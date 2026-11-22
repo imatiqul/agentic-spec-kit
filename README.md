@@ -21,6 +21,7 @@ who must approve.
 | `docs/prompts/spec/` | Requirements by concept, each with an ID and a release slice. |
 | `docs/prompts/30-phases.md` | Order of work and stop points. |
 | `docs/phase-reports/` | Evidence from each completed phase. |
+| `docs/design/` | Phase 2 design (draft, awaiting approval): architecture, schemas, check catalogue, agent team, source review, requirement map. |
 | `examples/healthq/` | Reference example: draft system map and the script that reproduces the Phase 1 findings. No source code from the reference repo is copied here. |
 | `NOTICE.md` | Upstream and community attribution. |
 

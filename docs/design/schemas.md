@@ -1,0 +1,234 @@
+# Schemas
+
+- **Phase and date:** Phase 2 (design), 2026-11-21
+- **Requirement IDs covered:** GOV-1 to GOV-16, TRC-1 to TRC-7, MAP-1 to MAP-9, CHG-1 to CHG-3, AGT-1, AGT-3
+- **Assumptions:** YAML for files people edit, JSON for files the kit generates
+- **Unverified:** the examples below parse as YAML or JSON (checked by script); no code consumes them yet
+
+All examples use invented values. Field names are the contract; JSON Schema files are produced in Phase 3 from these.
+
+## kit.yml (GOV-13)
+```yaml
+schema: agentic-kit/1
+profile: regulated            # lite | standard | regulated
+domain_packs: [hipaa]
+enforcement:
+  adapter: github
+  default_branch: main
+upstream:
+  speckit: "1.4.3"
+gates:
+  single_approver_exception: allowed   # allowed | forbidden
+  require_evidence_hash: true          # false is permitted in lite only
+waivers:
+  max_days: 90
+  critical_max_days: 30
+```
+
+## roles.yml (GOV-1 to GOV-3)
+Read from the base branch only.
+```yaml
+schema: agentic-roles/1
+people:
+  - id: example-user          # account name in the enforcement channel
+    roles: [product-owner, solutions-architect, security-compliance]
+  - id: second-user
+    roles: [qa, backend]
+roles:
+  product-owner: {title: Product Owner}
+  solutions-architect: {title: Solutions Architect}
+  backend: {title: Backend}
+  frontend: {title: Frontend}
+  ai-engineer: {title: AI Engineer}
+  data-owner: {title: Data Owner}
+  platform: {title: Platform}
+  qa: {title: QA}
+  security-compliance: {title: Security & Compliance}
+  devops-sre: {title: DevOps/SRE}
+  engineering-manager: {title: Engineering Manager}
+```
+
+## constitution.map.yml (GOV-11)
+```yaml
+schema: agentic-constitution-map/1
+principles:
+  - id: P-1
+    title: Authentication fails closed
+    enforcement: machine
+    checks: [arch-test:no-anonymous-fallback]
+  - id: P-7
+    title: A human reviews every clinical decision path
+    enforcement: human
+    judged_at: G3
+```
+
+## Spec front matter (GOV-9, MAP-8, TRC-1)
+Added to upstream's `spec.md` by the preset.
+```yaml
+---
+spec: 004-audit-identity
+tier_declared: critical
+owner_role: backend
+principles: [P-5]
+touches: [lib-infrastructure, phi-audit-logs]
+depends_on:
+  nodes: [entra-id]
+  specs: [001-fail-closed-auth]
+lane: standard
+---
+```
+
+## Gate decision record (GOV-5, GOV-6, TRC-18 proposed)
+Written by the kit after a valid review exists. One file per gate.
+```yaml
+schema: agentic-decision/1
+spec: 004-audit-identity
+gate: G3
+decision: approve-with-conditions      # approve | reject | approve-with-conditions
+conditions:
+  - Add a migration rollback test before G5
+commit: 9c1e4f0a7b2d
+evidence:
+  hash: sha256:5b0c1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f80
+  files: [specs/004-audit-identity/plan.md, specs/004-audit-identity/impact.md]
+approvals:
+  - reviewer: example-user
+    role: solutions-architect
+    review_ref: "pull/12#review-3"
+    at: 2026-12-01T15:04:00Z
+single_approver_exception: true
+audit_head: sha256:aa11bb22cc33dd44ee55ff66007788990011223344556677889900aabbccddee
+```
+
+## Waiver (GOV-15, GOV-16) and baseline (GOV-21 proposed)
+```yaml
+schema: agentic-waiver/1
+id: W-014
+rule: ck:no-skipped-tests          # a check id or a principle id
+scope:
+  paths: ["frontend/e2e-cloud/**"]
+  pattern: "test.skip("
+reason: Live smoke tests skip when the staging service is down
+compensating_control: Nightly job fails if more than two services are skipped
+owner: qa
+expires: 2027-01-31
+approved_by: {reviewer: example-user, review_ref: "pull/9#review-1"}
+```
+```yaml
+schema: agentic-baseline/1
+approved_by: {reviewer: example-user, review_ref: "pull/3#review-1"}
+groups:
+  - rule: ck:no-ci-escapes
+    count: 40
+    owner: devops-sre
+    reason: Existing escapes at adoption
+    expires: 2027-03-31
+```
+`CK-WAIVER` fails when a group's live count exceeds its recorded count, or when it has expired.
+
+## Trace manifest (TRC-1 to TRC-4) — generated
+```json
+{
+  "format": "agentic-trace/1",
+  "spec": "004-audit-identity",
+  "gate": {"ok": false, "failures": ["AC-003: gap"]},
+  "rows": [
+    {"principle": "P-5", "requirement": "FR-001", "criterion": "AC-001",
+     "tasks": ["T004"], "tests": ["AuditIdentityTests.AC_001_user_from_token"],
+     "state": "proven", "nodes": ["lib-infrastructure"]},
+    {"principle": "P-5", "requirement": "FR-002", "criterion": "AC-003",
+     "tasks": [], "tests": [], "state": "gap", "nodes": ["phi-audit-logs"]}
+  ]
+}
+```
+States: `proven`, `tracked-debt`, `waived`, `gap`.
+
+## Audit log entry (TRC-5 to TRC-7)
+One JSON object per line in the file; wrapped here for reading.
+```json
+{"seq": 41, "at": "2026-12-01T15:05:10Z",
+ "actor": {"type": "agent", "id": "impact-analyst", "on_behalf_of": "solutions-architect"},
+ "action": "impact.write", "spec": "004-audit-identity", "commit": "9c1e4f0a7b2d",
+ "inputs": ["specs/004-audit-identity/spec.md"], "outputs": ["specs/004-audit-identity/impact.md"],
+ "prev": "sha256:0f0e0d0c0b0a09080706050403020100ffeeddccbbaa99887766554433221100",
+ "hash": "sha256:aa11bb22cc33dd44ee55ff66007788990011223344556677889900aabbccddee"}
+```
+`actor.type` is `human`, `agent` or `kit`.
+
+## System map (MAP-1 to MAP-7)
+```yaml
+schema: agentic-map/1
+nodes:
+  - id: lib-infrastructure
+    type: shared-library
+    owner: platform
+    tier: critical
+    classification: none
+    repo: .
+    origin: derived
+    evidence: src/Infrastructure/Infrastructure.csproj
+  - id: phi-audit-logs
+    type: schema-object
+    owner: security-compliance
+    tier: critical
+    classification: restricted
+    origin: derived
+    evidence: src/Infrastructure/Persistence/AuditDbContext.cs
+edges:
+  - {from: identity-service, rel: writes, to: phi-audit-logs, origin: derived,
+     evidence: src/Identity/Program.cs}
+index:
+  - {paths: ["src/Infrastructure/**"], node: lib-infrastructure}
+federated:
+  - {repo: example-org/other-app, ref: 4f2a9c1, path: system-map}
+```
+Node types and edge types are the lists in MAP-2 and MAP-3. `classification` values come from the active domain pack.
+
+## Impact report front matter (MAP-10 to MAP-12) — generated
+```yaml
+spec: 004-audit-identity
+touches: [lib-infrastructure, phi-audit-logs]
+affected:
+  - {node: identity-service, distance: 1, via: builds-with, owner: backend}
+  - {node: identity-db, distance: 1, via: owns, owner: data-owner}
+tier_computed: critical
+required_approvers:
+  G3: [solutions-architect, platform, security-compliance, data-owner]
+  G5: [platform, qa, security-compliance]
+packs_triggered: [data-store, shared-component]
+```
+
+## Data-change plan (CHG-1 to CHG-3)
+Markdown with required headings, checked by `CK-DATA-PLAN`:
+`Classification`, `Forward migration`, `Rollback or roll-forward`, `Backfill`, `Compatibility during rollout`, `Index and query impact`, `Tenant isolation`, `Retention and deletion`, `Field classification and encryption`, `Readers and writers` (filled from the map).
+
+## Agent spec (AGT-1)
+```yaml
+schema: agentic-agent/1
+id: impact-analyst
+supports_role: solutions-architect
+charter: Compute blast radius, required reviewers and tier for one spec.
+inputs: [specs/*/spec.md, specs/*/plan.md, system-map/**]
+outputs: [specs/*/impact.md]
+tools: [read, search, run:agentic_kit]
+write_paths: [specs/*/impact.md]
+never:
+  - Edit the spec or plan it analyses
+  - Approve, merge, publish or deploy
+model_class: standard
+```
+
+## Work item (AGT-3)
+```yaml
+schema: agentic-work/1
+id: T017
+spec: 004-audit-identity
+state: in-review        # ready | in-progress | in-review | rework | blocked | done
+owner_agent: backend-implementer
+paths: [src/Infrastructure/Middleware/**]
+rework_rounds: 1
+handoff:
+  done: Moved audit middleware after authentication in nine services
+  evidence: [specs/004-audit-identity/evidence/T017-test-run.txt]
+  open_questions: []
+```

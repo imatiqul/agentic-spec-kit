@@ -1,0 +1,133 @@
+# ID | component | checks | enforcement | note
+# enforcement: E = enforced by a deterministic check; S = enforced only when repository settings are in place;
+#              P = procedural (the kit structures it, a human or agent must comply); D = deferred to slice 0.4 design detail
+GOV-1 | cli.roles, templates | CK-ROLES | E |
+GOV-2 | config roles.yml, presets | CK-ROLES | E | role names configurable
+GOV-3 | cli.roles | CK-ROLES | E | separation-of-duties report is output, not a failure, unless the profile forbids it
+GOV-4 | workflow agentic-sdd, step agentic-gate | CK-GATE-RECORD | E |
+GOV-5 | cli.gates, templates/decision | CK-GATE-RECORD | E |
+GOV-6 | adapter.github, cli.gates | CK-APPROVER, CK-GATE-MIRROR | S | convention only without branch protection and CODEOWNERS
+GOV-7 | adapter.github, cli.gates | CK-APPROVER | S | single-approver exception recorded when author and approver are the same person
+GOV-8 | cli.doctor, docs/admin-setup | CK-ENFORCE-SETUP | E | reports what is not enforced
+GOV-9 | cli.tiers, spec front matter | CK-TIER | E |
+GOV-10 | cli.impact | CK-TIER-RAISE | E | needs the system map
+GOV-11 | cli.constitution | CK-CONSTITUTION | E | checks that each principle names a check or a judging gate; cannot check that the named check is adequate
+GOV-12 | cli.constitution | CK-AMENDMENT | D |
+GOV-13 | presets lite, standard, regulated; config profile | CK-PROFILE | E |
+GOV-14 | preset lite, docs/lite | CK-PROFILE | P | "under an hour" is measured in acceptance, not by a check
+GOV-15 | cli.waivers, adapter.suppressions | CK-WAIVER | E | detects known suppression patterns only
+GOV-16 | cli.waivers, cli.gates | CK-WAIVER, CK-APPROVER | S |
+GOV-17 | cli.lanes | CK-LANE | D |
+GOV-18 | cli.lanes | CK-EMERGENCY-DEADLINE | D |
+GOV-19 | cli.gates | CK-AMENDMENT | D |
+GOV-20 | cli.brief | - | D |
+TRC-1 | cli.trace, templates | CK-TRACE | E |
+TRC-2 | cli.trace, cli.map | CK-TRACE | E |
+TRC-3 | cli.trace | CK-TRACE | E |
+TRC-4 | cli.trace | CK-TRACE-GENERATED | E |
+TRC-5 | cli.audit | CK-AUDIT-CHAIN | E | detects edits; cannot prevent wholesale rewrite by someone with push rights, so chain heads are copied into gate decisions
+TRC-6 | cli.audit, cli.orchestrate | CK-AUDIT-CHAIN | E |
+TRC-7 | docs, cli.audit | - | P | documented limit
+TRC-8 | cli.drift | CK-DRIFT-SPEC | E | deterministic for trace and touched files; semantic drift is an advisory agent finding
+TRC-9 | cli.drift, cli.map, cli.contracts | CK-MAP-DRIFT, CK-CONTRACT-DRIFT | E |
+TRC-10 | cli.drift | - | P | drift opens a finding; no auto-fix path exists
+TRC-11 | cli.metrics | CK-METRIC-SOURCE | E |
+TRC-12 | cli.metrics | - | D |
+TRC-13 | cli.metrics | - | D |
+TRC-14 | cli.metrics | CK-METRIC-SOURCE | E |
+TRC-15 | cli.report | - | D |
+TRC-16 | cli.report, adapter.hipaa | - | D |
+TRC-17 | tests/fixtures, CI | CK-SELFTEST | E |
+QLT-1 | workflow agentic-sdd, cli.verify | CK-VERIFY-INPUTS | P | checks the verifier's declared input manifest; cannot prove what a model saw
+QLT-2 | docs | - | P | stated limit
+QLT-12 | cli.waivers | CK-WAIVER | E |
+MAP-1 | system-map/ schema, cli.map | CK-MAP-SCHEMA | E |
+MAP-2 | system-map schema | CK-MAP-SCHEMA | E |
+MAP-3 | system-map schema | CK-MAP-SCHEMA | E |
+MAP-4 | cli.map | CK-MAP-OWNER | E |
+MAP-5 | cli.discover, adapter.discovery | CK-MAP-EVIDENCE | E | derived facts must cite an existing file; unknown technology yields assumed nodes
+MAP-6 | cli.discover, CI | CK-MAP-DRIFT | E |
+MAP-7 | cli.map | CK-MAP-FEDERATION | E |
+MAP-8 | spec and plan front matter | CK-TOUCH | E |
+MAP-9 | cli.impact | CK-TOUCH | E | needs a path-to-node index in the map
+MAP-10 | cli.impact | CK-IMPACT | E |
+MAP-11 | cli.impact, cli.gates | CK-IMPACT | E |
+MAP-12 | cli.impact, cli.gates | CK-IMPACT, CK-TIER-RAISE, CK-APPROVER | S |
+MAP-13 | cli.crossspec | CK-CROSS-SPEC | E |
+MAP-14 | cli.crossspec, templates/programme | CK-PROGRAMME | E |
+MAP-15 | cli.discover, command agentic.adopt | CK-FINDING-EVIDENCE | P | draft specs and findings are agent output; the check only requires evidence paths to exist
+MAP-16 | cli.report | - | D |
+CHG-1 | cli.data, templates/data-change-plan | CK-DATA-PLAN | E |
+CHG-2 | cli.data, adapter.engine | CK-DATA-CLASS | S | classification by the engine adapter; destructive changes need the Data Owner approval through the enforcement channel
+CHG-3 | templates/data-change-plan | CK-DATA-PLAN | E | checks sections are present and non-empty, not that they are right
+CHG-4 | adapter.engine, CI | CK-MIGRATION-ENGINE, CK-MIGRATION-DRIFT, CK-SHARED-STORE, CK-SYNTH-DATA | E | needs a container runtime in CI
+CHG-5 | adapter.engine (non-relational) | CK-DATA-PLAN | E |
+CHG-6 | cli.contracts | CK-CONTRACT-VERSION | E |
+CHG-7 | adapter.contract | CK-CONTRACT-BREAK | E | uses an established diff tool per format
+CHG-8 | cli.contracts | CK-CONTRACT-CONSUMER | E | checks that a consumer test exists and ran for each consumer in the map
+CHG-9 | cli.contracts | CK-DEPRECATION, CK-CONTRACT-DRIFT | E |
+CHG-10 | cli.shared | CK-SHARED-SEMVER | E |
+CHG-11 | cli.shared, CI | CK-CONSUMER-MATRIX | E |
+CHG-12 | cli.shared, cli.gates | CK-APPROVER | S |
+CHG-13 | system-map schema (external nodes) | CK-EXTERNAL-DEP | E |
+CHG-14 | adapter.domain | CK-EXTERNAL-DEP | E | records status only
+CHG-15 | cli.supply | CK-SBOM, CK-PIN | E |
+CHG-16 | cli.infra | - | D |
+CHG-17 | cli.infra | - | D |
+CHG-18 | templates/plan (rollout), cli.rollout | CK-ROLLOUT | E | checks the order is declared and consistent with map edges; "safe" is a human judgement at G7
+CHG-19 | cli.rollout | - | D |
+CHG-20 | cli.flags | - | D |
+CHG-21 | cli.rollout | - | D |
+AGT-1 | agents/*.agent.yml, cli.agents | CK-AGENT-SPEC | E |
+AGT-2 | presets, agents/ | CK-AGENT-SPEC | E |
+AGT-3 | cli.workitems | CK-WORKITEM | E |
+AGT-4 | cli.locks, worktree script | CK-PATH-LOCK | E |
+AGT-5 | workflow agentic-sdd, step agentic-gate | CK-GATE-RECORD | E |
+AGT-6 | cli.workitems | CK-REWORK-LIMIT | E |
+AGT-7 | cli.orchestrate | CK-BUDGET | E | steps and time are counted by the kit; cost only where the runtime reports it
+AGT-8 | workflow agentic-sdd-sequential | CK-GOLDEN | E |
+AGT-9 | cli.workitems, cli.audit | CK-AUTHOR-NEQ-VERIFIER | E | compares recorded agent identities; different model is best effort
+AGT-10 | adapter.runtime, runtime events | CK-PATH-DIFF | E | native pre-tool-use denial where supported; post-run diff check everywhere
+AGT-11 | cli.doctor | CK-CRED | S | checks the token the agent uses; cannot prove no other credential exists on the machine
+AGT-12 | agent specs, cli.orchestrate | CK-INJECTION (0.4) | P | instruction in 0.3, adversarial test in 0.4
+AGT-13 | fixtures/multi-app, CI | CK-GOLDEN | E |
+AGT-14 | CI | CK-GOLDEN-BASELINE | D |
+AGT-15 | fixtures, CI | CK-INJECTION | D |
+AGT-16 | cli.orchestrate | - | D |
+AGT-17 | cli.audit | - | D |
+AGT-18 | cli.memory | - | D |
+QLT-3 | pack security | - | D |
+QLT-4 | pack security | - | D |
+QLT-5 | pack security | - | D |
+QLT-6 | pack privacy | - | D |
+QLT-7 | pack test-depth | - | D |
+QLT-8 | pack test-depth | - | D |
+QLT-9 | pack test-depth | - | D |
+QLT-10 | pack test-depth | - | D |
+QLT-11 | pack test-depth | - | D |
+QLT-13 | pack ai | - | D |
+QLT-14 | pack ai | - | D |
+QLT-15 | pack ai | - | D |
+QLT-16 | pack ai | - | D |
+QLT-17 | pack ai | - | D |
+QLT-18 | pack ai | - | D |
+QLT-19 | pack ai | - | D |
+QLT-20 | pack operability | - | D |
+QLT-21 | pack feedback | - | D |
+QLT-22 | pack feedback | - | D |
+ADP-1 | extension.yml requires, NOTICE.md | CK-UPSTREAM-PIN | E |
+ADP-2 | docs/design/source-review.md | - | P | review recorded per dependency
+ADP-3 | adapter.github | CK-ENFORCE-SETUP | E |
+ADP-4 | adapter interface | - | P | interface designed; no second adapter built
+ADP-5 | adapter.engine.postgres | CK-MIGRATION-ENGINE | E |
+ADP-6 | adapter.engine.qdrant | CK-DATA-PLAN | E | proposed: Qdrant, the vector store the reference system uses
+ADP-7 | docs/adapters/engine.md | - | P |
+ADP-8 | adapter.contract.openapi, adapter.contract.graphql | CK-CONTRACT-BREAK | E |
+ADP-9 | adapter.discovery.dotnet, node, iac, ci | CK-MAP-EVIDENCE | E |
+ADP-10 | adapter.runtime.claude | CK-AGENT-SPEC | E |
+ADP-11 | adapter.runtime.copilot | CK-AGENT-SPEC | E | file format to be confirmed against current Copilot docs in Phase 3c
+ADP-12 | workflow agentic-sdd-sequential | CK-GOLDEN | E |
+ADP-13 | docs/adapters/runtime.md | - | P |
+ADP-14 | pack hipaa | CK-DOMAIN-SECTIONS | E |
+ADP-15 | docs/adapters/domain-pack.md | - | P |
+ADP-16 | adapter.tracker | - | D |
