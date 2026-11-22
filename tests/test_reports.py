@@ -122,6 +122,20 @@ def test_time_to_decision_is_counted_from_the_brief_to_the_recorded_decision(sam
     assert run(sample, "CK-AUDIT-CHAIN").ok, "the entry the brief adds keeps the chain intact"
 
 
+def test_writing_a_brief_that_has_not_changed_adds_nothing_to_the_audit_log(sample):
+    log = sample / core.KIT_DIR / "audit" / f"{SPEC}.jsonl"
+    code, out = cli(sample, "brief", "--spec", SPEC, "--gate", "G6", "--write")
+    assert code == 0 and out.startswith("wrote ")
+    once = log.read_text(encoding="utf-8")
+    assert once.count('"gate.ready"') == 1
+    code, out = cli(sample, "brief", "--spec", SPEC, "--gate", "G6", "--write")
+    assert code == 0 and out.startswith("unchanged ") and log.read_text(encoding="utf-8") == once, "the gate was already ready; nothing changed for the reviewer"
+    inputs = sample / "specs" / SPEC / "verification" / "G6-inputs.yml"
+    inputs.write_text(inputs.read_text(encoding="utf-8") + "# run again after a fix\n", encoding="utf-8")
+    code, out = cli(sample, "brief", "--spec", SPEC, "--gate", "G6", "--write")
+    assert code == 0 and out.startswith("wrote ") and log.read_text(encoding="utf-8").count('"gate.ready"') == 2, "new evidence, so the reviewer is asked again"
+
+
 def test_all_views_can_be_written_as_files_and_as_one_page(sample, tmp_path_factory):
     out = tmp_path_factory.mktemp("report")
     code, text = cli(sample, "report", "all", "--out", str(out), "--html", "--today", "2026-11-22")

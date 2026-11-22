@@ -28,7 +28,14 @@ SHARED_FILES = {"src/HealthQCopilot.AppHost/Program.cs"}
 #: Components the Phase 1 draft did not map and a finding changes. Added in Phase 5, batch 2, for H6: the workflows.
 EXTRA_NODES = [{"id": "ci-pipeline", "type": "shared-pipeline", "owner": "devops-sre", "tier": "high", "classification": "none", "origin": "derived",
                 "evidence": ".github/workflows", "note": "Not in the Phase 1 draft; added in Phase 5 because finding H6 changes it"}]
-EXTRA_INDEX = [{"paths": [".github/workflows/**"], "node": "ci-pipeline"}]
+EXTRA_NODES += [
+    {"id": "repo-config", "type": "infrastructure", "owner": "platform", "tier": "high", "classification": "none", "origin": "derived",
+     "evidence": "Directory.Build.props", "note": "Not in the Phase 1 draft; added in Phase 5 because findings M1, M4 and M5 change it"},
+    {"id": "dev-apphost", "type": "infrastructure", "owner": "devops-sre", "tier": "medium", "classification": "none", "origin": "derived",
+     "evidence": "src/HealthQCopilot.AppHost/Program.cs", "note": "Not in the Phase 1 draft; added in Phase 5 because finding N8 changes it"}]
+EXTRA_INDEX = [{"paths": [".github/workflows/**", "frontend/e2e/**", "frontend/e2e-cloud/**"], "node": "ci-pipeline"},
+               {"paths": ["Directory.Build.props", ".editorconfig", ".gitignore", "global.json", "README.md", "LICENSE"], "node": "repo-config"},
+               {"paths": ["src/HealthQCopilot.AppHost/**"], "node": "dev-apphost"}]
 
 
 def main(draft: Path, repo: Path, out: Path) -> None:

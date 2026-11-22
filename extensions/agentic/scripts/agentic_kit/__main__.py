@@ -213,6 +213,10 @@ def cmd_brief(args) -> int:
         return 2
     if args.write:
         path = ctx.src.root / lanes.brief_path(args.spec, args.gate)
+        if path.is_file() and path.read_text(encoding="utf-8") == text:
+            # Nothing changed for the reviewer, so the gate was already ready: no second entry in the audit log.
+            print(f"unchanged {lanes.brief_path(args.spec, args.gate)}")
+            return 0
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
         # The moment a gate is ready for a person: time-to-decision is counted from here (TRC-13).

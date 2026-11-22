@@ -616,6 +616,22 @@ nodes:
   origin: derived
   evidence: .github/workflows
   note: Not in the Phase 1 draft; added in Phase 5 because finding H6 changes it
+- id: repo-config
+  type: infrastructure
+  owner: platform
+  tier: high
+  classification: none
+  origin: derived
+  evidence: Directory.Build.props
+  note: Not in the Phase 1 draft; added in Phase 5 because findings M1, M4 and M5 change it
+- id: dev-apphost
+  type: infrastructure
+  owner: devops-sre
+  tier: medium
+  classification: none
+  origin: derived
+  evidence: src/HealthQCopilot.AppHost/Program.cs
+  note: Not in the Phase 1 draft; added in Phase 5 because finding N8 changes it
 edges:
 - from: agent-service
   rel: builds-with
@@ -1596,4 +1612,17 @@ index:
   node: pkg-web-pubsub-client
 - paths:
   - .github/workflows/**
+  - frontend/e2e/**
+  - frontend/e2e-cloud/**
   node: ci-pipeline
+- paths:
+  - Directory.Build.props
+  - .editorconfig
+  - .gitignore
+  - global.json
+  - README.md
+  - LICENSE
+  node: repo-config
+- paths:
+  - src/HealthQCopilot.AppHost/**
+  node: dev-apphost

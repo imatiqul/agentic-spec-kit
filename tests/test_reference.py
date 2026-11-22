@@ -23,10 +23,16 @@ PROJECT = REF / "project"
 CRITICAL = {"C1", "C2", "C3", "C4", "C5", "C6", "N1", "N2"}
 #: Batch 2. N5 has no spec of its own: 005 covers it, which the owner approved with batch 1.
 HIGH = {"H1", "H2", "H3", "H4", "H5", "H6", "N3", "N4"}
-#: Pairs the kit's word comparison lists as similar. A Product Owner decides each; until then CK-DUPLICATE fails on them.
-SIMILAR = [{"002-endpoint-authorization", "003-identity-from-token"}, {"005-triage-validation", "006-eval-production-path"},
+#: Batches 3 and 4, drafted on the owner's instruction to carry on; no gate is passed for them. N10 has no spec of its own: 021 covers it.
+MEDIUM = {"M1", "M2", "M3", "M4", "M5", "N6"}
+LOW = {"N7", "N8", "N9"}
+#: Pairs the kit's word comparison lists as similar, which the owner decided as Product Owner (`distinct`, in chat on 2026-11-22).
+DECIDED = [{"002-endpoint-authorization", "003-identity-from-token"}, {"005-triage-validation", "006-eval-production-path"},
            {"002-endpoint-authorization", "010-bff-authorization"}, {"004-audit-identity", "016-audit-record-content"},
            {"007-audit-export-complete", "015-audit-write-durable"}, {"007-audit-export-complete", "016-audit-record-content"}]
+#: Pairs nobody has decided. Only a Product Owner can; until then CK-DUPLICATE fails on them, and it should.
+WAITING = [{"014-pipeline-gates", "019-skipped-tests"}, {"014-pipeline-gates", "021-advisories-and-review"},
+           {"019-skipped-tests", "021-advisories-and-review"}]
 SPEC_CHECKS = ["CK-CONSTITUTION", "CK-ROLES", "CK-REQ-QUALITY", "CK-SPEC-SIZE", "CK-DOMAIN-SECTIONS", "CK-TIER", "CK-TIER-RAISE", "CK-TOUCH", "CK-TRACE",
                "CK-CROSS-SPEC", "CK-PROGRAMME", "CK-IMPACT", "CK-MAP-SCHEMA", "CK-MAP-OWNER", "CK-GATE-RECORD", "CK-BRIEF", "CK-LANE", "CK-AUDIT-CHAIN"]
 
@@ -58,7 +64,10 @@ def test_one_person_holds_every_role_as_the_charter_says():
 
 def test_the_map_is_in_the_kits_format_and_classifies_every_node():
     smap = yaml.safe_load((PROJECT / "system-map/map.yml").read_text(encoding="utf-8"))
-    assert smap["schema"] == "agentic-map/1" and len(smap["nodes"]) == 78 and len(smap["edges"]) == 168, "77 from Phase 1, and the pipeline"
+    assert smap["schema"] == "agentic-map/1" and len(smap["nodes"]) == 80 and len(smap["edges"]) == 168, \
+        "77 from Phase 1, then the pipeline, the repository's build configuration and the development host"
+    added = {n["id"] for n in smap["nodes"] if "added in Phase 5" in str(n.get("note"))}
+    assert added == {"ci-pipeline", "repo-config", "dev-apphost"}, "each node the findings needed and Phase 1 did not draw says so"
     assert {n["classification"] for n in smap["nodes"]} == {"restricted", "internal", "none"}
     unknown = [n for n in smap["nodes"] if "Not classified in Phase 1" in str(n.get("note"))]
     assert len(unknown) == 20 and all(n["classification"] == "restricted" for n in unknown), "what nobody classified is treated as protected"
@@ -66,9 +75,22 @@ def test_the_map_is_in_the_kits_format_and_classifies_every_node():
 
 def test_there_is_one_spec_for_each_finding_drafted_so_far():
     found = [front(s).get("finding") for s in specs()]
-    assert sorted(found) == sorted(CRITICAL | HIGH), "one spec per finding, none twice"
+    assert sorted(found) == sorted(CRITICAL | HIGH | MEDIUM | LOW), "one spec per finding, none twice"
+    assert len(found) == 25, "27 findings in Phase 1; N5 is covered by 005 and N10 by 021"
     assert all(front(s)["spec"] == s.name for s in specs())
     assert all(front(s)["tier_declared"] == "critical" for s in specs() if front(s)["finding"] in CRITICAL)
+
+
+def test_a_draft_says_it_is_a_draft_and_an_approved_spec_says_who_approved_it_and_how():
+    for s in specs():
+        text = (s / "spec.md").read_text(encoding="utf-8")
+        if front(s)["finding"] in CRITICAL | HIGH:
+            assert "G1 and G2 approved by the owner on 2026-11-22, in chat" in text and "No kit decision record exists yet" in text, s.name
+            assert "## Decided at G2" in text and "## Questions for G2" not in text, s.name
+        else:
+            assert "Draft, waiting at gates G1 and G2" in text and "approved by the owner" not in text, s.name
+            assert "## Questions for G2" in text and "(assumed)" in text and "(accepted)" not in text, s.name
+    assert not list((PROJECT / ".specify/agentic").glob("decisions/**/*.yml")), "no gate of the reference has a kit decision record: every approval so far was in chat"
 
 
 @pytest.mark.parametrize("cid", SPEC_CHECKS)
@@ -77,14 +99,31 @@ def test_the_specs_pass_the_kits_checks(cid):
     assert r.ok, [f.message for f in r.findings][:5]
 
 
-def test_only_the_known_similar_pairs_wait_for_the_product_owner():
+def dispositions(spec: str) -> dict:
+    path = PROJECT / "specs" / spec / "origin.yml"
+    if not path.is_file():
+        return {}
+    return {d["target"]: d for d in yaml.safe_load(path.read_text(encoding="utf-8")).get("dispositions") or []}
+
+
+def test_only_the_pairs_nobody_has_decided_wait_for_the_product_owner():
     waiting = set()
     for f in run("CK-DUPLICATE").findings:
         this = str(f.path).split("/")[1]
         other = f.message.split(" ", 1)[0]
-        assert {this, other} in SIMILAR, f.message
         waiting.add(frozenset({this, other}))
-    assert len(waiting) <= len(SIMILAR)
+    assert waiting == {frozenset(p) for p in WAITING}, "the check fails on exactly the pairs that wait, and on nothing the owner decided"
+
+
+def test_a_similar_pair_is_decided_only_by_the_owner_and_never_by_the_agent():
+    for pair in DECIDED:
+        a, b = sorted(pair)
+        d = dispositions(a).get(b) or dispositions(b).get(a)
+        assert d and d["decision"] == "distinct" and d["decided_by"] == {"reviewer": "imatiqul", "role": "product-owner"}, pair
+        assert "Decided in chat on 2026-11-22" in d["reason"], "the record says how the decision was made"
+    for pair in WAITING:
+        a, b = sorted(pair)
+        assert b not in dispositions(a) and a not in dispositions(b), f"{pair}: the agent may recommend; it may not record a decision"
 
 
 def test_every_spec_has_an_impact_report_and_a_brief_for_its_first_gate():

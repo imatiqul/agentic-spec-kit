@@ -34,6 +34,7 @@ A tool that governs agents is only useful if you know where its guarantees stop.
 - Duplicate detection compares vocabulary. Two requirements that say the same thing in different words score as unrelated. Agents and people add those candidates; the kit then insists each one is decided.
 - The requirement lint catches "should", "quickly" and two obligations in one sentence. It does not know whether a requirement is right, complete or wanted.
 - The glossary check finds a listed synonym. It does not find a new one.
+- The pinning check reads images where they are written out: workflow, Compose and Kubernetes files, container files, and the `AddContainer("name", "image", "tag")` calls of a .NET Aspire application host, with `WithImageTag` and `WithImageSHA256` on the same statement. An image named through a variable, built from parts, or set by any other code is not seen.
 
 ## It records; it does not certify
 

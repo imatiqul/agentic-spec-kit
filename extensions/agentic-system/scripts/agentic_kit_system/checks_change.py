@@ -198,6 +198,11 @@ def _version_of(ctx: Context, node: dict, text: str | None = None) -> str:
 
 # ── findings that waivers and the baseline can cover ────────────────────────────
 
+FLOATING_TAGS = ("latest", "stable", "edge", "main", "master", "nightly", "lts", "current", "dev")
+ASPIRE_CONTAINER = re.compile(r'\bAddContainer\(\s*"[^"]*"\s*,\s*"([^"]+)"\s*(?:,\s*"([^"]*)"\s*)?\)')
+ASPIRE_TAG = re.compile(r'\.WithImageTag\(\s*"([^"]*)"\s*\)')
+
+
 def _image_problem(ref: str, want_digest: bool) -> tuple[str, str] | None:
     ref = ref.strip().strip("\"'")
     if not ref or any(x in ref for x in ("${", "{{", "$(")) or ref.startswith("$") or ref == "scratch":
@@ -206,9 +211,29 @@ def _image_problem(ref: str, want_digest: bool) -> tuple[str, str] | None:
         return None
     last = ref.rsplit("/", 1)[-1]
     tag = last.split(":", 1)[1] if ":" in last else ""
-    if not tag or tag.lower() in ("latest", "stable", "edge", "main", "master", "nightly", "lts", "current", "dev"):
+    low = tag.lower()
+    # "2022-latest" moves as much as "latest" does.
+    if not tag or low in FLOATING_TAGS or low.endswith("-latest") or low.startswith("latest-"):
         return "pin-image", f"{ref} floats: {'no tag' if not tag else 'tag ' + tag}"
     return ("pin-digest", f"{ref} has a tag but no digest") if want_digest else None
+
+
+def _host_images(text: str) -> list[tuple[int, str, bool]]:
+    """(line, image reference, has a digest) for each container a .NET Aspire application host starts with literal arguments.
+
+    Read: AddContainer("name", "image"[, "tag"]) and, chained on the same statement, WithImageTag("tag") and WithImageSHA256("...").
+    Anything built from variables is not read; docs/limits.md says so.
+    """
+    out = []
+    for m in ASPIRE_CONTAINER.finditer(text):
+        end = text.find(";", m.end())
+        statement = text[m.start(): end if end != -1 else len(text)]
+        image, tag = m.group(1), m.group(2) or ""
+        retag = ASPIRE_TAG.findall(statement)
+        if retag:
+            tag = retag[-1]
+        out.append((text.count("\n", 0, m.start()) + 1, f"{image}:{tag}" if tag else image, "WithImageSHA256(" in statement))
+    return out
 
 
 def find_pins(ctx: Context) -> list[dict]:
@@ -227,11 +252,19 @@ def find_pins(ctx: Context) -> list[dict]:
         is_yaml = low.endswith((".yml", ".yaml"))
         is_docker = low.startswith("dockerfile") or low.endswith(".dockerfile")
         is_reqs = fnmatch.fnmatch(low, "requirements*.txt")
-        if not (is_yaml or is_docker or is_reqs or low == "package.json" or low.endswith((".csproj", ".props"))):
+        is_host = low.endswith(".cs")
+        if not (is_yaml or is_docker or is_reqs or is_host or low == "package.json" or low.endswith((".csproj", ".props"))):
             continue
         try:
             text = ctx.src.read(rel)
-        except (OSError, KitError):
+        except (OSError, KitError, UnicodeDecodeError):
+            continue
+        if is_host:
+            if "AddContainer(" in text:
+                for n, ref, digest in _host_images(text):
+                    hit = None if digest else _image_problem(ref, want_digest)
+                    if hit:
+                        add(hit[0], rel, n, hit[1])
             continue
         if low == "package.json":
             try:

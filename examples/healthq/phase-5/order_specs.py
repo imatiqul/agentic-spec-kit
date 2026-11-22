@@ -18,11 +18,14 @@ SPECS = Path(__file__).resolve().parents[1] / "project" / "specs"
 ORDER = ["001-fail-closed-auth", "003-identity-from-token", "004-audit-identity", "007-audit-export-complete", "008-audit-append-only",
          "006-eval-production-path", "005-triage-validation", "015-audit-write-durable", "016-audit-record-content", "009-phi-protection",
          "013-migrations-production-engine", "010-bff-authorization", "011-frontend-route-guards", "012-no-fabricated-data", "014-pipeline-gates",
+         "017-visible-failures", "018-reviewable-files", "019-skipped-tests", "020-repository-hygiene", "021-advisories-and-review",
+         "022-cors-allowlist", "023-environment-values", "024-pinned-dev-containers", "025-event-contracts",
          "002-endpoint-authorization"]
 EXTRA = {"005-triage-validation": ["006-eval-production-path"],            # the classifier is released on the evaluation's results
          "010-bff-authorization": ["001-fail-closed-auth", "003-identity-from-token"],
          "011-frontend-route-guards": ["001-fail-closed-auth"],
-         "012-no-fabricated-data": ["006-eval-production-path"]}             # real figures come from the evaluation
+         "012-no-fabricated-data": ["006-eval-production-path"],             # real figures come from the evaluation
+         "023-environment-values": ["001-fail-closed-auth"]}                  # a missing identity setting already stops a service
 
 
 def front(text: str) -> dict:

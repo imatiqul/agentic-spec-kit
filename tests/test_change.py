@@ -516,6 +516,31 @@ def test_digests_are_required_under_the_regulated_profile(shop):
     assert any("postgres:16.4 has a tag but no digest" in m for m in msgs(run(shop, "CK-PIN")))
 
 
+def test_images_an_aspire_application_host_starts_are_read_from_its_code(shop):
+    host = shop / "apphost"
+    host.mkdir()
+    (host / "Program.cs").write_text(
+        'var builder = DistributedApplication.CreateBuilder(args);\n'
+        'builder.AddContainer("sql", "mcr.example.test/mssql/server", "2022-latest")\n    .WithEndpoint(port: 1433, targetPort: 1433);\n'
+        'builder.AddContainer("bus", "example.test/bus-emulator", "latest");\n'
+        'builder.AddContainer("cache", "example.test/cache");\n'
+        'builder.AddContainer("queue", "example.test/queue", "3.13.7")\n    .WithImageSHA256("' + "a" * 64 + '");\n'
+        'builder.AddContainer("search", "example.test/search", "latest")\n    .WithImageTag("8.15.1");\n'
+        'var image = "example.test/built-at-run-time"; builder.AddContainer("other", image, tag);\n')
+    found = run(shop, "CK-PIN").findings
+    out = msgs(run(shop, "CK-PIN"))
+    assert any("mcr.example.test/mssql/server:2022-latest floats: tag 2022-latest" in f.message and f.path == "apphost/Program.cs:2"
+               for f in found), "a tag that ends in -latest moves too, and the finding names the file and the line"
+    assert any("example.test/bus-emulator:latest floats: tag latest" in m for m in out)
+    assert any("example.test/cache floats: no tag" in m for m in out)
+    assert not any("example.test/queue" in m or "example.test/search" in m or "built-at-run-time" in m for m in out), \
+        "a digest is a pin; under the standard profile a version is one; what is built from variables is not read"
+    edit(shop, ".specify/agentic/kit.yml", "profile: standard", "profile: regulated")
+    commit(shop)
+    out = msgs(run(shop, "CK-PIN"))
+    assert any("example.test/search:8.15.1 has a tag but no digest" in m for m in out) and not any("example.test/queue" in m for m in out)
+
+
 def test_manifest_with_dependencies_and_no_lockfile_fails(shop):
     (shop / "package-lock.json").rename(shop / "package-lock.json.bak")
     assert any("no lockfile" in m for m in msgs(run(shop, "CK-PIN")))

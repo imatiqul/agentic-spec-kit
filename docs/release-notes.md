@@ -29,6 +29,10 @@ Intake records, requirement linting, a glossary, living capability specs fed by 
 ## 0.6 Connected — `extensions/agentic-connect`
 Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and documents. One pipeline command, with files for GitHub Actions, Azure Pipelines and GitLab CI. Review mirroring. Notifications to Slack, Teams, email and the originating work item. 3 checks.
 
+## Since the slices, from using the kit on the reference project
+- The pinning check (CK-PIN) reads the containers a .NET Aspire application host starts, and treats a tag that ends in `-latest` as floating. Before, finding N8 of the reference (two floating tags in such a file) was one the kit could not see.
+- Writing a reviewer brief that has not changed no longer adds a second `gate.ready` entry to the audit log.
+
 ## Installing
 `scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

@@ -91,7 +91,7 @@ and the count can only fall. The owning check fails for anything beyond the base
 
 | Rule | Reported by | Meaning |
 |---|---|---|
-| `pin-action`, `pin-image`, `pin-package` | CK-PIN | An action not pinned to a commit; an image with no tag or a floating tag; a package requested as `*` or `latest`, or a manifest with no lockfile |
+| `pin-action`, `pin-image`, `pin-package` | CK-PIN | An action not pinned to a commit; an image with no tag or a floating tag (`latest` and the like, or a tag that ends in `-latest`); a package requested as `*` or `latest`, or a manifest with no lockfile. Images are read from workflow, Compose and Kubernetes files, container files, and the `AddContainer` calls of a .NET Aspire application host |
 | `pin-digest` | CK-PIN | Regulated only: an image with a tag but no digest |
 | `store-engine-unknown` | CK-MIGRATION-ENGINE | The map does not state a store's engine and version |
 | `migration-foreign-engine` | CK-MIGRATION-ENGINE | A migration carries another engine's types or annotations |
@@ -146,7 +146,7 @@ one-line statement of what must hold. A check fails when that statement is false
 
 Detail the summaries leave out:
 - CK-AUDIT-PACK looks only at a spec whose G7 is approved. The pack must have been made by the kit, be listed in the G7 evidence, and its hashes must still match the spec's own files and decision records. Roles, settings, waivers and the audit log go on changing after a release; the pack holds them as they were and a later change to them is not a failure.
-- CK-BRIEF needs the brief that was current when the decision was made. Writing a brief also appends `gate.ready` to the audit log, which is where the time-to-decision measure starts.
+- CK-BRIEF needs the brief that was current when the decision was made. Writing a brief also appends `gate.ready` to the audit log, which is where the time-to-decision measure starts. Writing a brief that is the same as the one on disk changes nothing and appends nothing.
 
 ### In the team extension: what an agent is given, what it used and what it cost
 | Check | Requires | Enforces | Profiles |
