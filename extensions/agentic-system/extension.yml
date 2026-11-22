@@ -4,7 +4,7 @@ extension:
   id: "agentic-system"
   name: "Agentic Spec Kit — System"
   version: "0.2.0"
-  description: "A system map of services, data stores, contracts and shared components, with discovery, impact analysis and reviewers derived from what a change touches."
+  description: "A system map of services, data stores, contracts and shared components, with discovery, impact analysis, reviewers derived from what a change touches, and change packs for data, contracts, shared components and dependencies."
   author: "Atiqul Islam"
   repository: "https://github.com/imatiqul/agentic-spec-kit"
   license: "MIT"
@@ -23,6 +23,9 @@ provides:
     - name: "speckit.agentic-system.impact"
       file: "commands/impact.md"
       description: "Compute what a spec touches and reaches, the tier that follows, and who must approve."
+    - name: "speckit.agentic-system.change"
+      file: "commands/change.md"
+      description: "Draft the data-change plan and rollout order a spec needs, classify its migrations, and run the change-pack checks."
 
 hooks:
   after_plan:
@@ -36,3 +39,5 @@ tags:
   - "impact-analysis"
   - "dependencies"
   - "governance"
+  - "migrations"
+  - "contracts"

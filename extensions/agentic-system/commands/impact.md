@@ -15,6 +15,7 @@ $ARGUMENTS
 3. Show the user: the blast radius, the tier computed from the map, the change packs triggered, and the roles that must approve at G3 and G5.
 4. If the computed tier is higher than `tier_declared`, tell the user the spec must be raised. Do not lower a node's tier to make the check pass.
 5. Run `python .specify/extensions/agentic/scripts/agentic.py check CK-TOUCH CK-IMPACT CK-TIER-RAISE CK-CROSS-SPEC`.
+6. If the report lists any change packs, tell the user to run the change command next: it drafts the data-change plan and the rollout order those packs require.
 
 ## Rules for the agent
 

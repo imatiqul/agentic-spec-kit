@@ -175,6 +175,7 @@ MANIFEST_HOOKS: list = []  # (ctx, spec, manifest) -> None; may add fields to th
 CLI_HOOKS: list = []       # (subparsers) -> None; adds commands
 SAMPLE_HOOKS: list = []    # (root) -> None; extends the self-test sample project before decisions are written
 FIXTURE_HOOKS: list = []   # () -> dict of extra self-test fixtures
+FINDER_HOOKS: list = []    # (ctx) -> list of {rule, path, line, text}: findings that waivers and the baseline can cover
 RULE_OWNERS: dict[str, str] = {}  # suppression rule id -> check id that reports it (default CK-WAIVER)
 
 

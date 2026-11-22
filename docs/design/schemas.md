@@ -198,9 +198,67 @@ required_approvers:
 packs_triggered: [data-store, shared-component]
 ```
 
-## Data-change plan (CHG-1 to CHG-3)
-Markdown with required headings, checked by `CK-DATA-PLAN`:
-`Classification`, `Forward migration`, `Rollback or roll-forward`, `Backfill`, `Compatibility during rollout`, `Index and query impact`, `Tenant isolation`, `Retention and deletion`, `Field classification and encryption`, `Readers and writers` (filled from the map).
+## Data-change plan (CHG-1 to CHG-5)
+`specs/<spec>/data-change-plan.md`: front matter plus required headings, checked by `CK-DATA-PLAN` and `CK-DATA-CLASS`.
+```yaml
+stores: [identity-db]
+classification: breaking          # additive | backward-compatible | breaking | destructive
+migrations: [src/Identity/Migrations/20261201_AuditTenant.cs]
+changes: [{kind: change-embedding-model}]   # engines whose changes are not files (vector stores)
+restore_evidence: specs/004-audit-identity/evidence/restore.txt   # destructive changes only
+```
+Headings for every engine: `Classification`, `Rollback or roll-forward`, `Compatibility during rollout`, `Tenant isolation`, `Retention and deletion`, `Field classification and encryption`, `Readers and writers` (must name every reader and writer in the map).
+Relational engines add `Forward migration`, `Backfill`, `Index and query impact`. Vector stores add `Collection and vector changes`, `Re-embedding plan`, `Search index rebuild`. Document stores add `Document shape versioning`, `Index and partition-key changes`. Caches add `Cache key and expiry changes`.
+A breaking change adds `Expand, migrate, contract`; a destructive one adds `Restore test`.
+
+## Rollout order (CHG-18)
+`specs/<spec>/rollout.yml`, required when a spec touches more than one deployable node.
+```yaml
+schema: agentic-rollout/1
+deploy: [{node: identity-db, phase: expand}, identity-service, {node: identity-db, phase: contract}]
+rollback: [identity-service, identity-db]
+flags: [audit-tenant-field]
+compatibility_window: Two releases
+```
+
+## Run records (CHG-4, CHG-8, CHG-11) — written by CI
+`specs/<spec>/evidence/migration-run.yml`
+```yaml
+schema: agentic-migration-run/1
+store: identity-db
+engine: postgresql
+engine_version: "16.4"
+result: pass
+model_drift: none
+applied:
+  - {path: src/Identity/Migrations/20261201_AuditTenant.cs, sha256: 5d41402abc4b2a76b9719d911017c592a3f1e0b7c6d5e4f30918273645566778}
+```
+`specs/<spec>/evidence/consumer-runs.yml`
+```yaml
+schema: agentic-runs/1
+runs:
+  - {kind: contract, provider: contract-identity-api, consumer: portal-web, result: pass,
+     subject: "sha256:9b74c9897bac770ffc029102a200c5de0f1e2d3c4b5a69788796a5b4c3d2e1f0"}
+  - {kind: build, provider: lib-infrastructure, consumer: identity-service, result: pass,
+     subject: "sha256:1f3870be274f6c49b3e31a0c6728957f0a1b2c3d4e5f60718293a4b5c6d7e8f9"}
+```
+`subject` is a hash of the contract file, or of every file of the shared component. A record whose subject no longer matches does not count.
+
+## System-map fields used by the change packs
+```yaml
+- {id: identity-db, type: data-store, engine: postgresql, engine_version: "16", migrations: ["src/Identity/Migrations/*"],
+   shared: true, writers: [identity-service, audit-export]}
+- {id: contract-identity-api, type: api-contract, path: contracts/identity.yaml, drift: {generated: build/identity.generated.json},
+   deprecations: [{element: "GET /v1/users", sunset: 2027-06-30, migration: "Use GET /v2/users"}]}
+- {id: lib-infrastructure, type: shared-library, version_file: src/Infrastructure/Infrastructure.csproj}
+- id: model-provider
+  type: external-service
+  agreement: {status: in-place}          # in-place | pending | not-required; never the document
+  dependency: {contract: ..., version: ..., auth: ..., data: ..., availability: ..., timeout: ..., retry: ...,
+               circuit_breaker: ..., user_failure: ..., test_double: ...}
+```
+Edges to a contract carry the consumer's test: `{from: portal-web, rel: calls, to: contract-identity-api, contract_test: tests/contract/identity.test.ts}`.
+Spec front matter adds `breaking: [<node>]` and `changes: {<node>: fix | feature | breaking}`. `kit.yml` adds `supply_chain: {licences: {deny: [...], allow: [...], allow_unknown: false}}` and `synthetic_data: {paths: [...], allow: [...], patterns: {...}}`.
 
 ## Agent spec (AGT-1)
 ```yaml

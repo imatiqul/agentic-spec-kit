@@ -1,6 +1,6 @@
 # agentic-spec-kit
 
-> **Status: pre-alpha, private.** Slice 0.1 and the first part of slice 0.2 are built.
+> **Status: pre-alpha, private.** Slice 0.1 and slice 0.2 are built; slice 0.2 part 2 awaits the owner's approval.
 > Nothing has been run against a live GitHub repository yet. This repository must stay private until the reference findings are fixed or
 > the owner decides otherwise (charter D2).
 
@@ -23,7 +23,7 @@ who must approve.
 | `docs/phase-reports/` | Evidence from each completed phase. |
 | `docs/design/` | Phase 2 design: architecture, schemas, check catalogue, agent team, source review, requirement map. |
 | `extensions/agentic/` | Slice 0.1: the check CLI, commands, templates and the CI workflow. |
-| `extensions/agentic-system/` | Slice 0.2 part 1: system map, discovery, impact analysis. |
+| `extensions/agentic-system/` | Slice 0.2: system map, discovery, impact analysis, and change packs for data stores, contracts, shared components, external services and the supply chain. |
 | `fixtures/multi-app/` | Two services, a shared library, a shared database and an external API, for cross-application tests. |
 | `extensions/agentic-hipaa/` | HIPAA domain pack (an engineering aid, not legal advice). |
 | `presets/`, `steps/`, `workflows/`, `bundles/` | Profile presets, the `agentic-gate` step, the lifecycle workflow, bundle manifests. |
@@ -41,7 +41,7 @@ who must approve.
 | 1 | Findings verification and system map | Complete; proceeded on the owner's go-ahead, 2026-11-21 |
 | 2 | Design of all four slices | Approved by the owner, 2026-11-21 |
 | 3a | Build slice 0.1 | Approved by the owner, 2026-11-21; live GitHub test skipped |
-| 3b | Build slice 0.2 | Part 1 (system map and impact) built, awaiting approval; part 2 (change packs) not started |
+| 3b | Build slice 0.2 | Part 1 (system map and impact) approved by the owner, 2026-11-21; part 2 (change packs) built, awaiting approval |
 | 3c | Build slice 0.3 | Not started |
 | 4–7 | Reference constitution, specs, plans, C4 walkthrough | Not started |
 | 8–10 | Guide, slice 0.4, final verification | Not started |

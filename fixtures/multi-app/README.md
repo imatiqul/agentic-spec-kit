@@ -9,4 +9,5 @@ All data is synthetic. Nothing here is meant to run in production.
 | `shop-orders`, `shop-billing` | Two services | Consumers of the shared library; both write to the same database |
 | `shop-shared-lib` | Shared library | A change here must reach both services' owners |
 | `shop-db` | PostgreSQL database | A shared store with two writers |
-| `contract-payments-openapi` | External API contract | A dependency outside the repo |
+| `contract-payments-openapi` | API contract of the payments provider | Contract versioning, breaking-change detection and a consumer contract test |
+| `payments-provider` | External service | A dependency outside the repo, with its timeout, retry and failure behaviour recorded |

@@ -5,17 +5,37 @@ nodes:
   - {id: shop-billing, type: service, owner: backend, tier: high, classification: internal, origin: derived,
      evidence: services/billing/package.json, discovered_by: node}
   - {id: shop-shared-lib, type: shared-library, owner: platform, tier: medium, classification: none, origin: derived,
-     evidence: packages/shared-lib/package.json, discovered_by: node}
+     evidence: packages/shared-lib/package.json, discovered_by: node, version_file: packages/shared-lib/package.json}
   - {id: shop-db, type: data-store, engine: postgresql, engine_version: "16", owner: data-owner, tier: high,
-     classification: internal, origin: derived, evidence: docker-compose.yml, discovered_by: compose}
+     classification: internal, origin: derived, evidence: docker-compose.yml, discovered_by: compose,
+     shared: true, writers: [shop-orders, shop-billing], migrations: ["db/migrations/*"]}
   - {id: contract-payments-openapi, type: api-contract, owner: solutions-architect, tier: high, classification: internal,
-     origin: derived, evidence: contracts/payments-openapi.yaml, discovered_by: contracts}
+     origin: derived, evidence: contracts/payments-openapi.yaml, discovered_by: contracts, drift: {mode: design-first}}
+  - id: payments-provider
+    type: external-service
+    owner: devops-sre
+    tier: high
+    classification: internal
+    origin: assumed
+    dependency:
+      contract: contracts/payments-openapi.yaml
+      version: "2.1.0"
+      auth: OAuth client credentials; the secret is a reference in the secret store
+      data: Order total and currency; no customer details
+      availability: 99.95% monthly
+      timeout: 3 seconds
+      retry: Two retries with an idempotency key
+      circuit_breaker: Opens after ten failures in thirty seconds
+      user_failure: The order is saved as unpaid and the customer is asked to retry
+      test_double: services/orders/test/payments.double.js
 edges:
   - {from: shop-orders, rel: builds-with, to: shop-shared-lib, origin: derived, evidence: services/orders/package.json}
   - {from: shop-billing, rel: builds-with, to: shop-shared-lib, origin: derived, evidence: services/billing/package.json}
   - {from: shop-orders, rel: writes, to: shop-db, origin: derived, evidence: services/orders/src/index.js}
   - {from: shop-billing, rel: writes, to: shop-db, origin: derived, evidence: services/billing/src/index.js}
-  - {from: shop-orders, rel: calls, to: contract-payments-openapi, origin: derived, evidence: services/orders/src/index.js}
+  - {from: shop-orders, rel: calls, to: contract-payments-openapi, origin: derived, evidence: services/orders/src/index.js,
+     contract_test: services/orders/test/payments.contract.test.js}
+  - {from: shop-orders, rel: calls, to: payments-provider, origin: assumed}
 index:
   - {paths: ["services/orders/*"], node: shop-orders}
   - {paths: ["services/billing/*"], node: shop-billing}

@@ -170,6 +170,15 @@ DEFAULT_EXCLUDE = [".specify/*", ".claude/*", ".github/skills/*", ".github/agent
 
 
 def find_suppressions(ctx: Context) -> list[dict]:
+    """Every suppression in the tree, plus findings from sibling extensions. Computed once per context."""
+    cached = getattr(ctx, "_suppressions", None)
+    if cached is None:
+        cached = _find_suppressions(ctx)
+        ctx._suppressions = cached
+    return cached
+
+
+def _find_suppressions(ctx: Context) -> list[dict]:
     rules = dict(DEFAULT_SUPPRESSIONS)
     exclude = list(ctx.kit().get("suppression_exclude") or DEFAULT_EXCLUDE)
     for rid, spec in (ctx.kit().get("suppressions") or {}).items():
@@ -196,4 +205,7 @@ def find_suppressions(ctx: Context) -> list[dict]:
             for rid, rx in todo:
                 if rx.search(line):
                     found.append({"rule": rid, "path": rel, "line": n, "text": line.strip()[:160]})
+    from .core import FINDER_HOOKS
+    for hook in FINDER_HOOKS:
+        found += [f for f in hook(ctx) if not any(fnmatch.fnmatch(f["path"], g) for g in exclude)]
     return found

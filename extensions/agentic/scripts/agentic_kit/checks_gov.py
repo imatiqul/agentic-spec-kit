@@ -489,46 +489,56 @@ def _waiver_files(ctx: Context) -> list[tuple[str, dict]]:
     return out
 
 
-@check("CK-WAIVER", ("GOV-15", "GOV-16", "GOV-21", "QLT-12"), "every suppression is waived or in the adoption baseline, and nothing has expired")
-def ck_waiver(ctx: Context, res: Result) -> None:
+def active_waivers(ctx: Context, res: Result | None = None) -> tuple[list, dict]:
+    """Unexpired waivers and baseline groups. With `res`, every problem in a waiver file is reported."""
+    fail = res.fail if res is not None else (lambda *a, **k: None)
     now = today(ctx)
     defined = set((ctx.roles().get("roles") or {}).keys())
     waivers, groups = [], {}
     for rel, body in _waiver_files(ctx):
         if rel.endswith("/baseline.yml"):
             if body.get("schema") != "agentic-baseline/1":
-                res.fail("schema must be agentic-baseline/1", rel)
+                fail("schema must be agentic-baseline/1", rel)
             if not body.get("approved_by"):
-                res.fail("the baseline has no approval", rel)
+                fail("the baseline has no approval", rel)
             for g in body.get("groups") or []:
                 rule = g.get("rule")
                 for key in ("rule", "count", "owner", "reason", "expires"):
                     if g.get(key) in (None, ""):
-                        res.fail(f"baseline group {rule or '?'} has no {key}", rel)
+                        fail(f"baseline group {rule or '?'} has no {key}", rel)
                 exp = as_date(g.get("expires"))
                 if exp is None or exp < now:
-                    res.fail(f"baseline group {rule} expired on {g.get('expires')}", rel)
+                    fail(f"baseline group {rule} expired on {g.get('expires')}", rel)
                 elif isinstance(g.get("count"), int):
                     groups[rule] = (int(g["count"]), rel)
             continue
         if body.get("schema") != "agentic-waiver/1":
-            res.fail("schema must be agentic-waiver/1", rel)
+            fail("schema must be agentic-waiver/1", rel)
         for key in ("id", "rule", "reason", "owner", "compensating_control", "expires"):
             if not body.get(key):
-                res.fail(f"waiver has no {key}", rel)
+                fail(f"waiver has no {key}", rel)
         if not (body.get("scope") or {}).get("paths"):
-            res.fail("waiver has no scope.paths", rel)
+            fail("waiver has no scope.paths", rel)
         if body.get("owner") and body["owner"] not in defined:
-            res.fail(f"owner {body['owner']} is not a defined role", rel)
+            fail(f"owner {body['owner']} is not a defined role", rel)
         if body.get("critical") and not body.get("approved_by"):
-            res.fail("a critical waiver needs approved_by from Security & Compliance", rel)
+            fail("a critical waiver needs approved_by from Security & Compliance", rel)
         exp = as_date(body.get("expires"))
         if exp is None:
-            res.fail("expires is not a date", rel)
+            fail("expires is not a date", rel)
         elif exp < now:
-            res.fail(f"waiver {body.get('id')} expired on {exp.isoformat()}", rel)
+            fail(f"waiver {body.get('id')} expired on {exp.isoformat()}", rel)
         else:
             waivers.append((rel, body))
+    return waivers, groups
+
+
+def report_unwaived(ctx: Context, res: Result, owner: str, waivers: list, groups: dict, what: str = "suppression(s)") -> set[str]:
+    """Fail for every finding of a rule that `owner` reports and that no waiver or baseline group covers.
+
+    Returns the waiver files that matched something. Sibling extensions call this for their own rules.
+    """
+    from .core import RULE_OWNERS
     used: set[str] = set()
     unwaived: dict[str, list[dict]] = {}
     for s in adapters.find_suppressions(ctx):
@@ -543,23 +553,30 @@ def ck_waiver(ctx: Context, res: Result) -> None:
             used.add(hit)
         else:
             unwaived.setdefault(s["rule"], []).append(s)
-    from .core import RULE_OWNERS
-    mine = ctx.options.get("rule_owner", "CK-WAIVER")
     for rule in sorted(set(unwaived) | set(groups)):
-        if RULE_OWNERS.get(rule, "CK-WAIVER") != mine:
+        if RULE_OWNERS.get(rule, "CK-WAIVER") != owner:
             continue
         items = unwaived.get(rule, [])
         allowed, rel = groups.get(rule, (0, ""))
         if len(items) > allowed:
             extra = len(items) - allowed
             where = f" (the baseline allows {allowed})" if allowed else ""
-            res.fail(f"{extra} {rule} suppression(s) have no waiver{where}")
+            res.fail(f"{extra} {rule} {what} have no waiver{where}")
             for s in items[:5]:
-                res.fail(f"{rule}: {s['text']}", f"{s['path']}:{s['line']}")
+                res.fail(f"{rule}: {s['text']}", f"{s['path']}:{s['line']}" if s.get("line") else s["path"])
         elif len(items) < allowed:
             res.notes.append(f"baseline group {rule} can be lowered from {allowed} to {len(items)}")
-    for rel, _ in waivers:
-        if rel not in used:
+    return used
+
+
+@check("CK-WAIVER", ("GOV-15", "GOV-16", "GOV-21", "QLT-12"), "every suppression is waived or in the adoption baseline, and nothing has expired")
+def ck_waiver(ctx: Context, res: Result) -> None:
+    waivers, groups = active_waivers(ctx, res)
+    used = report_unwaived(ctx, res, ctx.options.get("rule_owner", "CK-WAIVER"), waivers, groups)
+    # A waiver for a rule another check reports is used there, not here.
+    from .core import RULE_OWNERS
+    for rel, w in waivers:
+        if rel not in used and RULE_OWNERS.get(w.get("rule"), "CK-WAIVER") == "CK-WAIVER":
             res.notes.append(f"waiver matches no suppression and can be removed: {rel}")
 
 

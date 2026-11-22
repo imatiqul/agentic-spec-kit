@@ -82,3 +82,26 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 5. On the default branch only: drift checks.
 
 A check that cannot run reports `not-run` with the reason. At Standard and above `not-run` fails the job; at Lite it warns.
+
+## Carried by the adoption baseline (added in Phase 3b, part 2)
+
+Some change-pack rules hold for the whole codebase, and an existing codebase will not meet them on day one.
+Their unmet items are reported under a rule id, so a waiver or the adoption baseline (GOV-21) can carry them
+and the count can only fall. The owning check fails for anything beyond the baseline.
+
+| Rule | Reported by | Meaning |
+|---|---|---|
+| `pin-action`, `pin-image`, `pin-package` | CK-PIN | An action not pinned to a commit; an image with no tag or a floating tag; a package requested as `*` or `latest`, or a manifest with no lockfile |
+| `pin-digest` | CK-PIN | Regulated only: an image with a tag but no digest |
+| `store-engine-unknown` | CK-MIGRATION-ENGINE | The map does not state a store's engine and version |
+| `migration-foreign-engine` | CK-MIGRATION-ENGINE | A migration carries another engine's types or annotations |
+| `migration-warning-suppress` | CK-MIGRATION-DRIFT | The ORM's pending-model-changes warning is ignored in code |
+| `unversioned-contract` | CK-CONTRACT-VERSION | A contract with no version |
+| `contract-untested` | CK-CONTRACT-CONSUMER | A consumer in the map with no contract test |
+| `contract-drift-undeclared` | CK-CONTRACT-DRIFT | A contract that does not say how drift from the code is detected |
+| `unversioned-shared` | CK-SHARED-SEMVER | A shared component with no semantic version |
+| `external-dep-incomplete` | CK-EXTERNAL-DEP | An external dependency record with fields missing |
+
+Not carried, always a failure: a changed contract with the same version, an undeclared breaking change, a
+missing or stale run record, a classification lower than the migration, a missing agreement status for
+protected data, a denied licence, and a rollout order the map contradicts.

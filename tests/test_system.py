@@ -35,7 +35,7 @@ def run(root, cid, **options):
 def test_all_fixtures_behave_with_the_system_extension_loaded():
     good, rows = selftest.run_selftest()
     assert good, [r for r in rows if r["expected"] != r["actual"]]
-    assert len(rows) == len(core.REGISTRY) == 29
+    assert len(rows) == len(core.REGISTRY) == 46
 
 
 def test_discovery_finds_the_fixture_and_cites_files():
