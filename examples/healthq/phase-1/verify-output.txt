@@ -1,0 +1,73 @@
+commit: 6e0879d27bb59017f34544aa60e3033cce75e31d (2026-08-03)
+--- C1
+services calling AddHealthcareAuth                         10
+demo handler fallback (file:line)                          31
+--- C2
+minimal API endpoints                                      243
+controller actions                                         20
+RequireAuthorization calls (excluding comments)            12
+[Authorize] attributes                                     0
+endpoints in the 3 authorized groups                       10
+--- C3
+X-Tenant-Id header reads                                   4
+X-User-Id header reads                                     1
+break-glass group RequireAuthorization                     0
+--- C4
+src/HealthQCopilot.Agents/Program.cs                       audit line 391, authentication line 393
+src/HealthQCopilot.Fhir/Program.cs                         audit line 84, authentication line 86
+src/HealthQCopilot.Identity/Program.cs                     audit line 64, authentication line 65
+src/HealthQCopilot.Notifications/Program.cs                audit line 56, authentication line 57
+src/HealthQCopilot.Ocr/Program.cs                          audit line 47, authentication line 48
+src/HealthQCopilot.PopulationHealth/Program.cs             audit line 73, authentication line 74
+src/HealthQCopilot.RevenueCycle/Program.cs                 audit line 63, authentication line 64
+src/HealthQCopilot.Scheduling/Program.cs                   audit line 56, authentication line 57
+src/HealthQCopilot.Voice/Program.cs                        audit line 57, authentication line 58
+services with their own audit table registration           9
+migrations mentioning phi_audit_logs                       0
+RLS statements outside comments                            0
+--- C5
+classifier input is transcript + RAG (line)                150
+keyword rules in TriagePlugin                              3
+--- C6
+classifier references in eval code                         0
+golden set cases (tests project)                           5
+workflows that run Tests.Eval                              0
+--- H1
+PhiEncryptedString uses outside its own file               0
+PhiRedaction feature-flag checks                           4
+patient id written to localStorage (line)                  81
+--- H2
+auth or limit calls in BFF                                 0
+--- H3
+route guard or role-check symbols in frontend apps         0
+--- H4
+endpoints in DemoDataEndpoints.cs                          22
+environment check before MapDemoDataEndpoints              0
+--- H5
+migration files                                            53
+migration files with SQLite column types                   24
+PendingModelChangesWarning ignored (line)                  52
+--- H6
+continue-on-error: true                                    27
+|| true                                                    13
+uses: lines / pinned to a full SHA                         200 / 0
+:latest references                                         16
+--- M1
+catch (Exception ...)                                      128
+bare catch                                                 12
+discarded tasks (_ = ...)                                  36
+GetAwaiter().GetResult() / .Wait()                         7
+--- M2
+C# files over 800 lines (non-migration)                    1
+TSX files over 600 lines (non-test)                        4
+--- M3
+test.skip( calls                                           191
+of which conditional on a live response                    31
+--- M4
+tracked .map files                                         47
+tracked playwright report                                  1
+README licence line                                        Proprietary - all rights reserved.
+LICENSE first line                                         MIT License
+--- M5
+NuGetAuditSuppress entries                                 5
+marked critical                                            1
