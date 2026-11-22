@@ -2,7 +2,7 @@
 
 > **Status: pre-alpha, public.** All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture.
 > Nothing has been run against a live GitHub repository, a real coding agent, or a live tracker or chat service yet. The
-> reference example has an approved constitution (Phase 4); its specs (Phase 5) are being drafted. Do not rely on any of this for real work.
+> reference example has an approved constitution (Phase 4) and its first eight specs, approved at gates G1 and G2 (Phase 5), in conversation and not yet by a pull-request review. Do not rely on any of this for real work.
 > `docs/limits.md` lists what the kit does not do.
 >
 > The owner decided on 2026-11-22 to keep this repository public. Charter decision D2 says so, as updated on his approval.
@@ -41,7 +41,7 @@ who must approve.
 | `docs/guide/roles.md` | What each role approves, what they look at, and where. |
 | `docs/limits.md` | What the kit does not enforce, cannot see, and has never been run against. Read this before relying on anything. |
 | `docs/release-notes.md` | What each slice contains. Nothing has been released. |
-| `examples/healthq/` | Reference example: draft system map, the script that reproduces the Phase 1 findings, and the Phase 4 draft constitution with its map. No source code from the reference repo is copied here. |
+| `examples/healthq/` | Reference example: the Phase 1 findings script and draft map, the approved constitution (`phase-4/`), and `project/`: the reference as a project the kit checks, with its system map and specs. `overlay.py` lays it over a clone of the healthcare repo, and `export.py` writes it as it goes into that repo. No source code from that repo is copied here. |
 | `NOTICE.md` | Upstream and community attribution. |
 
 ## Progress
@@ -57,7 +57,7 @@ who must approve.
 | 3d | Build slices 0.5 and 0.6, and part of 0.4 | Built, 2026-11-22. Its decisions 1 to 20 approved by the owner, 2026-11-22 ("Needs you: approve"). See `docs/phase-reports/phase-3d-truth-connect-depth.md` |
 | 3e | Build the rest of slice 0.4; role guide, limits, release notes | Built, 2026-11-22. Its decisions 21 to 35 approved by the owner, 2026-11-22 ("Needs you: approve"). See `docs/phase-reports/phase-3e-slice-0.4.md` |
 | 4 | Reference constitution | Approved by the owner at gate G0, 2026-11-22 ("Needs you: approve"), as drafted. `examples/healthq/phase-4/`; `docs/phase-reports/phase-4-constitution.md` |
-| 5 | Reference specs, in four batches by tier | In progress: the Critical batch is being drafted and will stop at gates G1 and G2 |
+| 5 | Reference specs, in four batches by tier | Batch 1 (Critical: C1 to C6, N1, N2) approved by the owner at G1 and G2, 2026-11-22 ("G1: yes", "G2: approve"), with four clinical conditions for G3. The reference is also on branch `sdd/reference-governance` of the healthcare repo, not yet pushed. See `docs/phase-reports/phase-5-batch-1-critical.md`. Three batches to go |
 | 6–7 | Plans and tasks, C4 walkthrough | Not started. Each ends at a human gate |
 | 8–10 | The halves that need the reference: acceptance of the reference example, slice 0.4 applied to the showcase findings, a sample evidence pack for the C4 change | Not started; they need Phases 5 to 7 |
 

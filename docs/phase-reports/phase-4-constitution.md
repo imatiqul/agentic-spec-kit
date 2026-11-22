@@ -3,7 +3,7 @@
 - **Phase and date:** Phase 4, 2026-11-22
 - **Requirement IDs covered:** GOV-11
 - **Assumptions:** the 12 topics in `docs/prompts/reference/20-healthq.md` are the minimum; the 27 findings of Phase 1 stand as that report states them; Regulated profile with the HIPAA pack
-- **Unverified:** nothing was applied to the healthcare repository, which was not touched. 17 checks the draft names do not exist yet. The numbers marked *proposed* are guesses for the owner to set
+- **Unverified:** nothing was applied to the healthcare repository, which was not touched. 17 checks the constitution names do not exist yet. The two numbers an agent proposed (80 percent, 600 lines) were accepted by the owner with the rest; see section 6
 
 ## 1. What this is
 

@@ -35,6 +35,10 @@ Each slice must be usable on its own. Each requirement in `spec/` carries its sl
 - D1 Repos: toolkit in a new repo `imatiqul/agentic-spec-kit`. The reference example
   lives in `examples/healthq/` inside it and points at the healthcare repo by commit
   SHA; it does not copy source code.
+  Amended 2026-11-22: the reference's constitution, system map and specs also go on
+  a feature branch of the healthcare repo, for review in a draft pull request.
+  `examples/healthq/project/` here stays as the copy the kit's tests check. Still no
+  source code is copied.
 - D2 Disclosure: the toolkit repo is public. On 2026-11-22 I accepted publishing findings C1–C6 before they are fixed in the healthcare repo.
 - D3 People: I am the only human and hold every role. Record approvals under my
   GitHub identity with the role I am acting in. Where separation of duties would
@@ -77,6 +81,8 @@ Each slice must be usable on its own. Each requirement in `spec/` carries its sl
 | 2026-11-22 | 3d, 3e | Approved the 35 decisions the agent made without me while building slices 0.4 to 0.6, listed in the Phase 3d and 3e reports. They include: two new slices, 0.5 Truth and 0.6 Connected; building them before the rest of 0.4, which is not the order in D9; and tracker adapters built without reading the source of the community extensions that overlap them, which D7 asks for | Owner approval in chat ("Needs you: approve"); charter updated by the agent on that approval |
 | 2026-11-22 | 4 | Approved the reference constitution for HealthQ Copilot at gate G0, as drafted: 25 principles, 80 percent changed-line coverage, a 600-line file limit | Owner approval in chat ("Needs you: approve") |
 | 2026-11-22 | 5 | When I approve a change, the agent may also carry it out: edit this charter, commit and push, and touch the healthcare repo. Amends D4, and W4 and W7 of the working rules | Owner instruction in chat ("For followings so that you can go ahead and edit as well when I approve - editing the charter (your rule W7 says I propose, you edit), committing or pushing, or touching the healthcare repo.") |
+| 2026-11-22 | 5 | Approved the first batch of reference specs (C1 to C6, N1, N2) at gates G1 and G2. At G2, fourteen assumptions were accepted and four clinical ones were left as conditions for a clinician to settle at G3. The two pairs of specs the kit listed as similar were recorded as distinct | Owner approval in chat ("G1: yes", "G2: approve") |
+| 2026-11-22 | 5 | Move the reference into the healthcare repo: its constitution, system map and specs go on a feature branch there, for review in a draft pull request. Amends D1 | Owner approval in chat ("Move the reference into the healthcare repo? yes") |
 
 ## Glossary
 - **Gate**: a point where work stops until a human records a decision.

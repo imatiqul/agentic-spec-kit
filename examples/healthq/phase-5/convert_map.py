@@ -1,0 +1,146 @@
+"""Convert the Phase 1 draft map of HealthQ Copilot into the kit's system-map format (agentic-map/1).
+
+    python convert_map.py <draft.yml> <healthcare repository> <out map.yml>
+
+The healthcare repository is only read. Rules, all of them mechanical:
+- owner titles become role ids; tiers become lower case;
+- classification becomes one of the HIPAA pack's three values. A node the draft could not classify ("unknown")
+  becomes `restricted` until a person says otherwise, so that Security and Compliance is asked whenever it is touched;
+- a derived fact must cite a file that exists. Where the draft cited a description, the file is looked up in the
+  repository; where none is found the fact is downgraded to `assumed`, which is what it is;
+- the path index is built from the files and folders each node cites.
+"""
+import re
+import subprocess
+import sys
+from collections import Counter
+from pathlib import Path
+
+import yaml
+
+OWNERS = {"Backend": "backend", "Solutions Architect": "solutions-architect", "Platform": "platform", "Data Owner": "data-owner",
+          "AI Engineer": "ai-engineer", "Frontend": "frontend", "Security & Compliance": "security-compliance", "DevOps/SRE": "devops-sre"}
+INTERNAL = {"identity", "secrets", "clinical reference text"}
+NONE = {"none", "synthetic"}
+PACKAGES = {"azure-openai": "Microsoft.SemanticKernel.Connectors.OpenAI", "azure-speech": "Microsoft.CognitiveServices.Speech",
+            "azure-document-intelligence": "Azure.AI.DocumentIntelligence", "azure-communication": "Azure.Communication"}
+SHARED_FILES = {"src/HealthQCopilot.AppHost/Program.cs"}
+
+
+def main(draft: Path, repo: Path, out: Path) -> None:
+    src = yaml.safe_load(draft.read_text(encoding="utf-8"))
+    tracked = subprocess.run(["git", "-C", str(repo), "ls-files"], capture_output=True, text=True, check=True).stdout.splitlines()
+    tracked_set = set(tracked)
+    commit = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+
+    def exists(path: str) -> bool:
+        path = path.rstrip("/")
+        return path in tracked_set or any(t.startswith(path + "/") for t in tracked)
+
+    def paths_in(evidence) -> list[str]:
+        found = []
+        for part in str(evidence or "").split(";"):
+            token = re.sub(r":[0-9,\- ]+$", "", part.strip().split(" ")[0])
+            if token and exists(token):
+                found.append(token.rstrip("/"))
+        return found
+
+    def grep(pattern: str, under: str = "src") -> str | None:
+        """First tracked file under a folder whose text matches, in path order, so the result is repeatable."""
+        rx = re.compile(pattern)
+        for rel in sorted(t for t in tracked if t.startswith(under.rstrip("/") + "/") and t.endswith((".cs", ".csproj", ".ts", ".tsx", ".yaml", ".yml", ".json"))):
+            try:
+                if rx.search((repo / rel).read_text(encoding="utf-8", errors="replace")):
+                    return rel
+            except OSError:
+                continue
+        return None
+
+    stats = Counter()
+    folders: dict[str, str] = {}
+    nodes, index = [], []
+    for n in src["nodes"]:
+        nid, origin = n["id"], n["origin"]
+        cited = paths_in(n.get("evidence"))
+        note = None
+        if origin == "derived" and not cited:
+            found = None
+            if nid in PACKAGES:
+                found = grep(re.escape(PACKAGES[nid]))
+            elif nid.startswith("topic-"):
+                found = grep(r'"' + re.escape(nid[len("topic-"):]) + r'"')
+            if found:
+                cited, note = [found], f"Phase 1 cited: {n.get('evidence')}"
+                stats["node evidence looked up"] += 1
+            else:
+                origin, note = "assumed", f"Phase 1 cited no file that could be found: {n.get('evidence')}"
+                stats["node downgraded to assumed"] += 1
+        cls = str(n.get("classification", "")).strip()
+        if cls in NONE:
+            new_cls = "none"
+        elif cls in INTERNAL:
+            new_cls = "internal"
+        elif cls == "unknown":
+            new_cls, note = "restricted", ((note + ". ") if note else "") + "Not classified in Phase 1; treated as restricted until a person classifies it"
+            stats["unknown classification treated as restricted"] += 1
+        else:
+            new_cls = "restricted"
+        node = {"id": nid, "type": n["type"], "owner": OWNERS[n["owner"]], "tier": str(n["tier"]).lower(), "classification": new_cls, "origin": origin}
+        if cls not in ("none", "unknown", new_cls):
+            node["holds"] = cls
+        if cited:
+            node["evidence"] = "; ".join(cited)
+        if note:
+            node["note"] = note
+        nodes.append(node)
+        globs = []
+        for p in cited:
+            if p in SHARED_FILES or not n["type"] in ("service", "frontend", "shared-library", "shared-package", "ai-component", "api-contract", "schema-object",
+                                                       "data-store", "event-bus", "event-stream", "external-service"):
+                continue
+            if nid in PACKAGES or nid.startswith("topic-"):
+                continue  # a file that mentions a package or a topic is not the node's own file
+            is_dir = p not in tracked_set
+            if is_dir:
+                globs.append(p + "/**")
+            elif p.rsplit("/", 1)[-1] in ("Program.cs", "package.json") or p.endswith(".csproj"):
+                globs.append(p.rsplit("/", 1)[0] + "/**")
+            else:
+                globs.append(p)
+        if globs:
+            index.append({"paths": sorted(set(globs)), "node": nid})
+            folder = next((g[:-3] for g in globs if g.endswith("/**")), None)
+            if folder:
+                folders[nid] = folder
+
+    edges = []
+    for e in src["edges"]:
+        edge = {"from": e["from"], "rel": e["rel"], "to": e["to"], "origin": e["origin"]}
+        cited = paths_in(e.get("evidence"))
+        if e["origin"] == "derived" and not cited and e["rel"] in ("publishes", "subscribes") and e["from"] in folders:
+            found = grep(r'"' + re.escape(e["to"][len("topic-"):]) + r'"', folders[e["from"]]) if e["to"].startswith("topic-") else None
+            if found:
+                cited = [found]
+                stats["edge evidence looked up"] += 1
+        if e["origin"] == "derived" and not cited:
+            edge["origin"] = "assumed"
+            edge["note"] = "Phase 1 cited no file for this"
+            stats["edge downgraded to assumed"] += 1
+        if cited:
+            edge["evidence"] = "; ".join(cited)
+        edges.append(edge)
+
+    doc = {"schema": "agentic-map/1", "nodes": nodes, "edges": edges, "index": index}
+    header = (f"# System map of HealthQ Copilot, in agentic-spec-kit's format.\n"
+              f"# Converted by examples/healthq/phase-5/convert_map.py from the Phase 1 draft, against the repository at commit {commit}.\n"
+              "# Owners, tiers and classifications are an agent's proposals from Phase 1. A person confirms them when a plan is reviewed (G3).\n"
+              "# `holds` keeps what Phase 1 wrote where the HIPAA pack's three classes are coarser. Not mapped: " + "; ".join(src.get("not_mapped") or []) + "\n")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(header + yaml.safe_dump(doc, sort_keys=False, width=160), encoding="utf-8", newline="\n")
+    print(f"{len(nodes)} nodes ({sum(n['origin'] == 'assumed' for n in nodes)} assumed), {len(edges)} edges ({sum(e['origin'] == 'assumed' for e in edges)} assumed), {len(index)} index entries")
+    for k, v in sorted(stats.items()):
+        print(f"  {k}: {v}")
+
+
+if __name__ == "__main__":
+    main(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))
