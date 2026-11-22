@@ -1,0 +1,29 @@
+schema_version: "1.0"
+
+preset:
+  id: "agentic-regulated"
+  name: "Agentic Spec Kit — Regulated profile"
+  version: "0.1.0"
+  description: "Regulated profile: Standard plus domain-pack sections, independent verification and the auditor pack."
+  author: "Atiqul Islam"
+  repository: "https://github.com/imatiqul/agentic-spec-kit"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=1.4.3"
+
+provides:
+  templates:
+    - type: "template"
+      name: "spec-template"
+      file: "templates/spec-template.md"
+      description: "Wraps the core spec template with the front matter and sections the kit's checks read"
+      strategy: "wrap"
+    - type: "template"
+      name: "tasks-template"
+      file: "templates/tasks-template.md"
+      description: "Adds the Carries rule that links tasks to acceptance criteria"
+      strategy: "append"
+tags:
+  - "governance"
+  - "profile"

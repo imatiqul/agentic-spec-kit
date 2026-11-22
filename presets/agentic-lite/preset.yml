@@ -1,0 +1,24 @@
+schema_version: "1.0"
+
+preset:
+  id: "agentic-lite"
+  name: "Agentic Spec Kit — Lite profile"
+  version: "0.1.0"
+  description: "Lite profile: gates G1, G3 and G5 with one approver; traceability to requirement level."
+  author: "Atiqul Islam"
+  repository: "https://github.com/imatiqul/agentic-spec-kit"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=1.4.3"
+
+provides:
+  templates:
+    - type: "template"
+      name: "spec-template"
+      file: "templates/spec-template.md"
+      description: "Wraps the core spec template with the front matter and sections the kit's checks read"
+      strategy: "wrap"
+tags:
+  - "governance"
+  - "profile"

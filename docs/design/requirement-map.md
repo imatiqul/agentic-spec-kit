@@ -6,7 +6,7 @@ Enforcement levels: **Enforced** by a deterministic check; **Enforced with repos
 
 | Slice | Enforced | With settings | Procedural | Designed later | Total |
 |---|---|---|---|---|---|
-| 0.1 | 22 | 3 | 7 | 0 | 32 |
+| 0.1 | 24 | 3 | 7 | 0 | 34 |
 | 0.2 | 34 | 3 | 2 | 0 | 39 |
 | 0.3 | 15 | 1 | 2 | 0 | 18 |
 | 0.4 | 0 | 0 | 0 | 40 | 40 |
@@ -34,6 +34,7 @@ Enforcement levels: **Enforced** by a deterministic check; **Enforced with repos
 | GOV-18 | 0.4 | cli.lanes | CK-EMERGENCY-DEADLINE | Designed in Phase 9 |  |
 | GOV-19 | 0.4 | cli.gates | CK-AMENDMENT | Designed in Phase 9 |  |
 | GOV-20 | 0.4 | cli.brief | - | Designed in Phase 9 |  |
+| GOV-21 | 0.1 | cli.waivers (baseline) | CK-WAIVER | Enforced | approved at a gate through the enforcement channel |
 | TRC-1 | 0.1 | cli.trace, templates | CK-TRACE | Enforced |  |
 | TRC-2 | 0.2 | cli.trace, cli.map | CK-TRACE | Enforced |  |
 | TRC-3 | 0.1 | cli.trace | CK-TRACE | Enforced |  |
@@ -51,6 +52,7 @@ Enforcement levels: **Enforced** by a deterministic check; **Enforced with repos
 | TRC-15 | 0.4 | cli.report | - | Designed in Phase 9 |  |
 | TRC-16 | 0.4 | cli.report, adapter.hipaa | - | Designed in Phase 9 |  |
 | TRC-17 | 0.1 | tests/fixtures, CI | CK-SELFTEST | Enforced |  |
+| TRC-18 | 0.1 | cli.evidence, cli.gates | CK-GATE-RECORD, CK-GATE-MIRROR | Enforced |  |
 | QLT-1 | 0.1 | workflow agentic-sdd, cli.verify | CK-VERIFY-INPUTS | Procedural | checks the verifier's declared input manifest; cannot prove what a model saw |
 | QLT-2 | 0.1 | docs | - | Procedural | stated limit |
 | QLT-3 | 0.4 | pack security | - | Designed in Phase 9 |  |

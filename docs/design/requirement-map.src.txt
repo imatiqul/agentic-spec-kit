@@ -17,6 +17,7 @@ GOV-13 | presets lite, standard, regulated; config profile | CK-PROFILE | E |
 GOV-14 | preset lite, docs/lite | CK-PROFILE | P | "under an hour" is measured in acceptance, not by a check
 GOV-15 | cli.waivers, adapter.suppressions | CK-WAIVER | E | detects known suppression patterns only
 GOV-16 | cli.waivers, cli.gates | CK-WAIVER, CK-APPROVER | S |
+GOV-21 | cli.waivers (baseline) | CK-WAIVER | E | approved at a gate through the enforcement channel
 GOV-17 | cli.lanes | CK-LANE | D |
 GOV-18 | cli.lanes | CK-EMERGENCY-DEADLINE | D |
 GOV-19 | cli.gates | CK-AMENDMENT | D |
@@ -25,6 +26,7 @@ TRC-1 | cli.trace, templates | CK-TRACE | E |
 TRC-2 | cli.trace, cli.map | CK-TRACE | E |
 TRC-3 | cli.trace | CK-TRACE | E |
 TRC-4 | cli.trace | CK-TRACE-GENERATED | E |
+TRC-18 | cli.evidence, cli.gates | CK-GATE-RECORD, CK-GATE-MIRROR | E |
 TRC-5 | cli.audit | CK-AUDIT-CHAIN | E | detects edits; cannot prevent wholesale rewrite by someone with push rights, so chain heads are copied into gate decisions
 TRC-6 | cli.audit, cli.orchestrate | CK-AUDIT-CHAIN | E |
 TRC-7 | docs, cli.audit | - | P | documented limit

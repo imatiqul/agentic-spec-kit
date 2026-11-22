@@ -1,0 +1,31 @@
+schema_version: "1.0"
+
+bundle:
+  id: "agentic-lite"
+  name: "Agentic Spec Kit — Lite"
+  version: "0.1.0"
+  role: "developer"
+  description: "Installs the agentic extension, the lite profile preset, the gate step and the lifecycle workflow."
+  author: "Atiqul Islam"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=1.4.3"
+  tools: []
+  mcp: []
+
+provides:
+  extensions:
+    - id: "agentic"
+      version: "0.1.0"
+  presets:
+    - id: "agentic-lite"
+      version: "0.1.0"
+  steps:
+    - id: "agentic-gate"
+      version: "0.1.0"
+  workflows:
+    - id: "agentic-sdd"
+      version: "0.1.0"
+
+tags: ["governance", "human-in-the-loop", "lite"]

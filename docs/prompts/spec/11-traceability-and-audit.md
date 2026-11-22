@@ -7,6 +7,8 @@
 - TRC-3 [0.1] A check fails when any link is missing or orphaned in either
   direction.
 - TRC-4 [0.1] A traceability matrix is generated, never hand-written.
+- TRC-18 [0.1] A gate decision names the hash of its evidence bundle, so an approval
+  is bound to exactly what was reviewed.
 
 ## Audit log
 - TRC-5 [0.1] Append-only record of kit command runs and gate decisions: who, role,

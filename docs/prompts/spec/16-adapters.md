@@ -23,7 +23,8 @@ convention-only, and its own passing and failing fixtures (TRC-17).
 
 ## Data engines (binds CHG-1 to CHG-5)
 - ADP-5 [0.2] PostgreSQL.
-- ADP-6 [0.2] One non-relational store actually used by the reference system.
+- ADP-6 [0.2] Qdrant, the vector store the reference system uses, as the first
+  non-relational engine.
 - ADP-7 [0.2] A written guide for adding an engine adapter.
 
 ## Contract formats (binds CHG-6 to CHG-9)

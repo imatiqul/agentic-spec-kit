@@ -2,7 +2,7 @@
 
 - **Phase and date:** Phase 2 (design), 2026-11-21
 - **Pinned upstream:** github/spec-kit `v1.4.3` (commit `980b3d0`, 2026-11-19)
-- **Requirement IDs covered:** all 130; see `requirement-map.md`
+- **Requirement IDs covered:** all 132; see `requirement-map.md`
 - **Assumptions:** listed in section 10
 - **Unverified:** nothing here has been built or run. Upstream APIs were read at the pinned tag; community designs were read, not executed.
 
@@ -192,7 +192,7 @@ Namespaced `speckit.agentic.*`. Each wraps a CLI call so the same logic runs wit
 | AGT-10 | Path limits are native only where the runtime has pre-tool events | Post-run diff check everywhere |
 | AGT-11 | Cannot prove no other credential exists on a machine | Checks the token in use; documents the residual risk |
 
-## 11. Proposed spec changes (need your approval; I have not edited `spec/`)
+## 11. Spec changes (approved by the owner on 2026-11-21 and applied to `spec/`)
 1. **GOV-21 [0.1] Adoption baseline.** When the kit is first applied to an existing codebase, existing suppressions may be recorded as one baseline, grouped by rule, each group with an owner, reason and expiry, approved once at a gate. New suppressions need individual waivers. The count in each group may only go down. Reason: the reference repo has about 236 existing suppressions (Phase 1).
 2. **TRC-18 [0.1] Evidence hash.** A gate decision names the hash of its evidence bundle. Reason: without it an approval is not bound to what was reviewed. This is already implied by GOV-5 "tied to a commit" but is stronger and is the core of the trust model.
 3. **ADP-6 wording.** Name Qdrant as the non-relational store, since the reference system uses it for retrieval and it exercises the re-embedding rule in CHG-5.

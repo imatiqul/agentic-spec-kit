@@ -1,7 +1,7 @@
 # agentic-spec-kit
 
-> **Status: pre-alpha, private.** Phases 0 and 1 are complete; no toolkit code exists
-> yet. This repository must stay private until the reference findings are fixed or
+> **Status: pre-alpha, private.** Slice 0.1 is built and awaiting approval. It has
+> not been run against a live GitHub repository. This repository must stay private until the reference findings are fixed or
 > the owner decides otherwise (charter D2).
 
 An Agentic Specification-Driven Development toolkit that builds on
@@ -21,7 +21,13 @@ who must approve.
 | `docs/prompts/spec/` | Requirements by concept, each with an ID and a release slice. |
 | `docs/prompts/30-phases.md` | Order of work and stop points. |
 | `docs/phase-reports/` | Evidence from each completed phase. |
-| `docs/design/` | Phase 2 design (draft, awaiting approval): architecture, schemas, check catalogue, agent team, source review, requirement map. |
+| `docs/design/` | Phase 2 design: architecture, schemas, check catalogue, agent team, source review, requirement map. |
+| `extensions/agentic/` | Slice 0.1: the check CLI, commands, templates and the CI workflow. |
+| `extensions/agentic-hipaa/` | HIPAA domain pack (an engineering aid, not legal advice). |
+| `presets/`, `steps/`, `workflows/`, `bundles/` | Profile presets, the `agentic-gate` step, the lifecycle workflow, bundle manifests. |
+| `scripts/` | Install scripts for bash and PowerShell. |
+| `tests/` | Unit tests. Self-tests live in the CLI: `agentic.py selftest`. |
+| `docs/install.md`, `docs/admin-setup.md` | How to install, and what an administrator must configure. |
 | `examples/healthq/` | Reference example: draft system map and the script that reproduces the Phase 1 findings. No source code from the reference repo is copied here. |
 | `NOTICE.md` | Upstream and community attribution. |
 
@@ -30,11 +36,20 @@ who must approve.
 | Phase | Output | State |
 |---|---|---|
 | 0 | Upstream and community audit | Approved 2026-11-21 |
-| 1 | Findings verification and system map | Awaiting approval |
-| 2 | Design of all four slices | Not started |
-| 3a–3c | Build slices 0.1, 0.2, 0.3 | Not started |
+| 1 | Findings verification and system map | Complete; proceeded on the owner's go-ahead, 2026-11-21 |
+| 2 | Design of all four slices | Approved by the owner, 2026-11-21 |
+| 3a | Build slice 0.1 | Built; awaiting approval |
+| 3b–3c | Build slices 0.2, 0.3 | Not started |
 | 4–7 | Reference constitution, specs, plans, C4 walkthrough | Not started |
 | 8–10 | Guide, slice 0.4, final verification | Not started |
+
+## Try it
+```bash
+pip install pyyaml pytest
+python extensions/agentic/scripts/agentic.py selftest     # every check fails on its broken fixture
+python -m pytest tests -q
+```
+See `docs/install.md` to install it into a Spec Kit project.
 
 ## Release slices
 

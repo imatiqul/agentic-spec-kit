@@ -1,0 +1,6 @@
+step:
+  type_key: agentic-gate
+  name: Agentic Gate
+  version: 0.1.0
+  author: Atiqul Islam
+  description: Pause until a valid human approval for a gate exists in the enforcement channel. Never accepts a verdict as input.
