@@ -11,10 +11,10 @@ depends_on:
 ---
 # Feature Specification: PHI is redacted at the boundaries, encrypted in the field, and kept out of browser storage
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3
-- **Assumptions:** A1 to A3 under "Questions for G2". The finding is rated High; the tier here is Critical because the change touches Critical components
+- **Assumptions:** A1 to A3 under "Decided at G2". The finding is rated High; the tier here is Critical because the change touches Critical components
 - **Unverified:** nothing was built or run; the evidence is from reading files in Phase 1 and a file search on 2026-11-22
 
 ## Finding
@@ -59,10 +59,11 @@ Evidence: `src/HealthQCopilot.Infrastructure/AI/RegexPhiRedactor.cs`; `frontend/
 ## Out of Scope
 - Who may see a patient's record (002). What the audit record holds (016). The triage classifier's inputs (005).
 
-## Questions for G2
-- A1 (assumed): the fields to encrypt are those the data classification marks as PHI; the plan lists them by name for the Data Owner to confirm.
-- A2 (assumed): the recall threshold for redaction is set in the evaluation plan at G3 by Security and Compliance, not here.
-- A3 (assumed): nothing about a patient or a conversation may be kept in the browser between sessions, not even encrypted.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): the fields to encrypt are those the data classification marks as PHI; the plan lists them by name for the Data Owner to confirm.
+- A2 (accepted): the recall threshold for redaction is set in the evaluation plan at G3 by Security and Compliance, not here.
+- A3 (accepted): nothing about a patient or a conversation may be kept in the browser between sessions, not even encrypted.
 
 ## PHI Involved
 Patient identifiers and free text in prompts, logs and stored fields; patient identifiers and chat content in the browser.

@@ -11,10 +11,10 @@ depends_on:
 ---
 # Feature Specification: Migrations are written for, and tested on, the engine production runs
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3; later CHG-1 to CHG-4, CHG-17
-- **Assumptions:** A1 and A2 under "Questions for G2". The finding is rated High; the tier here is Critical because the change touches Critical components
+- **Assumptions:** A1 and A2 under "Decided at G2". The finding is rated High; the tier here is Critical because the change touches Critical components
 - **Unverified:** nothing was built or run, and no migration was applied to any database; the evidence is from reading files in Phase 1 and a file listing on 2026-11-22
 
 ## Finding
@@ -55,9 +55,10 @@ Evidence: `src/HealthQCopilot.Infrastructure/Persistence/DatabaseExtensions.cs:4
 ## Out of Scope
 - Protection of the audit table (008). Encryption of PHI fields (009). Engines other than PostgreSQL: the vector store, the cache and the document store have their own records under the parity requirement and no migrations here.
 
-## Questions for G2
-- A1 (assumed): tests that need a relational database use PostgreSQL in a container, at the production major version.
-- A2 (assumed): comparing against production uses a schema-only copy; no production data leaves production.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): tests that need a relational database use PostgreSQL in a container, at the production major version.
+- A2 (accepted): comparing against production uses a schema-only copy; no production data leaves production.
 
 ## PHI Involved
 Every service database holds PHI. This spec changes schemas and how they are produced, not the data.

@@ -11,10 +11,10 @@ depends_on:
 ---
 # Feature Specification: An audit record says whose data was reached, in which tenant, and what happened
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3; later CHG-1 to CHG-4
-- **Assumptions:** A1 to A3 under "Questions for G2". The tier follows the components: both are Critical
+- **Assumptions:** A1 to A3 under "Decided at G2". The tier follows the components: both are Critical
 - **Unverified:** nothing was built or run; the evidence is from reading files in Phase 1
 
 ## Finding
@@ -54,10 +54,11 @@ Evidence: `src/HealthQCopilot.Infrastructure/Persistence/AuditDbContext.cs:38-47
 ## Out of Scope
 - Who the record names (004). Lost records (015). Export across services (007). Protection (008).
 
-## Questions for G2
-- A1 (assumed): the tenant recorded is the token's tenant (003), never a header's.
-- A2 (assumed): a request that reaches many patients, such as a list, records each identifier, up to a limit the plan states; past it, the record says how many and by what query.
-- A3 (assumed): records written before the change are kept as they are and are not back-filled.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): the tenant recorded is the token's tenant (003), never a header's.
+- A2 (accepted): a request that reaches many patients, such as a list, records each identifier, up to a limit the plan states; past it, the record says how many and by what query.
+- A3 (accepted): records written before the change are kept as they are and are not back-filled.
 
 ## PHI Involved
 The audit record, which gains a tenant, patient identifiers and an outcome.

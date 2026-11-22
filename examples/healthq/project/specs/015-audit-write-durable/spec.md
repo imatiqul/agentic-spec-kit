@@ -11,10 +11,10 @@ depends_on:
 ---
 # Feature Specification: An audit record is never lost without the request failing
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3
-- **Assumptions:** A1 and A2 under "Questions for G2". The tier follows the component: the shared infrastructure library is Critical
+- **Assumptions:** A1 and A2 under "Decided at G2". The tier follows the component: the shared infrastructure library is Critical
 - **Unverified:** nothing was built or run; the evidence is from reading files in Phase 1
 
 ## Finding
@@ -50,9 +50,10 @@ Evidence: `src/HealthQCopilot.Infrastructure/Middleware/PhiAuditMiddleware.cs:82
 ## Out of Scope
 - Who the record names (004). What it holds (016). Export (007). Protection of the table (008).
 
-## Questions for G2
-- A1 (assumed): the refusal is 503 with no patient data, for reads as well as writes.
-- A2 (assumed): the event stream may lag the store, but may not lose a record.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): the refusal is 503 with no patient data, for reads as well as writes.
+- A2 (accepted): the event stream may lag the store, but may not lose a record.
 
 ## PHI Involved
 The audit record. No field is added by this spec.

@@ -63,3 +63,9 @@ On 2026-11-22 at 11:39 Central time the owner replied to the list of things wait
 Recorded as: **G0 approved as drafted.** All eight decisions in section 4 stand as written, including 80 percent changed-line coverage (P-22) and the 600-line limit (P-24). The constitution is version 1.0.0.
 
 What this record is not: a kit decision record. No file was written under `.specify/agentic/decisions/`, and no agent approved anything. When the constitution reaches a repository with branch protection, G0 should be passed again there by a review, so that the kit's checks can read it.
+
+## 7. Amendment, version 2, 2026-11-22
+
+While writing the spec for finding H1 the agent found a mistake of its own in P-7: it said PHI is redacted "before it reaches a model provider, a log or a browser", which read literally forbids showing a patient's record to their clinician. The owner approved dropping "or a browser" ("Batch 2, waiting on you: go ahead"). The constitution is now version 2; what earlier sections call 1.0.0 is version 1, because the kit numbers versions in whole numbers.
+
+The amendment report is `examples/healthq/project/.specify/agentic/constitution/amendment-v2.md`. It was written by hand in the kit's format: the kit generates it from a G0 decision record, and the reference has none. No check and no approved spec is affected.

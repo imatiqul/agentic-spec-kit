@@ -11,10 +11,10 @@ depends_on:
 ---
 # Feature Specification: Frontend routes are guarded, and sign-in never fails silently
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3
-- **Assumptions:** A1 and A2 under "Questions for G2"
+- **Assumptions:** A1 and A2 under "Decided at G2"
 - **Unverified:** nothing was built or run; the evidence is from reading files in Phase 1
 
 ## Finding
@@ -51,9 +51,10 @@ Evidence: `frontend/packages/auth-client/src/client.ts:31-47`; `examples/healthq
 ## Out of Scope
 - Server-side authorization (002, 010). PHI in browser storage (009).
 
-## Questions for G2
-- A1 (assumed): role names come from the token's role claims, the same names the server's policies use.
-- A2 (assumed): there is no demo mode in a hosted build. Local development may use the development identity of 001.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): role names come from the token's role claims, the same names the server's policies use.
+- A2 (accepted): there is no demo mode in a hosted build. Local development may use the development identity of 001.
 
 ## PHI Involved
 The screens that display PHI. This spec changes which screens a user is shown.

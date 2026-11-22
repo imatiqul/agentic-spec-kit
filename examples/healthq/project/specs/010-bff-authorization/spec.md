@@ -12,10 +12,10 @@ endpoints_changed: true
 ---
 # Feature Specification: The GraphQL BFF authenticates, authorizes and limits every query
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3
-- **Assumptions:** A1 and A2 under "Questions for G2"
+- **Assumptions:** A1 and A2 under "Decided at G2"
 - **Unverified:** nothing was built or run; the evidence is from reading files in Phase 1
 
 ## Finding
@@ -53,9 +53,10 @@ Evidence: `src/HealthQCopilot.BFF/Program.cs:11-67`; `src/HealthQCopilot.Gateway
 ## Out of Scope
 - Authorization and scoping inside the services (002). Browser route guards (011).
 
-## Questions for G2
-- A1 (assumed): the depth and cost limits are numbers set in the plan from measured queries, not here.
-- A2 (assumed): the BFF never calls a service under an identity of its own for a user's request.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): the depth and cost limits are numbers set in the plan from measured queries, not here.
+- A2 (accepted): the BFF never calls a service under an identity of its own for a user's request.
 
 ## PHI Involved
 Whatever the six services behind the BFF return. This spec changes who can ask, not what is stored.

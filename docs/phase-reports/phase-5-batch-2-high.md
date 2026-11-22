@@ -1,16 +1,16 @@
-# Phase 5, batch 2 — reference specs for the High findings (waiting at gates G1 and G2)
+# Phase 5, batch 2 — reference specs for the High findings (approved at gates G1 and G2 on 2026-11-22)
 
 - **Phase and date:** Phase 5, batch 2 of 4, 2026-11-22
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository `imatiqul/azure-ai-cloud-healthcare` at commit `6e0879d2`, read only
 - **Requirement IDs exercised:** GOV-9, GOV-10, GOV-15, MAP-4, MAP-8, MAP-10 to MAP-13, TRC-1, PRD-1 to PRD-4, INT-5
-- **Assumptions:** the 18 questions written into the specs, and the decisions in section 5. None is approved
+- **Assumptions:** the 18 questions written into the specs, and the decisions in section 5. Section 7 says what the owner decided
 - **Unverified:** nothing was built or run in the healthcare repository, and no migration was applied to any database. One agent wrote these specs. See section 6
 
 ## 1. What this is
 
 The owner approved batch 1 at G1 and G2 on 2026-11-22. This is batch 2: the six High findings and two of the findings from Phase 1 that an agent proposed as High (N3 and N4).
 
-**The work stops here. G1 and G2 for these eight specs are the owner's decisions.** Nothing in this batch is committed, and none of it is on the healthcare repository's branch.
+The work stopped here for the owner's decisions on G1 and G2. Section 7 records them.
 
 Finding N5 has no spec of its own. Spec 005, approved in batch 1, covers what it says.
 
@@ -95,3 +95,22 @@ Numbering continues from the batch 1 report.
 - Spec 013 says what a migration test must show. No migration was applied to a database, and what production databases hold today is unknown.
 - No adoption baseline has been drafted. Spec 014 assumes one (A1).
 - The remaining two batches: five Medium findings (M1 to M5) and five more from Phase 1 (N6, Medium; N7 to N10, Low). Not started. With them the reference will have 26 specs for 27 findings, N5 being covered by 005.
+
+## 7. The owner's decision, 2026-11-22
+
+Sections 1 to 6 are the report as the owner saw it. At 13:11 Central time he answered:
+
+> Batch 2, waiting on you: go ahead
+> Before Phase 7: merged PR, continue to finish everything and reevaluate then wait to push by myself
+
+| Item of section 4 | Recorded as | Where |
+|---|---|---|
+| 1. G1 for the eight specs | Approved | Each spec's header; the charter's decision log |
+| 2. Four similar pairs | `distinct`, as recommended, under the owner's name as Product Owner | `origin.yml` of 002, 004, 007, 010, 015 and 016. CK-DUPLICATE passes |
+| 3. G2, the 18 assumptions | All accepted as written | "Decided at G2" in each spec |
+| 4. The amendment to P-7 | Approved: the constitution is at version 2 | `constitution.md` ("Amendments"), `constitution.map.yml` (`version: 2`), `.specify/agentic/constitution/amendment-v2.md` |
+| 5. The branch in the healthcare repository | The owner pushed it and merged it himself: pull request #72, `main` at `8d04df3` | Checked on the remote |
+
+None of this is a kit decision record.
+
+The owner had already committed and pushed this batch's files as they stood (`978f706`). The second line of his answer lifts the stop after each remaining batch and gate, and keeps pushing for himself. It does not pass any gate: what is drafted from here on is marked as waiting for the gate it has not passed.

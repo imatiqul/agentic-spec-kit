@@ -12,10 +12,10 @@ endpoints_changed: true
 ---
 # Feature Specification: No fabricated figures, and no demo endpoints, in a production build
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3
-- **Assumptions:** A1 and A2 under "Questions for G2". The finding is rated High; the tier here is Critical because the agent service is a Critical component
+- **Assumptions:** A1 and A2 under "Decided at G2". The finding is rated High; the tier here is Critical because the agent service is a Critical component
 - **Unverified:** nothing was built or run; the evidence is from reading files in Phase 1
 
 ## Finding
@@ -52,9 +52,10 @@ Evidence: `src/HealthQCopilot.Agents/Endpoints/DemoDataEndpoints.cs:29-55`; `src
 ## Out of Scope
 - Producing the evaluation results (006). Authorization of the other endpoints (002).
 
-## Questions for G2
-- A1 (assumed): "unavailable" is shown, not a last-known or estimated figure.
-- A2 (assumed): no hosted environment keeps the demo endpoints, including environments used for sales demonstrations.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): "unavailable" is shown, not a last-known or estimated figure.
+- A2 (accepted): no hosted environment keeps the demo endpoints, including environments used for sales demonstrations.
 
 ## PHI Involved
 None in the figures. The seed endpoint writes synthetic records.

@@ -11,10 +11,10 @@ depends_on:
 ---
 # Feature Specification: A failing gate stops the change, and everything the pipeline uses is pinned
 
-- **Phase and date:** Phase 5, batch 2, 2026-11-22. Draft for gates G1 and G2
+- **Phase and date:** Phase 5, batch 2, 2026-11-22. G1 and G2 approved by the owner on 2026-11-22, in chat ("Batch 2, waiting on you: go ahead"). No kit decision record exists yet; that needs a pull-request review
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository at commit `6e0879d2`
 - **Requirement IDs exercised:** GOV-9, MAP-8, TRC-1, PRD-1 to PRD-3; GOV-15, GOV-16
-- **Assumptions:** A1 and A2 under "Questions for G2"
+- **Assumptions:** A1 and A2 under "Decided at G2"
 - **Unverified:** nothing was built or run in the healthcare repository's pipeline. The counts are from Phase 1 and from the kit's own checks run over a copy of the repository on 2026-11-22
 
 ## Finding
@@ -51,9 +51,10 @@ Evidence: `examples/healthq/phase-1/verify-output.txt` in the agentic-spec-kit r
 ## Out of Scope
 - Skipped tests (M3) and suppressed advisories (M5), which get their own specs and share the waiver register. Floating tags in development containers (N8).
 
-## Questions for G2
-- A1 (assumed): the adoption baseline is drafted from the kit's count, with an owner and an expiry for each group, and approved by the owner before this spec's plan.
-- A2 (assumed): no waiver runs longer than 90 days without being renewed in a review.
+## Decided at G2
+The owner approved G2 on 2026-11-22 ("Batch 2, waiting on you: go ahead"). Each item stands as written.
+- A1 (accepted): the adoption baseline is drafted from the kit's count, with an owner and an expiry for each group, and approved by the owner before this spec's plan.
+- A2 (accepted): no waiver runs longer than 90 days without being renewed in a review.
 
 ## PHI Involved
 None.
