@@ -1,0 +1,1 @@
+{"action":"gate.ready","actor":{"id":"brief","type":"kit"},"at":"2026-11-22T18:55:03Z","gate":"G1","hash":"sha256:6fa9eb840c6a1368f54fc9e911bee71e7f21850e566ad7a6112c95a046cfe047","prev":"sha256:0000000000000000000000000000000000000000000000000000000000000000","seq":1,"spec":"014-pipeline-gates"}

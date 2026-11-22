@@ -1,0 +1,1 @@
+{"action":"gate.ready","actor":{"id":"brief","type":"kit"},"at":"2026-11-22T18:55:02Z","gate":"G1","hash":"sha256:10057cfc9f324d5bf4a0bd90dea9c966c202303480472f1a099f9953b24fa41a","prev":"sha256:0000000000000000000000000000000000000000000000000000000000000000","seq":1,"spec":"013-migrations-production-engine"}

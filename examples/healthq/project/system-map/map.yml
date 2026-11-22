@@ -608,6 +608,14 @@ nodes:
   origin: derived
   evidence: src/HealthQCopilot.Agents/EventHandlers/TriageCompletedHandler.cs
   note: 'Phase 1 cited: PublishEventAsync calls and Topic attributes in src. Not classified in Phase 1; treated as restricted until a person classifies it'
+- id: ci-pipeline
+  type: shared-pipeline
+  owner: devops-sre
+  tier: high
+  classification: none
+  origin: derived
+  evidence: .github/workflows
+  note: Not in the Phase 1 draft; added in Phase 5 because finding H6 changes it
 edges:
 - from: agent-service
   rel: builds-with
@@ -1586,3 +1594,6 @@ index:
 - paths:
   - frontend/packages/web-pubsub-client/**
   node: pkg-web-pubsub-client
+- paths:
+  - .github/workflows/**
+  node: ci-pipeline

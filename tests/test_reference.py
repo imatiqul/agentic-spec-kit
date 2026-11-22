@@ -21,8 +21,12 @@ core.load_plugins(ROOT / "extensions" / "agentic" / "scripts")
 REF = ROOT / "examples" / "healthq"
 PROJECT = REF / "project"
 CRITICAL = {"C1", "C2", "C3", "C4", "C5", "C6", "N1", "N2"}
+#: Batch 2. N5 has no spec of its own: 005 covers it, which the owner approved with batch 1.
+HIGH = {"H1", "H2", "H3", "H4", "H5", "H6", "N3", "N4"}
 #: Pairs the kit's word comparison lists as similar. A Product Owner decides each; until then CK-DUPLICATE fails on them.
-SIMILAR = [{"002-endpoint-authorization", "003-identity-from-token"}, {"005-triage-validation", "006-eval-production-path"}]
+SIMILAR = [{"002-endpoint-authorization", "003-identity-from-token"}, {"005-triage-validation", "006-eval-production-path"},
+           {"002-endpoint-authorization", "010-bff-authorization"}, {"004-audit-identity", "016-audit-record-content"},
+           {"007-audit-export-complete", "015-audit-write-durable"}, {"007-audit-export-complete", "016-audit-record-content"}]
 SPEC_CHECKS = ["CK-CONSTITUTION", "CK-ROLES", "CK-REQ-QUALITY", "CK-SPEC-SIZE", "CK-DOMAIN-SECTIONS", "CK-TIER", "CK-TIER-RAISE", "CK-TOUCH", "CK-TRACE",
                "CK-CROSS-SPEC", "CK-PROGRAMME", "CK-IMPACT", "CK-MAP-SCHEMA", "CK-MAP-OWNER", "CK-GATE-RECORD", "CK-BRIEF", "CK-LANE", "CK-AUDIT-CHAIN"]
 
@@ -54,15 +58,17 @@ def test_one_person_holds_every_role_as_the_charter_says():
 
 def test_the_map_is_in_the_kits_format_and_classifies_every_node():
     smap = yaml.safe_load((PROJECT / "system-map/map.yml").read_text(encoding="utf-8"))
-    assert smap["schema"] == "agentic-map/1" and len(smap["nodes"]) == 77 and len(smap["edges"]) == 168
+    assert smap["schema"] == "agentic-map/1" and len(smap["nodes"]) == 78 and len(smap["edges"]) == 168, "77 from Phase 1, and the pipeline"
     assert {n["classification"] for n in smap["nodes"]} == {"restricted", "internal", "none"}
     unknown = [n for n in smap["nodes"] if "Not classified in Phase 1" in str(n.get("note"))]
     assert len(unknown) == 20 and all(n["classification"] == "restricted" for n in unknown), "what nobody classified is treated as protected"
 
 
-def test_there_is_one_spec_for_each_critical_finding():
+def test_there_is_one_spec_for_each_finding_drafted_so_far():
     found = [front(s).get("finding") for s in specs()]
-    assert sorted(found) == sorted(CRITICAL) and all(front(s)["spec"] == s.name and front(s)["tier_declared"] == "critical" for s in specs())
+    assert sorted(found) == sorted(CRITICAL | HIGH), "one spec per finding, none twice"
+    assert all(front(s)["spec"] == s.name for s in specs())
+    assert all(front(s)["tier_declared"] == "critical" for s in specs() if front(s)["finding"] in CRITICAL)
 
 
 @pytest.mark.parametrize("cid", SPEC_CHECKS)
@@ -84,7 +90,7 @@ def test_only_the_known_similar_pairs_wait_for_the_product_owner():
 def test_every_spec_has_an_impact_report_and_a_brief_for_its_first_gate():
     for s in specs():
         impact = yaml.safe_load((s / "impact.md").read_text(encoding="utf-8").split("---")[1])
-        assert impact["tier_computed"] == "critical" and impact["required_approvers"]["G3"], s.name
+        assert impact["tier_computed"] == front(s)["tier_declared"] and impact["required_approvers"]["G3"], s.name
         brief = (s / "briefs" / "G1.md").read_text(encoding="utf-8")
         assert f"Brief for G1 of {s.name}" in brief and len(brief.splitlines()) <= 80
 
@@ -93,6 +99,8 @@ def test_the_specs_that_share_a_component_are_ordered_and_nothing_waits_on_the_a
     deps = {s.name: set(front(s)["depends_on"]["specs"]) for s in specs()}
     assert all("002-endpoint-authorization" not in d for d in deps.values()), "C2 is analysis only in the reference; nothing may wait for it"
     assert deps["004-audit-identity"] == {"001-fail-closed-auth", "003-identity-from-token"}, "the reference brief: C4 depends on C1 and C3"
+    out = subprocess.run([sys.executable, str(REF / "phase-5" / "order_specs.py"), "--check"], capture_output=True, text=True)
+    assert out.returncode == 0, "the order in the specs is the one order_specs.py derives: " + out.stdout
 
 
 @pytest.mark.skipif(not os.environ.get("HEALTHQ_REPO"), reason="set HEALTHQ_REPO to a clone of the healthcare repository")

@@ -25,6 +25,10 @@ NONE = {"none", "synthetic"}
 PACKAGES = {"azure-openai": "Microsoft.SemanticKernel.Connectors.OpenAI", "azure-speech": "Microsoft.CognitiveServices.Speech",
             "azure-document-intelligence": "Azure.AI.DocumentIntelligence", "azure-communication": "Azure.Communication"}
 SHARED_FILES = {"src/HealthQCopilot.AppHost/Program.cs"}
+#: Components the Phase 1 draft did not map and a finding changes. Added in Phase 5, batch 2, for H6: the workflows.
+EXTRA_NODES = [{"id": "ci-pipeline", "type": "shared-pipeline", "owner": "devops-sre", "tier": "high", "classification": "none", "origin": "derived",
+                "evidence": ".github/workflows", "note": "Not in the Phase 1 draft; added in Phase 5 because finding H6 changes it"}]
+EXTRA_INDEX = [{"paths": [".github/workflows/**"], "node": "ci-pipeline"}]
 
 
 def main(draft: Path, repo: Path, out: Path) -> None:
@@ -130,6 +134,8 @@ def main(draft: Path, repo: Path, out: Path) -> None:
             edge["evidence"] = "; ".join(cited)
         edges.append(edge)
 
+    nodes += [dict(n) for n in EXTRA_NODES if exists(n["evidence"])]
+    index += [dict(i) for i in EXTRA_INDEX]
     doc = {"schema": "agentic-map/1", "nodes": nodes, "edges": edges, "index": index}
     header = (f"# System map of HealthQ Copilot, in agentic-spec-kit's format.\n"
               f"# Converted by examples/healthq/phase-5/convert_map.py from the Phase 1 draft, against the repository at commit {commit}.\n"

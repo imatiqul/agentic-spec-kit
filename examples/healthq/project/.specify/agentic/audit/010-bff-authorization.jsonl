@@ -1,0 +1,1 @@
+{"action":"gate.ready","actor":{"id":"brief","type":"kit"},"at":"2026-11-22T18:55:01Z","gate":"G1","hash":"sha256:0a5427ded5958b8bf1393707fd092377054efcb4d1ff6ff50191ad278bb749ce","prev":"sha256:0000000000000000000000000000000000000000000000000000000000000000","seq":1,"spec":"010-bff-authorization"}

@@ -1,0 +1,1 @@
+{"action":"gate.ready","actor":{"id":"brief","type":"kit"},"at":"2026-11-22T18:55:04Z","gate":"G1","hash":"sha256:db28b48a3fd9dc4be1316db691165532450ba5eafb99c7ca80ac5db07b056acf","prev":"sha256:0000000000000000000000000000000000000000000000000000000000000000","seq":1,"spec":"016-audit-record-content"}
