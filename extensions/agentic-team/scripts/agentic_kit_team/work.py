@@ -495,6 +495,8 @@ def over_budget(run: dict) -> str:
             return "budget-minutes"
     except ValueError:
         return "unreadable-times"
+    if budget.get("cost") is not None and float(run.get("cost") or 0) > float(budget["cost"]):
+        return "budget-cost"
     return ""
 
 
@@ -514,15 +516,38 @@ def run_stop(ctx: Context, spec: str, run_id: str, reason: str) -> dict:
 
 
 def run_step(ctx: Context, spec: str, run_id: str, agent: str, action: str, inputs: list[str] | None = None,
-             outputs: list[str] | None = None) -> tuple[dict, str]:
-    """Record one agent step. Returns the run and, when the budget is spent, the reason it was stopped."""
+             outputs: list[str] | None = None, model: dict | None = None, tools: list[str] | None = None,
+             cost: float | None = None, seconds: float | None = None, gate: str | None = None) -> tuple[dict, str]:
+    """Record one agent step (AGT-17). Returns the run and, when the budget is spent, the reason it was stopped.
+
+    The kit fills in what it can see for itself: the hash of the agent specs, the hash of each input, the tools the
+    agent's spec allows, and the time since the last step. Which model ran and what the step cost are known only to
+    the runtime; they are recorded as given, and CK-RUN-RECORD fails a step that does not say.
+    """
+    import hashlib
     run = read_run(ctx, spec, run_id)
     if run.get("state") != "running":
         raise KitError(f"run {spec}/{run_id} is {run.get('state')} ({run.get('stop_reason')}); start a new run")
-    run["steps"], run["last"] = int(run.get("steps") or 0) + 1, now(ctx)
+    stamp = now(ctx)
+    try:
+        elapsed = max(0.0, round(_minutes(str(run.get("last")), stamp) * 60, 1))
+    except ValueError:
+        elapsed = 0.0
+    hashes = {}
+    for rel in inputs or []:
+        hashes[str(rel)] = "sha256:" + hashlib.sha256(ctx.src.read_bytes(str(rel))).hexdigest() if ctx.src.exists(str(rel)) else "missing"
+    declared = (ag.load(ctx).get(agent) or {}).get("tools")
+    record = {"inputs": list(inputs or []), "input_hashes": hashes, "outputs": list(outputs or []), "agents_hash": ag.specs_hash(ctx),
+              "model": dict(model) if model else None,
+              "tools": list(tools) if tools is not None else list(declared or []), "tools_source": "reported" if tools is not None else "declared",
+              "cost": None if cost is None else round(float(cost), 6), "seconds": elapsed if seconds is None else round(float(seconds), 1)}
+    if gate:
+        record["gate"] = gate
+    run["steps"], run["last"] = int(run.get("steps") or 0) + 1, stamp
+    if record["cost"] is not None:
+        run["cost"] = round(float(run.get("cost") or 0) + record["cost"], 6)
     _write_run(ctx, run)
-    audit_append(ctx.src.root, spec, actor(ctx, agent), f"agent.{action}", spec=spec, run=run_id,
-                 inputs=list(inputs or []), outputs=list(outputs or []))
+    audit_append(ctx.src.root, spec, actor(ctx, agent), f"agent.{action}", spec=spec, run=run_id, **record)
     reason = over_budget(run)
     if reason:
         return run_stop(ctx, spec, run_id, reason), reason

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from . import __version__, adapters, checks_gov, checks_trace, selftest  # noqa: F401
+from . import __version__, adapters, checks_gov, checks_trace, reports, selftest  # noqa: F401
 from .checks_gov import DEFAULT_APPROVERS, decisions, gate_roles
 from .checks_trace import build_manifest
 from .core import (DECISIONS, GATES, KIT_DIR, PROFILE_GATES, PROFILES, REGISTRY, Context, KitError, Source,
@@ -215,9 +215,79 @@ def cmd_brief(args) -> int:
         path = ctx.src.root / lanes.brief_path(args.spec, args.gate)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
+        # The moment a gate is ready for a person: time-to-decision is counted from here (TRC-13).
+        audit_append(ctx.src.root, args.spec, {"type": "kit", "id": "brief"}, "gate.ready", spec=args.spec, gate=args.gate)
         print(f"wrote {lanes.brief_path(args.spec, args.gate)}")
     else:
         print(text)
+    return 0
+
+
+def cmd_report(args) -> int:
+    ctx = _context(args)
+    available = reports.views()
+    if args.view == "list":
+        print("\n".join(sorted(available)))
+        return 0
+    if args.view == "all":
+        rendered = reports.render_all(ctx)
+        if not args.out:
+            print("\n".join(rendered.values()))
+            return 0
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        for name, text in rendered.items():
+            (out / f"{name}.md").write_text(text, encoding="utf-8", newline="\n")
+        if args.html:
+            (out / "index.html").write_text(reports.page(ctx, rendered), encoding="utf-8", newline="\n")
+        print(f"wrote {len(rendered)} view(s) to {out}" + (" and index.html" if args.html else ""))
+        return 0
+    if args.view not in available:
+        print(f"unknown view {args.view!r}; choose from {', '.join(sorted(available))}, or all", file=sys.stderr)
+        return 2
+    text = reports.view_trace(ctx, args.spec) if args.view == "trace" and args.spec else available[args.view](ctx)
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(text, encoding="utf-8", newline="\n")
+        print(f"wrote {args.out}")
+    else:
+        print(text)
+    return 0
+
+
+def cmd_audit_pack(args) -> int:
+    from .checks_gov import as_date
+    ctx = _context(args)
+    scope = {}
+    if args.spec:
+        if args.spec not in ctx.specs():
+            print(f"spec {args.spec} does not exist", file=sys.stderr)
+            return 2
+        specs = [args.spec]
+    elif args.date_from or args.date_to:
+        start, end = as_date(args.date_from) if args.date_from else None, as_date(args.date_to) if args.date_to else None
+        if (args.date_from and start is None) or (args.date_to and end is None):
+            print("--from and --to are dates, as YYYY-MM-DD", file=sys.stderr)
+            return 2
+        specs = reports.specs_in_range(ctx, start, end)
+        scope = {"from": args.date_from, "to": args.date_to}
+    else:
+        specs = ctx.specs()
+    manifest, files = reports.build_pack(ctx, specs, scope)
+    if args.out:
+        reports.write_pack(Path(args.out), manifest, files)
+        print(f"wrote {len(files) + 1} file(s) to {args.out}")
+    if args.write:
+        for spec in specs:
+            own = manifest if len(specs) == 1 else reports.build_pack(ctx, [spec], scope)[0]
+            rel = f"specs/{spec}/{reports.PACK_FILE}"
+            path = ctx.src.root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(reports.spec_pack(own), indent=2, default=str) + "\n", encoding="utf-8", newline="\n")
+            print(f"wrote {rel}")
+    if not args.out and not args.write:
+        print(json.dumps(reports.spec_pack(manifest), indent=2, default=str))
+    print(reports.STATEMENT, file=sys.stderr)
     return 0
 
 
@@ -402,6 +472,14 @@ def main(argv: list[str] | None = None) -> int:
     sp = sub.add_parser("brief", help="the one-page brief for the person at a gate"); common(sp)
     sp.add_argument("--spec", required=True); sp.add_argument("--gate", required=True, choices=GATES)
     sp.add_argument("--write", action="store_true"); sp.set_defaults(fn=cmd_brief)
+    sp = sub.add_parser("report", help="views built from the repository: gate board, waivers, traceability, metrics and more"); common(sp)
+    sp.add_argument("view", help="a view name, `all`, or `list`"); sp.add_argument("--spec"); sp.add_argument("--out")
+    sp.add_argument("--html", action="store_true", help="with `all --out`: also write one page a person can open in a browser")
+    sp.add_argument("--today"); sp.set_defaults(fn=cmd_report)
+    sp = sub.add_parser("audit-pack", help="export the evidence for a release or a date range, with hashes; it supports an audit and certifies nothing")
+    common(sp); sp.add_argument("--spec"); sp.add_argument("--from", dest="date_from"); sp.add_argument("--to", dest="date_to")
+    sp.add_argument("--out", help="write the pack to this folder"); sp.add_argument("--write", action="store_true", help="keep the manifest with the spec, for the release gate")
+    sp.add_argument("--today"); sp.set_defaults(fn=cmd_audit_pack)
     sp = sub.add_parser("amend", help="which gates a change re-opens; the constitution amendment report"); common(sp)
     sp.add_argument("action", choices=["status", "report"]); sp.add_argument("--spec")
     sp.add_argument("--write", action="store_true"); sp.set_defaults(fn=cmd_amend)

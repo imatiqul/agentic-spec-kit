@@ -26,6 +26,8 @@ Prove it on a real system, described in `reference/20-healthq.md`.
 | 0.2 | System | System map, impact analysis, change packs, supply chain |
 | 0.3 | Team | Agent team, coordination, sequential fallback |
 | 0.4 | Depth | Change lanes, amendments, quality packs, agent operations, integrations, auditor pack |
+| 0.5 | Truth | Intake, requirement quality, living capability specs, duplicate detection, outcomes, lineage |
+| 0.6 | Connected | Requirement sources, pipelines, review mirroring, notifications |
 
 Each slice must be usable on its own. Each requirement in `spec/` carries its slice.
 
@@ -33,13 +35,15 @@ Each slice must be usable on its own. Each requirement in `spec/` carries its sl
 - D1 Repos: toolkit in a new repo `imatiqul/agentic-spec-kit`. The reference example
   lives in `examples/healthq/` inside it and points at the healthcare repo by commit
   SHA; it does not copy source code.
-- D2 Disclosure: the toolkit repo stays PRIVATE until findings C1–C6 are fixed in
-  the healthcare repo or I explicitly accept publishing them.
+- D2 Disclosure: the toolkit repo is public. On 2026-11-22 I accepted publishing findings C1–C6 before they are fixed in the healthcare repo.
 - D3 People: I am the only human and hold every role. Record approvals under my
   GitHub identity with the role I am acting in. Where separation of duties would
   need a second person, record "single-approver exception"; never imply two people.
 - D4 Pushes: feature branches and draft PRs are allowed in both repos. Never push
   to main, merge, mark a PR ready for review, or approve.
+  Amended 2026-11-22: when I approve a change, the agent may also carry it out —
+  commit and push it, edit this charter for it, and touch the healthcare repo for
+  it. The rest stands: the agent never merges, marks a PR ready for review, or approves.
 - D5 Agent runtimes: Claude Code subagents first, GitHub Copilot custom agents
   second, and a sequential single-agent mode that every workflow must also support.
 - D6 Upstream: pinned to github/spec-kit `v1.4.3`, commit `980b3d0`, dated
@@ -69,6 +73,10 @@ Each slice must be usable on its own. Each requirement in `spec/` carries its sl
 | Date | Phase | Decision | Source |
 |---|---|---|---|
 | 2026-11-21 | 0 | Approved delivery shape (D12), pin v1.4.3 (D6), reuse stance (D7), full source review of the three design references in Phase 2, read-only clone of the healthcare repo at head of `main` | Owner approval in chat ("yes, go ahead"); charter updated by the agent on that approval |
+| 2026-11-22 | 3d | Keep the toolkit repo public, including the Phase 1 findings C1–C6. Replaces the earlier D2 | Owner instruction in chat ("Keep it public") |
+| 2026-11-22 | 3d, 3e | Approved the 35 decisions the agent made without me while building slices 0.4 to 0.6, listed in the Phase 3d and 3e reports. They include: two new slices, 0.5 Truth and 0.6 Connected; building them before the rest of 0.4, which is not the order in D9; and tracker adapters built without reading the source of the community extensions that overlap them, which D7 asks for | Owner approval in chat ("Needs you: approve"); charter updated by the agent on that approval |
+| 2026-11-22 | 4 | Approved the reference constitution for HealthQ Copilot at gate G0, as drafted: 25 principles, 80 percent changed-line coverage, a 600-line file limit | Owner approval in chat ("Needs you: approve") |
+| 2026-11-22 | 5 | When I approve a change, the agent may also carry it out: edit this charter, commit and push, and touch the healthcare repo. Amends D4, and W4 and W7 of the working rules | Owner instruction in chat ("For followings so that you can go ahead and edit as well when I approve - editing the charter (your rule W7 says I propose, you edit), committing or pushing, or touching the healthcare repo.") |
 
 ## Glossary
 - **Gate**: a point where work stops until a human records a decision.

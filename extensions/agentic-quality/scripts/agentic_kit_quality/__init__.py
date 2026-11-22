@@ -26,6 +26,18 @@ core.SAMPLE_HOOKS.append(sample.extend_sample)
 core.FIXTURE_HOOKS.append(sample.fixtures)
 core.VIEW_HOOKS["debt"] = lambda ctx: checks_feedback.render_debt(checks_feedback.debt_register(ctx))
 
+
+def _metrics(ctx) -> list[dict]:
+    """TRC-12: defects that reached production, from the incident records."""
+    found = checks_feedback.escaped_defects(ctx)
+    if not found["total"]:
+        return []
+    by_gate = ", ".join(f"{g}: {n}" for g, n in found["by_gate"].items())
+    return [{"metric": "Defects that escaped to production", "value": f"{found['total']} (by the gate that should have caught them: {by_gate})", "source": "incident records"}]
+
+
+core.METRIC_HOOKS.append(_metrics)
+
 QUALITY_CHECKS = ["CK-THREAT-MODEL", "CK-SECURITY-EVIDENCE", "CK-PRIVACY-IMPACT", "CK-TEST-STRATEGY", "CK-CHARACTERIZATION", "CK-TEST-DATA", "CK-A11Y",
                   "CK-AI-VERSION", "CK-AI-EVAL", "CK-AI-PROD-PATH", "CK-AI-SAFETY-CASE", "CK-AI-RETRIEVAL", "CK-AI-RUNTIME", "CK-METRIC-PROVENANCE",
                   "CK-INFRA-CHANGE", "CK-ENV-PARITY", "CK-PROGRESSIVE", "CK-FLAG", "CK-POST-RELEASE", "CK-OPS-READINESS", "CK-ADR", "CK-INCIDENT-LOOP"]

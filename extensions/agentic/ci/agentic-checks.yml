@@ -2,6 +2,8 @@
 name: agentic-checks
 on:
   pull_request:
+  pull_request_review:
+    types: [submitted]   # a review may carry a gate's approval line: the checks run again so that decision can be mirrored and judged
   push:
     branches: [main]
 permissions:
@@ -21,10 +23,11 @@ jobs:
       - name: Self-test (every check fails on its broken fixture)
         run: python .specify/extensions/agentic/scripts/agentic.py selftest
       - name: Checks on a pull request
-        if: github.event_name == 'pull_request'
+        if: github.event_name != 'push'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python .specify/extensions/agentic/scripts/agentic.py check --base-ref "origin/${{ github.base_ref }}"
+          BASE_REF: ${{ github.event.pull_request.base.ref }}   # passed through the environment, never pasted into the command
+        run: python .specify/extensions/agentic/scripts/agentic.py check --base-ref "origin/$BASE_REF"
       - name: Checks and drift on the default branch
         if: github.event_name == 'push'
         env:

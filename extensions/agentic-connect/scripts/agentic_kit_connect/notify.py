@@ -62,39 +62,7 @@ def title(event: Event, templates: dict | None = None) -> str:
     return template.format(**event.fields())
 
 
-def _evidence(ctx: Context, spec: str, gate: str) -> list[str]:
-    from agentic_kit.__main__ import _evidence_files
-    return _evidence_files(ctx, spec, gate, None)
-
-
-def _current(ctx: Context, spec: str, gate: str, records: dict) -> bool:
-    """Is the gate approved for the evidence as it stands now?"""
-    found = records.get(gate)
-    if not found:
-        return False
-    try:
-        files = [str(f) for f in (found[1].get("evidence") or {}).get("files") or []]
-        return evidence_hash(ctx.src, spec, gate, files) == (found[1].get("evidence") or {}).get("hash")
-    except KitError:
-        return False
-
-
-def board(ctx: Context) -> list[dict]:
-    """Where every spec stands: one row per spec with the state of each gate it needs."""
-    rows = []
-    for spec in ctx.specs():
-        records = approved_records(ctx, spec)
-        gates, waiting = {}, False
-        for gate in required_gates(ctx, spec):
-            if _current(ctx, spec, gate, records):
-                gates[gate] = "approved"
-            elif waiting:
-                gates[gate] = "later"
-            else:
-                gates[gate] = "open" if _evidence(ctx, spec, gate) else "no evidence yet"
-                waiting = True
-        rows.append({"spec": spec, "gates": gates, "complete": complete(ctx, spec)})
-    return rows
+from agentic_kit.reports import board, evidence_of as _evidence  # noqa: E402  (the gate board is the core's; this module adds events to it)
 
 
 def detect(ctx: Context, results: list | None = None, commit: str = "") -> list[Event]:

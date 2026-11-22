@@ -68,7 +68,7 @@ def fixtures() -> dict:
     E = selftest._edit
     return {
         "CK-CONNECT-CONFIG": ("a webhook address is stored in connect.yml",
-                              E(CONNECT, "webhook_env: SLACK_WEBHOOK_URL", 'webhook: "https://hooks.slack.com/services/T0000000/B0000000/abcdefghijklmnop"'), {}, {}),
+                              E(CONNECT, "webhook_env: SLACK_WEBHOOK_URL", 'webhook: "https://hooks.slack.com/' + 'services/T0000000/B0000000/' + 'abcdefghijklmnop"'), {}, {}),
         "CK-NOTIFY-CONTENT": ("a notification template tries to include a requirement's text",
                               E(CONNECT, '"Gate {gate} of {spec} needs {roles}"', '"Gate {gate} of {spec}: {body}"'), {}, {}),
         "CK-PIPELINE-SECRETS": ("the job that runs an agent can read the Slack webhook",

@@ -357,3 +357,82 @@ report: null            # written when the run stops
 
 Settings added to `kit.yml`: `intake.screen`, `intake.owner_roles`, `intake.dedupe.threshold`, `requirements.style | weak_words | allow_words | limits`, `product.merge_days | archive_days | outcomes.from_tier`, `team.context.max_chars`, `team.tools.files`.
 
+## Slice 0.4 additions (added 2026-11-22)
+
+### Agent step (AGT-17)
+One entry in `.specify/agentic/audit/<spec>.jsonl` per step, written only by `orchestrate step`. The action is `agent.<action>`.
+```json
+{"action": "agent.step", "actor": {"type": "agent", "id": "backend-implementer"}, "spec": "004-audit-identity", "run": "r1",
+ "inputs": ["specs/004-audit-identity/tasks.md"], "input_hashes": {"specs/004-audit-identity/tasks.md": "sha256:…"},
+ "outputs": [], "agents_hash": "sha256:…", "model": {"name": "…", "version": "…"},
+ "tools": ["Read", "Edit"], "tools_source": "declared", "cost": 0.25, "seconds": 41.0, "gate": "G5"}
+```
+| Field | Filled by | Note |
+|---|---|---|
+| `agents_hash`, `input_hashes` | The kit | An input that does not exist is recorded as `missing` |
+| `tools`, `tools_source` | The kit, or the runtime | `reported` when the runtime passed `--tools`; otherwise `declared`, copied from the agent spec |
+| `seconds` | The runtime, or the kit | When not reported, the time since the run's last step |
+| `model`, `cost` | The runtime only | The kit cannot see either. CK-RUN-RECORD fails a step that leaves one out; nothing can prove what was reported |
+| `gate` | The orchestrator | The gate the work is heading for; `report spend` groups by it |
+
+The run record (`runs/<spec>/<run>.yml`) gains `cost`, the sum of its steps, and `budget.cost`. A run past its cost budget stops with `stop_reason: budget-cost`.
+
+### Golden baseline (AGT-14)
+`.specify/agentic/golden/baseline.yml`, written by `golden baseline --accepted-by <person>:<role>:pull/<n>#review-<id> --write`.
+```yaml
+schema: agentic-golden-baseline/1
+agents_hash: "sha256:…"        # the agent specs the results were produced with
+routing_hash: "sha256:…"       # the routing policy at that time
+accepted_by: {reviewer: bob, role: engineering-manager, review_ref: "pull/7#review-31"}
+results:
+  parallel:
+    tasks: {T001: true}         # completed
+    defects: {D1: true}         # caught
+    injections: {in-a-file: true, in-an-issue: true, in-tool-output: true}   # reported and not acted on
+```
+The kit checks that the reviewer is a person in `roles.yml` and that the reference is well formed. It does not look the review up. What protects the baseline is that it is read from the base branch once it is there, that agents may not write `golden/*`, and that CODEOWNERS covers `.specify/`.
+
+Golden results (`golden/results.yml`) gain, per run, `injections: [{id, channel, acted, reported, evidence}]`, and at the top `routing_hash` when the golden tasks were run for a project that has a routing policy (`agentic.py --root <project> golden run --fixture <fixture> --out <project>/.specify/agentic/golden/results.yml`).
+
+### Evidence pack (TRC-16)
+`agentic.py audit-pack --spec <spec> --write` writes `specs/<spec>/release/audit-pack.json`; `--out <dir>` writes the whole pack as files, with `MANIFEST.json` and a `README.md`. `--from <date> --to <date>` takes every spec released in the range.
+```yaml
+schema: agentic-audit-pack/1
+statement: This pack supports an audit. It does not certify compliance with any law, regulation or standard.
+generated_on: "2026-11-22"
+kit: {version, upstream, profile, domain_packs}
+scope: {specs: [...]}                      # and from / to when a range was asked for
+controls:                                  # from each active domain pack's `controls: [{section, reference, asks}]`
+  - {pack, reference, section, asks, specs: {<spec>: {present, sha256, where}}}
+approvals: [{spec, gate, decision, commit, evidence_hash, approvals: [{reviewer, role, review_ref}], conditions, lane}]
+waivers: [...]                             # active waivers, and the adoption baseline by rule and count
+exceptions: [...]                          # single-approver decisions and emergency changes
+checks: {CK-…: pass | fail | not run | skipped}
+audit_log: intact                          # or "NOT INTACT: …"
+sources: {<repository path>: sha256}
+files: {<path inside the pack>: sha256}     # in MANIFEST.json only
+```
+
+### Report views (TRC-15)
+`agentic.py report <view>`; `report all --out <dir>` writes every view, and `--html` adds one self-contained page. Views are generated; nothing reads them back.
+
+| View | From | Registered by |
+|---|---|---|
+| `gates`, `waivers`, `trace`, `metrics` | Decision records, waivers, the trace manifest, the audit log | core |
+| `map` | The system map, as a diagram and a table | system |
+| `debt` | The technical-debt register: discovery findings, waivers, drift | quality |
+| `spend` | Agent steps | team |
+| `capabilities` | The living specs | product |
+
+A metric is a row `{metric, value, source}`. Extensions add rows through `METRIC_HOOKS`. A measure with no data is left out, not shown as zero.
+
+### Settings added to `kit.yml`
+| Setting | Meaning | Default |
+|---|---|---|
+| `team.routing.<class>: {model, version}` | The model each class of agent may run on | none; required at Regulated |
+| `team.spend.per_spec` | Limit on recorded agent cost for one spec | none |
+| `team.budget.cost` | Limit on recorded cost for one run | none |
+| `team.memory.files` | More instruction files to lint | none |
+| `team.memory.forbid: [{pattern, why}]` | More things an instruction file may not grant | none |
+| `team.memory.allow_missing` | Paths an instruction file may name although they do not exist | none |
+| `team.tools.files` | More MCP configuration files to read | none |

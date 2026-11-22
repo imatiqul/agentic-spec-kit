@@ -1,6 +1,6 @@
 # Install
 
-Needs: Spec Kit 1.4.3 (`specify --version`), Python 3.10 or later with PyYAML, git. For real approvals: a GitHub repository and the `gh` CLI.
+Needs: Spec Kit 1.4.3 (`specify --version`), Python 3.10 or later with PyYAML (3.11 or later if agents use a Codex `.codex/config.toml`), git. For real approvals: a GitHub repository and the `gh` CLI.
 
 ## 1. Install into a Spec Kit project
 ```bash
@@ -12,7 +12,7 @@ path\to\agentic-spec-kit\scripts\install.ps1 -Project . -Profile standard      #
 ```
 The script runs ordinary `specify` commands: the `agentic` extension, an optional domain pack, the `agentic-team` extension, the profile preset, the `agentic-gate` step and three workflows (`agentic-sdd`, `agentic-sdd-team`, `agentic-sdd-sequential`).
 
-For Standard and Regulated the script also installs `agentic-system` (the system map and impact analysis). After installing, draft the map with `agentic.py map discover --write`, give every node an owner, tier and classification, and save it as `system-map/map.yml`. Until that file exists the map checks report "not run".
+For Standard and Regulated the script also installs `agentic-system` (the system map and impact analysis), `agentic-quality` (quality packs), `agentic-product` (intake, living specs, duplicates) and `agentic-connect` (trackers, pipelines, notifications). Lite installs none of the four. After installing, draft the map with `agentic.py map discover --write`, give every node an owner, tier and classification, and save it as `system-map/map.yml`. Until that file exists the map checks report "not run".
 
 Bundles are in `bundles/` but cannot be installed yet. Spec Kit 1.4.3 resolves a bundle's components only through catalogs, and this kit has not published one.
 
@@ -54,6 +54,21 @@ Fill in an owner and expiry for each group, have it approved in a review, and sa
 | Mirror the review into a decision record | `agentic.py record --spec <id> --gate G3 --decision approve --commit <sha> --approval <user>:<role>:pull/<n>#review-<id>` |
 | Build the trace manifest | `agentic.py trace --write` |
 | Run the whole lifecycle with gates | `specify workflow run agentic-sdd -i spec="..."` |
+
+## 6. Seeing where things stand
+| You want | Command |
+|---|---|
+| Who is needed next, at which gate | `agentic.py report gates` |
+| Open exceptions and when they end | `agentic.py report waivers` |
+| Requirement to test, per spec | `agentic.py report trace --spec <id>` |
+| Flow and agent measures, each with its source | `agentic.py report metrics` |
+| What agents cost, by spec and gate | `agentic.py report spend` |
+| Everything, as files and one page | `agentic.py report all --out reports --html` |
+| The reviewer's one page for a gate | `agentic.py brief --spec <id> --gate G3 --write` |
+| The evidence pack for a release | `agentic.py audit-pack --spec <id> --write` |
+| Why a line of code exists | `agentic.py why <file>:<line>` |
+
+What each role does with these is in `docs/guide/roles.md`. What the kit does not do is in `docs/limits.md`.
 
 ## Lite in one page
 Lite needs three gates (G1 spec, G3 plan, G5 implementation), one approver each, and requirements linked to tasks. You edit two files: `roles.yml` and CODEOWNERS. The constitution map, the trace manifest, domain packs, drift detection and the evidence-hash line are not required.

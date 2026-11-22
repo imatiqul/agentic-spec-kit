@@ -13,7 +13,7 @@ from typing import Callable
 
 import yaml
 
-from . import checks_gov, checks_trace, lanes  # noqa: F401  (registers the checks)
+from . import checks_gov, checks_trace, lanes, reports  # noqa: F401  (registers the checks)
 from .checks_trace import build_manifest
 from .core import KIT_DIR, REGISTRY, Context, Result, Source, approval_line, audit_append, check, evidence_hash, run_check
 
@@ -224,6 +224,9 @@ FIXTURES: dict[str, tuple[str, Callable[[Path], None], dict, dict]] = {
                      {"approved_files": {f"specs/{SPEC}/plan.md": "# Plan\n\nA different plan was approved.\n"}}),
     "CK-BRIEF": ("a gate was decided without the reviewer brief in its evidence",
                  _edit(f"{KIT_DIR}/decisions/{SPEC}/G3.yml", f"  - specs/{SPEC}/briefs/G3.md\n", ""), {}, {}),
+    "CK-AUDIT-PACK": ("a release was approved with no evidence pack",
+                      lambda root: _dump(root, f"{KIT_DIR}/decisions/{SPEC}/G7.yml", {"schema": "agentic-decision/1", "spec": SPEC, "gate": "G7",
+                                                                                      "decision": "approve", "evidence": {"hash": "sha256:0", "files": []}}), {}, {}),
     "CK-DOMAIN-SECTIONS": ("a section the domain pack requires is missing",
                            _edit(SPECFILE, "## Data Classification\nSynthetic data only.\n", ""), {}, {}),
 }

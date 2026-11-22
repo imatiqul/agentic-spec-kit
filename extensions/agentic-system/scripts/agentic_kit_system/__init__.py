@@ -20,6 +20,33 @@ core.ROLE_HOOKS.append(checks_map.role_hook)
 core.MANIFEST_HOOKS.append(checks_map.manifest_hook)
 core.LANE_HOOKS.append(checks_map.lane_hook)
 core.BRIEF_HOOKS.append(checks_map.brief_hook)
+
+
+def map_view(ctx) -> str:
+    """TRC-15: the system map as a diagram (Mermaid source) and a table of what each component is and who owns it."""
+    import re
+
+    from .mapmodel import load_map
+    smap = load_map(ctx, required=False)
+    if smap is None:
+        return "# System map\n\nThere is no system map in this repository yet.\n"
+
+    def ident(node: str) -> str:
+        return "n_" + re.sub(r"[^A-Za-z0-9]", "_", node)
+    lines = ["# System map", "", "```mermaid", "flowchart LR"]
+    for nid, node in sorted(smap.nodes.items()):
+        lines.append(f'  {ident(nid)}["{nid}<br/>{node.get("type", "?")} · {node.get("owner", "?")} · {node.get("tier", "?")}"]')
+    for e in smap.edges:
+        if e.get("from") in smap.nodes and e.get("to") in smap.nodes:
+            lines.append(f'  {ident(str(e["from"]))} -->|{e.get("rel", "")}| {ident(str(e["to"]))}')
+    lines += ["```", "", "| Component | Type | Owner | Tier | Data | Used by |", "|---|---|---|---|---|---|"]
+    for nid, node in sorted(smap.nodes.items()):
+        users = ", ".join(sorted({who for who, _ in smap.consumers(nid)})) or "-"
+        lines.append(f"| `{nid}` | {node.get('type', '?')} | {node.get('owner', '?')} | {node.get('tier', '?')} | {node.get('classification', '?')} | {users} |")
+    return "\n".join(lines) + "\n"
+
+
+core.VIEW_HOOKS["map"] = map_view
 core.SAMPLE_HOOKS.append(sample.extend_sample)
 core.FIXTURE_HOOKS.append(sample.fixtures)
 

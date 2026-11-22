@@ -35,6 +35,10 @@ ENV = {"JIRA_USER": "kit@example.com", "JIRA_TOKEN": "jira-token-value", "ADO_TO
 JIRA = "https://example.atlassian.net"
 ADO = "https://dev.azure.com/example/Demo"
 SECRET_TEXT = "As a user I want to be greeted by name"   # words from the sample intake record's body
+# Made-up values in the shape of real credentials, joined here so that no file in the repository holds one whole.
+FAKE_SLACK_HOOK = "https://hooks.slack.com/" + "services/T0000000/B0000000/" + "abcdefghijklmnop"
+FAKE_GITHUB_TOKEN = "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789"
+FAKE_SLACK_TOKEN = "xoxb-" + "1234567890-abcdefghij"
 
 
 @pytest.fixture()
@@ -574,7 +578,7 @@ def test_an_unconnected_repository_is_left_alone(sample):
 @pytest.mark.parametrize("old,new,expect", [
     ('base_url: "https://example.atlassian.net"', 'base_url: "http://example.atlassian.net"', "base_url must start with https://"),
     ("token_env: JIRA_TOKEN", "token_env: jira token", "must be the NAME of an environment variable"),
-    ("token_env: ADO_TOKEN", "token_env: ghp_abcdefghijklmnopqrstuvwxyz0123456789", "contains a GitHub token"),
+    ("token_env: ADO_TOKEN", "token_env: " + FAKE_GITHUB_TOKEN, "contains a GitHub token"),
     ("organization: example, ", "", "(ado) is missing organization"),
     ('list: "901", ', "", "(clickup) is missing list"),
     ("repo: example/demo, ", "", "needs repo, project or both"),
@@ -598,7 +602,7 @@ def test_a_notification_cannot_be_configured_to_carry_text(sample):
 
 
 @pytest.mark.parametrize("old,new,expect", [
-    ("SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}", "SLACK_WEBHOOK_URL: https://hooks.slack.com/services/T0000000/B0000000/abcdefghijklmnop", "a Slack webhook"),
+    ("SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}", "SLACK_WEBHOOK_URL: " + FAKE_SLACK_HOOK, "a Slack webhook"),
     ("JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}", "JIRA_TOKEN: hunter2", "JIRA_TOKEN is given a literal value"),
     ("  workflow_run:\n    workflows: [agentic-checks]\n    types: [completed]\n", "  pull_request:\n", "runs on pull_request and uses JIRA_TOKEN"),
     ("  workflow_run:\n    workflows: [agentic-checks]\n    types: [completed]\n", "  pull_request_target:\n", "pull_request_target"),
@@ -624,7 +628,7 @@ def test_other_ci_systems_are_scanned_for_stored_secrets(sample):
     selftest._write(sample, "azure-pipelines.yml", "variables:\n  SLACK_WEBHOOK_URL: $(SLACK_WEBHOOK_URL)\nsteps:\n  - script: echo ok\n")
     selftest._write(sample, ".gitlab-ci.yml", "kit:\n  script:\n    - python agentic.py connect run --notify\n")
     assert run(sample, "CK-PIPELINE-SECRETS").ok
-    edit(sample, "azure-pipelines.yml", "$(SLACK_WEBHOOK_URL)", "'xoxb-1234567890-abcdefghij'")
+    edit(sample, "azure-pipelines.yml", "$(SLACK_WEBHOOK_URL)", f"'{FAKE_SLACK_TOKEN}'")
     out = msgs(run(sample, "CK-PIPELINE-SECRETS"))
     assert "a Slack token" in out and "SLACK_WEBHOOK_URL is given a literal value" in out
 

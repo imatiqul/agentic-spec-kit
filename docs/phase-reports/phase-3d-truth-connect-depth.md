@@ -75,7 +75,7 @@ What the tests show, by claim:
 | 14 | The mirror job is off by default and needs a GitHub App token | A push with the built-in token does not start workflows | Set the repository variable `AGENTIC_MIRROR` |
 | 15 | `connect.yml`, the tool allowlist, the glossary and the exemption list are read from the base branch | A change must not relax the rule it is judged by | None recommended |
 | 16 | A context pack is built at claim, with a budget of 20,000 characters; a stale pack fails the checks but does not block hand-off | The agent may be mid-task when the spec changes; the person reviewing should see it | `kit.yml`: `team.context.max_chars` |
-| 17 | The allowlist covers MCP servers only, in six known configuration files | These are where agents get tools that run code | `kit.yml`: `team.tools.files` adds more |
+| 17 | The allowlist covers MCP servers only, in eight known configuration files (this row said six until 2026-11-22; the code has always read eight) | These are where agents get tools that run code | `kit.yml`: `team.tools.files` adds more |
 | 18 | Six agent specs were edited | So the team writes deltas and reads packs | `git diff extensions/agentic-team/agents/` |
 | 19 | `connect.yml` joined the files CODEOWNERS must cover when the connect extension is installed | It names where credentials are sent | Remove the line in the connect extension's `_register` |
 | 20 | A requirement typed in by hand gets an id from a hash of its text, not from its title | Ids appear in notifications | `cmd_intake` in the product extension |
@@ -91,11 +91,11 @@ What the tests show, by claim:
 
 ## 6. Not built
 
-From slice 0.4: regression of golden tasks against a baseline (AGT-14), planted-instruction tests (AGT-15), model routing and spend (AGT-16), run records (AGT-17), instruction-file lint (AGT-18), agent and flow metrics (TRC-13), generated views (TRC-15), the auditor evidence pack (TRC-16).
+From slice 0.4, at the time of this report: regression of golden tasks against a baseline (AGT-14), planted-instruction tests (AGT-15), model routing and spend (AGT-16), run records (AGT-17), instruction-file lint (AGT-18), agent and flow metrics (TRC-13), generated views (TRC-15), the auditor evidence pack (TRC-16). These were built afterwards; see `phase-3e-slice-0.4.md`.
 
-From the comparison: a system map that spans repositories; tests generated from requirements; escaped defects feeding new golden tasks; a reminder cadence; approvals from Azure Repos or GitLab; an MCP server for the kit's own state.
+From the comparison: impact analysis across repositories (maps from other repositories are already pinned and validated by slice 0.2, but not folded into the blast radius); tests generated from requirements; escaped defects feeding new golden tasks; a reminder cadence; approvals from Azure Repos or GitLab; an MCP server for the kit's own state.
 
-The closing documents (role guide, release notes per slice, the list of what the kit does not enforce) are not written.
+The closing documents (role guide, release notes per slice, the list of what the kit does not enforce) were not written at the time of this report. They are `docs/guide/roles.md`, `docs/release-notes.md` and `docs/limits.md`, written in Phase 3e.
 
 ## 7. Waiting on the owner
 

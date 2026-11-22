@@ -199,6 +199,7 @@ FIXTURE_HOOKS: list = []   # () -> dict of extra self-test fixtures
 LANE_HOOKS: list = []      # (ctx, spec) -> "fast" when impact analysis puts a spec on the fast lane, else None
 BRIEF_HOOKS: list = []     # (ctx, spec, gate) -> list of (heading, lines) added to the reviewer brief
 VIEW_HOOKS: dict = {}      # report name -> (ctx) -> markdown; sibling extensions add views
+METRIC_HOOKS: list = []    # (ctx) -> list of {metric, value, source}; a row with no value is not shown (TRC-14)
 FINDER_HOOKS: list = []    # (ctx) -> list of {rule, path, line, text}: findings that waivers and the baseline can cover
 RULE_OWNERS: dict[str, str] = {}  # suppression rule id -> check id that reports it (default CK-WAIVER)
 

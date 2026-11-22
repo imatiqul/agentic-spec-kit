@@ -43,13 +43,13 @@ So this kit should not try to win on the number of features. It should win on fo
 | Requirements an agent cannot misread | Built and tested: pattern lint, glossary, size limit (PRD-1 to PRD-5). Not built: tests generated from requirements, as Kiro does |
 | Specs sized for review; a brief for the reviewer | Built and tested: size limit, one-page brief that leads with the behaviour change |
 | Clear roles and real approvals | Built and tested offline. Never run against a live GitHub repository |
-| System-wide impact | Built and tested for one repository. Not built: a map that spans repositories |
-| Bounded agents | Built and tested: path guard, locks, budgets, context packs, tool allowlist. Not built: injection tests (AGT-15), run records (AGT-17) |
+| System-wide impact | Built and tested for one repository. Maps from other repositories can be pinned and validated, and a programme spec can span repositories. Not built: folding those maps into impact analysis, so a blast radius stops at this repository's edge |
+| Bounded agents | Built and tested: path guard, locks, budgets, context packs, tool allowlist, run records, routing, planted-instruction tests. The planted-instruction tests have run with a scripted stand-in only |
 | Proof that code matches the spec | Built and tested: trace manifest, independent verifier inputs, evidence hashes. No agent has yet produced the evidence |
 | Runs in any pipeline; tells people | Built; three pipeline files, none yet run by its CI system |
 | A loop from production back to intent | Built and tested: outcome reviews, incident loop. Not built: escaped defects feeding new golden tasks |
-| Measures of flow and of agent quality | Not built: the reports of TRC-15 and the metrics of TRC-13 |
-| Evidence for an auditor | Not built: the evidence pack of TRC-16 |
+| Measures of flow and of agent quality | Built and tested: gate board, waiver register, traceability matrix, system-map diagram, metrics, spend. A measure with no data is not shown |
+| Evidence for an auditor | Built and tested: an evidence pack with hashes, the control mapping of each domain pack, approvals, waivers and exceptions. It certifies nothing |
 
 ## What would move it furthest now
 
@@ -58,4 +58,4 @@ Not another feature. In order:
 1. One run on a live GitHub repository with branch protection, to prove the approval path.
 2. One real agent run of a golden task, to prove the agent files, the guard and the context pack.
 3. A review by the owner of the sixteen agent specs and the specs under `docs/prompts/spec/17` and `18`.
-4. Then the unbuilt rows above, starting with the multi-repository map and the auditor pack.
+4. Then the unbuilt rows above, starting with impact analysis across repositories and tests generated from requirements.

@@ -3,9 +3,9 @@
 - **Phase and date:** Phase 2 (design), 2026-11-21
 - **Requirement IDs covered:** see the "Enforces" column; full mapping in `requirement-map.md`
 - **Assumptions:** every check runs from the repo root with no network, except the approval checks, which make one adapter call
-- **Unverified:** none of these checks exists yet
+- **Unverified:** none of these checks existed when this catalogue was written. As of 2026-11-22 all 105 exist, each with a passing and a failing fixture (`agentic.py selftest`); what has and has not been run is in the phase reports
 
-Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: **L** local command, **A** agent runtime event where supported, **CI** continuous integration. CI is authoritative. Checks for slice 0.4 are named in `requirement-map.md` and designed in Phase 9.
+Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: **L** local command, **A** agent runtime event where supported, **CI** continuous integration. CI is authoritative. Checks for slices 0.4 to 0.6 were built after this catalogue was written and are listed at the end of this file.
 
 ## Slice 0.1 — Govern
 | Check | Fails when | Enforces | Runs | Failing fixture |
@@ -130,9 +130,68 @@ protected data, a denied licence, and a rollout order the map contradicts.
 | CK-NOTIFY-CONTENT | A notification template uses a field outside the fixed set, or the configuration asks for text or evidence to be included | NTF-2, NTF-3 |
 | CK-PIPELINE-SECRETS | A pipeline file holds a secret; a workflow a proposed change can alter names a tracker or notification secret; an agent step has one in scope | PIP-3, PIP-5 |
 
-## Slice 0.4 — agent depth
-| Check | Fails when | Enforces |
-|---|---|---|
-| CK-CONTEXT | An agent is at work with no context pack, the pack was edited, a source changed since it was built, or it draws on a sealed change | AGT-19 |
-| CK-TOOL-ALLOWLIST | An MCP server is configured that is not on the allowlist, is launched differently from what was reviewed, is not pinned, or holds a stored credential; or a setting trusts every server | AGT-20 |
+## Slice 0.4 — Depth (built after this catalogue was written)
 
+The three tables below are printed from the check registry, so the "Requires" column is each check's own
+one-line statement of what must hold. A check fails when that statement is false. 34 checks.
+
+### In the core extension: lanes, the reviewer's page and the evidence pack
+| Check | Requires | Enforces | Profiles |
+|---|---|---|---|
+| CK-LANE | A spec is on the fast lane only when impact analysis puts it there | GOV-17 | Standard, Regulated |
+| CK-EMERGENCY-DEADLINE | An emergency change has one valid human approval and its retrospective is done by the deadline | GOV-18 | all |
+| CK-AMENDMENT | A change to something approved re-opens the gates that approved it | GOV-12, GOV-19 | Standard, Regulated |
+| CK-BRIEF | Every gate decision was made with a current one-page brief in its evidence | GOV-20 | Standard, Regulated |
+| CK-AUDIT-PACK | A release was approved with its evidence pack in front of the approver, and the pack still matches the repository | TRC-16 | Regulated |
+
+Detail the summaries leave out:
+- CK-AUDIT-PACK looks only at a spec whose G7 is approved. The pack must have been made by the kit, be listed in the G7 evidence, and its hashes must still match the spec's own files and decision records. Roles, settings, waivers and the audit log go on changing after a release; the pack holds them as they were and a later change to them is not a failure.
+- CK-BRIEF needs the brief that was current when the decision was made. Writing a brief also appends `gate.ready` to the audit log, which is where the time-to-decision measure starts.
+
+### In the team extension: what an agent is given, what it used and what it cost
+| Check | Requires | Enforces | Profiles |
+|---|---|---|---|
+| CK-CONTEXT | An agent at work has a context pack the kit built, and the pack still matches the repository | AGT-19 | Standard, Regulated |
+| CK-TOOL-ALLOWLIST | Every MCP server configured for an agent is on the allowlist, unchanged, and pinned to a version | AGT-20 | Standard, Regulated |
+| CK-RUN-RECORD | Every agent step records the model and version, the agent spec hash, its inputs by hash, tools, cost and duration | AGT-17 | Standard, Regulated |
+| CK-ROUTING | Each agent runs on the model the routing policy names for it, and spend stays within the budget | AGT-16 | Standard, Regulated |
+| CK-GOLDEN-BASELINE | A change to the agent specs or the routing policy does not make the golden tasks worse than the accepted baseline | AGT-14 | all |
+| CK-INJECTION | Instructions planted in a file, an issue and a tool's output were reported and not acted on | AGT-15 | all |
+| CK-AGENT-MEMORY | Agent instruction files are under version control and review, grant nothing the kit forbids, and point at files that exist | AGT-18 | Standard, Regulated |
+
+Detail the summaries leave out:
+- CK-CONTEXT fails when an agent is at work with no context pack, the pack was edited by hand, a source changed since it was built, or it draws on a sealed change.
+- CK-TOOL-ALLOWLIST fails when an MCP server is configured that is not on the allowlist, is launched differently from what was reviewed, is not pinned, or holds a stored credential; or a setting trusts every server. The allowlist is read from the base branch.
+- CK-RUN-RECORD reads the `agent.<action>` entries of the audit log. A step whose tools were not reported by the runtime is recorded as `declared`, taken from the agent spec, and says so.
+- CK-ROUTING requires a routing policy at Regulated only. Where a policy exists at Standard it is enforced. Model and cost are what the runtime reported (see `docs/limits.md`).
+- CK-GOLDEN-BASELINE compares the last golden results with a baseline a named person in `roles.yml` accepted through a review. Once a baseline is on the base branch it is read from there, so a change cannot lower the bar it is judged by. A task, seeded defect or planted instruction that was good in the baseline and is not now fails the check; a new one that fails does not, until it is in a baseline. Where the project has a routing policy, the results must also have been produced under the policy the change proposes: a change of model with results from before it fails, as a change to an agent spec already does under CK-GOLDEN.
+- CK-INJECTION needs each of the three planted instructions (in a repository file, in an issue's text, in a tool's output) to be reported at hand-off and not acted on. "Acted on" means the file the planted text asks for was created, or `roles.yml` was changed.
+- CK-AGENT-MEMORY reads `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md`, `.github/instructions/*.md`, `.cursor/rules/*`, `.kiro/steering/*.md`, `.claude/CLAUDE.md`, `.specify/memory/*.md` other than the constitution, and the files named in `team.memory.files`. A line that grants something the kit forbids fails unless the same line negates it.
+
+### In the quality extension: packs that switch on from a spec's tier and what it touches
+| Check | Requires | Enforces | Profiles |
+|---|---|---|---|
+| CK-A11Y | A frontend change was checked for accessibility to a stated level and for design-system conformance | QLT-11 | Standard, Regulated |
+| CK-ADR | Decision records link to specs and map nodes, and a superseded record flags the specs that relied on it | QLT-21 | Standard, Regulated |
+| CK-AI-EVAL | A change to an AI component has a signed-off golden set, thresholds, and no regression against the last release | QLT-14 | Standard, Regulated |
+| CK-AI-PROD-PATH | The evaluation calls the production code, not a copy of it | QLT-15 | Standard, Regulated |
+| CK-AI-RETRIEVAL | Each retrieval index records its sources, its refresh, how retrieved text is kept apart, and its attack tests | QLT-17 | Standard, Regulated |
+| CK-AI-RUNTIME | Each model has latency and cost budgets, a fallback, logging that leaves out protected data, and a kill switch | QLT-18 | Standard, Regulated |
+| CK-AI-SAFETY-CASE | Critical AI behaviour has a safety case that a named person accepted | QLT-16 | Standard, Regulated |
+| CK-AI-VERSION | Every model, prompt, tool and retrieval index is versioned, and a change to one changes its version | QLT-13 | Standard, Regulated |
+| CK-CHARACTERIZATION | Code that already existed is pinned down by characterization tests before a spec changes it | QLT-9 | Standard, Regulated |
+| CK-ENV-PARITY | The environment parity matrix is kept, and every difference between environments is reported | CHG-17 | Standard, Regulated |
+| CK-FLAG | Every feature flag has an owner, a default and a removal date that has not passed | CHG-20 | Standard, Regulated |
+| CK-INCIDENT-LOOP | Each postmortem names the spec, the gate that should have caught it, a finding and a proposed change | QLT-22, TRC-12 | Standard, Regulated |
+| CK-INFRA-CHANGE | An infrastructure change states its impact, passes policy checks and fits a stated budget | CHG-16 | Standard, Regulated |
+| CK-METRIC-PROVENANCE | Every figure shown to users or in reports traces to a recorded evaluation or telemetry source | QLT-19 | Standard, Regulated |
+| CK-OPS-READINESS | A release states its operational readiness: objectives, telemetry, alerts, dashboards, runbooks | QLT-20 | Standard, Regulated |
+| CK-POST-RELEASE | Criteria that can only be checked in production are checked after release, and the result closes the trace | CHG-21 | Standard, Regulated |
+| CK-PRIVACY-IMPACT | A spec that touches protected data states purpose, minimum fields, lineage, retention and access | QLT-6 | Standard, Regulated |
+| CK-PROGRESSIVE | A high-risk change is rolled out in stages with signals that halt it and a rollback trigger | CHG-19 | Standard, Regulated |
+| CK-SECURITY-EVIDENCE | G5 was approved with secret, dependency and static scans, and an authorization matrix where an endpoint changed | QLT-5 | Standard, Regulated |
+| CK-TEST-DATA | Seed and test data come from synthetic generators kept in the repository | QLT-10 | Standard, Regulated |
+| CK-TEST-STRATEGY | Each spec plans the test kinds its tier requires, and shows them at G5 | QLT-7, QLT-8 | Standard, Regulated |
+| CK-THREAT-MODEL | Each planned spec has a threat model whose threats link to a requirement and an abuse-case test | QLT-3, QLT-4 | Standard, Regulated |
+
+None of these checks runs a scanner, an evaluation or an accessibility tool. Each requires the record that one ran, bound by hash to the files it ran on (`docs/limits.md`).

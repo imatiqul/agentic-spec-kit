@@ -13,7 +13,7 @@ import yaml
 from agentic_kit import core
 from agentic_kit.core import KIT_DIR, KitError
 
-from . import agents, checks_team, context, golden, sample, tools, work
+from . import agents, checks_team, context, golden, ops, sample, tools, work
 
 __version__ = "0.3.0"
 
@@ -34,13 +34,18 @@ def brief_hook(ctx, spec: str, gate: str) -> list[tuple[str, list[str]]]:
 core.BRIEF_HOOKS.append(brief_hook)
 
 TEAM_CHECKS = ["CK-AGENT-SPEC", "CK-WORKITEM", "CK-PATH-LOCK", "CK-PATH-DIFF", "CK-REWORK-LIMIT", "CK-BUDGET",
-               "CK-AUTHOR-NEQ-VERIFIER", "CK-CRED", "CK-GOLDEN", "CK-CONTEXT", "CK-TOOL-ALLOWLIST"]
+               "CK-AUTHOR-NEQ-VERIFIER", "CK-CRED", "CK-GOLDEN", "CK-CONTEXT", "CK-TOOL-ALLOWLIST",
+               "CK-RUN-RECORD", "CK-ROUTING", "CK-GOLDEN-BASELINE", "CK-INJECTION", "CK-AGENT-MEMORY"]
 
 
 def _register() -> None:
     from agentic_kit import __main__ as cli
+    from agentic_kit import checks_trace
     if "CK-CRED" not in cli.DOCTOR_CHECKS:
         cli.DOCTOR_CHECKS.append("CK-CRED")
+    core.VIEW_HOOKS["spend"] = ops.spend_view
+    core.METRIC_HOOKS.append(ops.metrics)
+    checks_trace.KNOWN_SOURCES["runs"] = lambda ctx: bool(ops.runs(ctx))
 
 
 _register()
@@ -235,7 +240,13 @@ def cmd_orchestrate(args) -> int:
     if not args.run:
         return _err("--run is required", 2)
     if args.action == "step":
-        run, stopped = work.run_step(ctx, args.spec, args.run, args.agent or "orchestrator", args.do or "step", args.input, args.output)
+        model = None
+        if args.model:
+            name, _, version = args.model.partition("@")
+            model = {"name": name, "version": version}
+        run, stopped = work.run_step(ctx, args.spec, args.run, args.agent or "orchestrator", args.do or "step", args.input, args.output,
+                                     model=model, tools=[t.strip() for t in args.tools.split(",") if t.strip()] if args.tools is not None else None,
+                                     cost=args.cost, seconds=args.seconds, gate=args.gate)
         if stopped:
             print(f"run {args.run} is stopped: {stopped}. Report: {run['report']}. Stop working and tell the accountable person.")
             return 3
@@ -250,12 +261,43 @@ def cmd_orchestrate(args) -> int:
 
 
 def cmd_golden(args) -> int:
+    if args.action == "baseline":
+        from agentic_kit.__main__ import _context
+        ctx = _context(args)
+        if not ctx.src.exists(golden.RESULTS):
+            return _err(f"there are no golden results at {golden.RESULTS}; run the golden tasks first and write them there with --out", 2)
+        try:
+            reviewer, role, ref = (args.accepted_by or "").split(":", 2)
+        except ValueError:
+            return _err("--accepted-by must be reviewer:role:pull/<n>#review-<id>: a person accepts the baseline", 2)
+        doc = ops.make_baseline(ctx, {"reviewer": reviewer, "role": role, "review_ref": ref})
+        if args.write:
+            path = ctx.src.root / ops.BASELINE
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8", newline="\n")
+            print(f"wrote {ops.BASELINE}")
+        else:
+            print(yaml.safe_dump(doc, sort_keys=False))
+        return 0
+    if not args.fixture:
+        return _err("--fixture is required", 2)
     fixture = Path(args.fixture).resolve()
     if not (fixture / KIT_DIR / "kit.yml").is_file():
         return _err(f"{fixture} is not a kit project to run golden tasks on", 2)
     modes = ["parallel", "sequential"] if args.mode in (None, "both") else [args.mode]
-    driver = golden.Command(args.agent_command) if args.agent_command else golden.Scripted()
-    doc = golden.run(fixture, modes, driver)
+    model = None
+    if args.agent_model:
+        name, _, version = args.agent_model.partition("@")
+        model = {"name": name, "version": version}
+    driver = golden.Command(args.agent_command, model) if args.agent_command else golden.Scripted()
+    rhash = None
+    if (Path(args.root).resolve() / KIT_DIR / "kit.yml").is_file():  # run for a project: tie the results to its routing policy
+        from agentic_kit.__main__ import _context
+        try:
+            rhash = ops.results_routing_hash(_context(args))
+        except KitError:
+            rhash = None
+    doc = golden.run(fixture, modes, driver, routing_hash=rhash)
     problems = golden.failures(doc)
     if args.out:
         out = Path(args.out)
@@ -272,6 +314,11 @@ def cmd_golden(args) -> int:
             for d in r["defects"]:
                 print(f"  {'ok  ' if d.get('caught') else 'FAIL'} defect {d['id']}: " + (f"caught by {d.get('caught_by')} via {d.get('via')}" if d.get("caught") else "not caught")
                       + (f" — {d['error']}" if d.get("error") else ""))
+            for i in r.get("injections") or []:
+                good = i.get("reported") and not i.get("acted")
+                print(f"  {'ok  ' if good else 'FAIL'} instruction planted in {i.get('channel')}: "
+                      + ("acted on" if i.get("acted") else "not acted on") + ", " + ("reported" if i.get("reported") else "not reported")
+                      + (f" — {i['error']}" if i.get("error") else ""))
         for p in problems:
             print(f"FAIL {p}")
         if isinstance(driver, golden.Scripted):
@@ -339,11 +386,19 @@ def _cli(sub, common) -> None:
     sp.add_argument("--input", action="append")
     sp.add_argument("--output", action="append")
     sp.add_argument("--reason")
+    sp.add_argument("--model", help="with step: the model that ran it, as name@version")
+    sp.add_argument("--tools", help="with step: the tools it used, comma-separated (default: the tools its spec allows)")
+    sp.add_argument("--cost", type=float, help="with step: what it cost, in the project's currency")
+    sp.add_argument("--seconds", type=float, help="with step: how long it took (default: the time since the last step)")
+    sp.add_argument("--gate", help="with step: the gate this work is heading for")
     sp.set_defaults(fn=cmd_orchestrate)
     sp = sub.add_parser("golden", help="run the golden tasks and seeded defects on a fixture, in both modes")
     common(sp, base=False)
-    sp.add_argument("action", choices=["run"])
-    sp.add_argument("--fixture", required=True)
+    sp.add_argument("action", choices=["run", "baseline"])
+    sp.add_argument("--fixture")
+    sp.add_argument("--agent-model", help="with --agent-command: the model behind it, as name@version, unless the command reports it per step")
+    sp.add_argument("--accepted-by", help="with baseline: reviewer:role:pull/<n>#review-<id>")
+    sp.add_argument("--write", action="store_true")
     sp.add_argument("--mode", choices=["parallel", "sequential", "both"])
     sp.add_argument("--agent-command", help="run this command for each implementation and review step instead of the scripted stand-ins")
     sp.add_argument("--out", help="write the results document here")

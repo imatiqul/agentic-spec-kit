@@ -337,7 +337,7 @@ def completed_on(ctx: Context, spec: str) -> datetime.date | None:
 
 # ── checks ──────────────────────────────────────────────────────────────────────
 
-@check("CK-LIVING-SPEC", ("PRD-8", "PRD-9"), "every living capability spec equals the replay of the deltas that were merged into it")
+@check("CK-LIVING-SPEC", ("PRD-8", "PRD-9", "PRD-16"), "every living capability spec equals the replay of the deltas that were merged into it")
 def ck_living_spec(ctx: Context, res: Result) -> None:
     present = {cap_path(cid) for cid in capabilities(ctx)}
     idx = common.index(ctx)

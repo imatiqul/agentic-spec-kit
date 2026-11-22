@@ -96,6 +96,7 @@ to report, not a pass.
 - The C5/C6 evaluation design provably runs the production classifier.
 
 ## Overall
-- Nothing is public, nothing was merged, no real data or secrets are in either repo.
+- The toolkit repository is public by the owner's decision of 2026-11-22, which replaces charter D2. Nothing was merged, and no
+  real data or secrets are in either repo.
 - Every artifact carries the header from `01-working-rules.md`.
 - Upstream and community components are attributed and their reviews recorded.
