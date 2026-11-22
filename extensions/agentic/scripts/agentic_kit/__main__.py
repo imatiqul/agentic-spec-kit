@@ -23,6 +23,8 @@ DEFAULT_EVIDENCE = {
     "G4": ["tasks.md", "trace-manifest.json"], "G5": ["trace-manifest.json", "evidence/*"],
     "G6": ["verification/*"], "G7": ["release/*"],
 }
+for _gate in list(DEFAULT_EVIDENCE):  # every gate also binds its reviewer brief, when one has been generated (GOV-20)
+    DEFAULT_EVIDENCE[_gate].append(f"briefs/{_gate}.md")
 DOCTOR_CHECKS = ["CK-PROFILE", "CK-ROLES", "CK-UPSTREAM-PIN", "CK-ENFORCE-SETUP"]
 
 
@@ -91,14 +93,26 @@ def cmd_doctor(args) -> int:
     return code
 
 
+CONSTITUTION_EVIDENCE = [".specify/memory/constitution.md", f"{KIT_DIR}/constitution.map.yml"]
+
+
 def _evidence_files(ctx: Context, spec: str, gate: str, explicit: list[str] | None) -> list[str]:
     base = f"specs/{spec}"
     if explicit:
         return sorted(explicit)
     import fnmatch
+    if gate == "G0":
+        version = (ctx.src.yaml(CONSTITUTION_EVIDENCE[1]) or {}).get("version") if ctx.src.exists(CONSTITUTION_EVIDENCE[1]) else None
+        report = f"{KIT_DIR}/constitution/amendment-v{version}.md"
+        return sorted(f for f in CONSTITUTION_EVIDENCE + [report] if ctx.src.exists(f))
+    from .checks_gov import FAST_MERGED, lane
+    patterns = list(DEFAULT_EVIDENCE.get(gate, []))
+    if gate == "G4" and lane(ctx, spec) == "fast":  # the fast lane's one review covers what G1 to G3 would have
+        for merged in FAST_MERGED:
+            patterns += [p for p in DEFAULT_EVIDENCE.get(merged, []) if p not in patterns]
     present = ctx.src.files(base)
     out = []
-    for pat in DEFAULT_EVIDENCE.get(gate, []):
+    for pat in patterns:
         out += [p for p in present if fnmatch.fnmatch(p, f"{base}/{pat}")]
     return sorted(set(out))
 
@@ -108,6 +122,16 @@ def cmd_gate(args) -> int:
     if args.gate not in GATES:
         print(f"{args.gate} is not a gate", file=sys.stderr)
         return 2
+    from .checks_gov import lane, required_gates
+    spec_lane = lane(ctx, args.spec)
+    if args.gate != "G0" and args.gate not in required_gates(ctx, args.spec):
+        why = (f"{args.gate} is folded into G4 on the fast lane" if spec_lane == "fast"
+               else f"{args.gate} is not required by the {ctx.profile} profile")
+        if args.json:
+            print(json.dumps({"spec": args.spec, "gate": args.gate, "required": False, "lane": spec_lane, "status": why}, indent=2))
+        else:
+            print(f"Gate {args.gate} for {args.spec}: {why}")
+        return 0
     files = _evidence_files(ctx, args.spec, args.gate, args.file)
     if not files:
         print(f"no evidence files found for {args.gate} of {args.spec}", file=sys.stderr)
@@ -122,7 +146,7 @@ def cmd_gate(args) -> int:
     info = {"spec": args.spec, "gate": args.gate, "evidence": files, "hash": digest, "status": state,
             "approved": bool(record and record.get("decision") in ("approve", "approve-with-conditions")
                              and (record.get("evidence") or {}).get("hash") == digest),
-            "required_roles": gate_roles(ctx, args.gate, args.spec),
+            "required_roles": gate_roles(ctx, args.gate, args.spec), "required": True, "lane": spec_lane,
             "paste": approval_line(args.gate, "approve", digest)}
     if args.json:
         print(json.dumps(info, indent=2))
@@ -159,13 +183,79 @@ def cmd_record(args) -> int:
     record = {"schema": "agentic-decision/1", "spec": args.spec, "gate": args.gate, "decision": args.decision,
               "commit": args.commit, "evidence": {"hash": digest, "files": files}, "approvals": approvals,
               "single_approver_exception": bool(args.exception), "audit_head": entry["hash"]}
+    from .checks_gov import lane
+    if lane(ctx, args.spec) == "fast":
+        record["lane"] = "fast"
+    if args.gate == "G0" and ctx.src.exists(CONSTITUTION_EVIDENCE[1]):
+        record["constitution_version"] = (ctx.src.yaml(CONSTITUTION_EVIDENCE[1]) or {}).get("version")
     if args.condition:
         record["conditions"] = args.condition
     path = ctx.src.root / KIT_DIR / "decisions" / args.spec / f"{args.gate}.yml"
+    if path.is_file():  # a gate decided again (an amendment re-opened it): keep what the earlier decision was
+        old = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        record["superseded"] = list(old.get("superseded") or []) + [{
+            "decision": old.get("decision"), "commit": old.get("commit"), "hash": (old.get("evidence") or {}).get("hash"),
+            "approvals": old.get("approvals") or []}]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(record, sort_keys=False), encoding="utf-8", newline="\n")
     print(f"wrote {path.relative_to(ctx.src.root).as_posix()}")
     print("This is a mirror. CK-APPROVER and CK-GATE-MIRROR decide whether the review behind it is valid.")
+    return 0
+
+
+def cmd_brief(args) -> int:
+    from . import lanes
+    ctx = _context(args)
+    try:
+        text = lanes.build_brief(ctx, args.spec, args.gate)
+    except KitError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if args.write:
+        path = ctx.src.root / lanes.brief_path(args.spec, args.gate)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+        print(f"wrote {lanes.brief_path(args.spec, args.gate)}")
+    else:
+        print(text)
+    return 0
+
+
+def cmd_amend(args) -> int:
+    from . import lanes
+    ctx = _context(args)
+    try:
+        if args.action == "report":
+            rel, text = lanes.amendment_report(ctx)
+            if args.write:
+                path = ctx.src.root / rel
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8", newline="\n")
+                print(f"wrote {rel}")
+            else:
+                print(text)
+            return 0
+        specs = [args.spec] if args.spec else ctx.specs()
+        rows = {s: lanes.reopened(ctx, s)[0] for s in specs}
+    except KitError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(rows, indent=2))
+    else:
+        for spec, gates in rows.items():
+            if not gates:
+                print(f"{spec}: nothing approved has changed")
+            for gate, why in sorted(gates.items()):
+                print(f"{spec}: {gate} is re-opened ({'; '.join(why)})")
+    return 1 if any(rows.values()) else 0
+
+
+def cmd_lane(args) -> int:
+    from .checks_gov import lane, required_gates
+    ctx = _context(args)
+    for spec in ([args.spec] if args.spec else ctx.specs()):
+        print(f"{spec}: {lane(ctx, spec)} lane; gates {', '.join(required_gates(ctx, spec))}")
     return 0
 
 
@@ -309,6 +399,14 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--approval", action="append", required=True, help="reviewer:role:pull/<n>#review-<id>")
     sp.add_argument("--condition", action="append"); sp.add_argument("--exception", action="store_true")
     sp.add_argument("--file", action="append"); sp.set_defaults(fn=cmd_record)
+    sp = sub.add_parser("brief", help="the one-page brief for the person at a gate"); common(sp)
+    sp.add_argument("--spec", required=True); sp.add_argument("--gate", required=True, choices=GATES)
+    sp.add_argument("--write", action="store_true"); sp.set_defaults(fn=cmd_brief)
+    sp = sub.add_parser("amend", help="which gates a change re-opens; the constitution amendment report"); common(sp)
+    sp.add_argument("action", choices=["status", "report"]); sp.add_argument("--spec")
+    sp.add_argument("--write", action="store_true"); sp.set_defaults(fn=cmd_amend)
+    sp = sub.add_parser("lane", help="the lane impact analysis puts each spec on, and the gates that follow"); common(sp)
+    sp.add_argument("--spec"); sp.set_defaults(fn=cmd_lane)
     sp = sub.add_parser("trace", help="build the trace manifest and matrix"); common(sp)
     sp.add_argument("--spec"); sp.add_argument("--write", action="store_true"); sp.set_defaults(fn=cmd_trace)
     sp = sub.add_parser("suppressions", help="list detected suppressions or propose a baseline"); common(sp)

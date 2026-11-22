@@ -51,6 +51,38 @@ to report, not a pass.
 - A changed agent spec triggers the regression suite and a baseline comparison.
 - The auditor pack for one release exports with hashes and its disclaimer.
 - Lite profile effort is unchanged from slice 0.1.
+- An agent's context for a task is rebuilt identically from the same repository, and
+  a change to its sources while the task is in progress fails.
+- A tool server that is not on the allowlist, is launched differently from what was
+  reviewed, or floats on "latest" fails.
+
+## Slice 0.5 — Truth
+- A requirement that repeats one already in flight, or one the system already
+  meets, is listed as a candidate, and the spec cannot pass its first gate until a
+  Product Owner has decided it.
+- Personal data and credentials in an incoming requirement are replaced before the
+  record is written.
+- A vague requirement, a requirement with two obligations and a spec too large to
+  review each fail before the first gate, and none fails after a person approved
+  the wording.
+- A living spec edited by hand fails; so does a merge before release and an edit to
+  a merged delta.
+- After release, one command merges the change into the living specs, and the
+  finished change is sealed and left out of agent context.
+- From one line of code, one command names the request, the requirement, the
+  capability and the approvers.
+
+## Slice 0.6 — Connected
+- Requirements are fetched from each supported tracker and from documents into the
+  same record shape, with no adapter test using a network.
+- One command runs the whole kit in a pipeline with no prompt.
+- A notification contains no requirement text, in any channel.
+- An event is announced once across repeated runs.
+- A webhook address or token in a configuration or pipeline file fails.
+- A pipeline that lets a proposed change, or an agent step, read a tracker or
+  notification credential fails.
+- A review is mirrored into a decision record only when it carries the gate's line
+  for the current evidence and covers every required role.
 
 ## Reference example
 - Every finding has a verification status with reproducible evidence.

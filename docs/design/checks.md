@@ -105,3 +105,34 @@ and the count can only fall. The owning check fails for anything beyond the base
 Not carried, always a failure: a changed contract with the same version, an undeclared breaking change, a
 missing or stale run record, a classification lower than the migration, a missing agreement status for
 protected data, a denied licence, and a rollout order the map contradicts.
+
+## Slice 0.5 — Truth (built after this catalogue was written)
+| Check | Fails when | Enforces |
+|---|---|---|
+| CK-INTAKE-RECORD | An intake record is malformed, its text does not match its hash, it holds personal data or a credential, or it was closed without a reason and a Product Owner | INT-1 to INT-4 |
+| CK-INTAKE-DRIFT | A work item changed at its source after someone acted on it and nobody decided what that means | INT-7 |
+| CK-DUPLICATE | A spec still to be approved resembles existing work and a candidate has no decision from a Product Owner, or was decided to be a duplicate | INT-5, INT-6 |
+| CK-REQ-QUALITY | A requirement still to be approved has no MUST or SHALL, has two, uses a vague word with no number, has no criterion, or has an open question | PRD-1 to PRD-3 |
+| CK-SPEC-SIZE | A spec still to be approved is over the size limit | PRD-4 |
+| CK-GLOSSARY | A spec still to be approved uses a word the glossary says to avoid; or the glossary contradicts itself | PRD-5 |
+| CK-DELTA-VALID | A delta does not apply to the living spec, a requirement in it cannot be tested, or a requirement of the spec is carried by no delta | PRD-7 |
+| CK-CAPABILITY-COVERAGE | A change says nothing about behaviour, or touches a component no capability describes | PRD-10 |
+| CK-LIVING-SPEC | A living spec differs from the replay of its merged deltas; a delta changed after merge; a change was merged before release; an adoption merge names no Product Owner | PRD-8, PRD-9, PRD-16 |
+| CK-DELTA-MERGED | A released change is not merged within `product.merge_days` | PRD-9 |
+| CK-SPEC-COLLISION | Two changes in flight alter the same requirement and neither lists the other under `after:` | PRD-11 |
+| CK-ARCHIVE | A merged change is not sealed within `product.archive_days`, or a sealed file changed or was added | PRD-12 |
+| CK-OUTCOME | A Medium-tier or higher change states no expected result, or its review date passed with no review | PRD-14, PRD-15 |
+
+## Slice 0.6 — Connected
+| Check | Fails when | Enforces |
+|---|---|---|
+| CK-CONNECT-CONFIG | `connect.yml` holds a secret, uses a non-https address, misses a field a platform needs, or routes to a channel or event that does not exist | ADP-17 to ADP-19, PIP-3 |
+| CK-NOTIFY-CONTENT | A notification template uses a field outside the fixed set, or the configuration asks for text or evidence to be included | NTF-2, NTF-3 |
+| CK-PIPELINE-SECRETS | A pipeline file holds a secret; a workflow a proposed change can alter names a tracker or notification secret; an agent step has one in scope | PIP-3, PIP-5 |
+
+## Slice 0.4 — agent depth
+| Check | Fails when | Enforces |
+|---|---|---|
+| CK-CONTEXT | An agent is at work with no context pack, the pack was edited, a source changed since it was built, or it draws on a sealed change | AGT-19 |
+| CK-TOOL-ALLOWLIST | An MCP server is configured that is not on the allowlist, is launched differently from what was reviewed, is not pinned, or holds a stored credential; or a setting trusts every server | AGT-20 |
+

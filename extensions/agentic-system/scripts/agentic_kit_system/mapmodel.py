@@ -81,12 +81,9 @@ def tier_rank(tier) -> int:
 
 def restricted_classes(ctx: Context) -> set[str]:
     """Classification values that count as protected data: the first key of each active pack's vocabulary."""
-    from agentic_kit.core import KIT_DIR
     out = set()
-    for pack in ctx.kit().get("domain_packs") or []:
-        rel = f"{KIT_DIR}/packs/{pack}.yml"
-        if ctx.src.exists(rel):
-            classes = list(((ctx.src.yaml(rel) or {}).get("classification") or {}).keys())
-            if classes:
-                out.add(classes[0])
+    for _, body in ctx.packs():
+        classes = list((body.get("classification") or {}).keys())
+        if classes:
+            out.add(classes[0])
     return out or {"restricted"}

@@ -11,7 +11,7 @@
 | Unit | Path |
 |---|---|
 | System extension, 2 commands | `extensions/agentic-system/` |
-| Map model, discovery, impact, 11 checks (about 700 lines) | `extensions/agentic-system/scripts/agentic_kit_system/` |
+| Map model, discovery, impact, 11 checks (about 800 lines) | `extensions/agentic-system/scripts/agentic_kit_system/` |
 | Multi-app fixture (charter D8) | `fixtures/multi-app/` |
 | Tests | `tests/test_system.py` (15 tests) |
 | Extension points in the core | `ROLE_HOOKS`, `MANIFEST_HOOKS`, `CLI_HOOKS`, sample and fixture hooks in `agentic_kit/core.py` |
@@ -51,7 +51,7 @@ python extensions/agentic/scripts/agentic.py --root fixtures/multi-app impact --
 | A dependent spec passes a gate before the spec it depends on | `CK-CROSS-SPEC` fails |
 
 ### On the real healthcare repo (read-only)
-Discovery found **46 nodes and 86 edges** with no configuration: 11 services, 3 shared libraries, 8 frontends, 9 packages, 9 databases, 4 data stores and 1 message bus. The hand-built Phase 1 draft has 77 nodes and 168 edges. The 31 nodes discovery did not find are the kinds it has no adapter for: 15 event topics, 9 external services, 4 AI components, the audit table, the API contract (its file name does not say OpenAPI) and one FHIR server container. It also found no reads, writes, owns or publishes edges. Those stay hand-entered and marked assumed, as the design says.
+Discovery found **46 nodes and 86 edges** with no configuration: 11 services, 3 shared libraries, 8 frontends, 9 packages, 9 databases, 4 data stores and 1 message bus. The hand-built Phase 1 draft has 77 nodes and 168 edges. The two are not a strict subset of each other, but the kinds discovery did not find at all are the ones it has no adapter for: event topics, external services, AI components, individual tables, and the API contract (its file name does not say OpenAPI). It found only build dependencies between projects and packages; no reads, writes, owns or publishes edges. Those stay hand-entered and marked assumed, as the design says.
 
 ## 3. Problems found by testing, and fixed
 | Found by | Problem | Fix |

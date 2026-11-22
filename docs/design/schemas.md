@@ -277,16 +277,83 @@ model_class: standard
 ```
 
 ## Work item (AGT-3)
+`.specify/agentic/work/<spec>/<item>.yml`. Written only by kit commands.
 ```yaml
 schema: agentic-work/1
 id: T017
 spec: 004-audit-identity
+title: Move the audit middleware after authentication
 state: in-review        # ready | in-progress | in-review | rework | blocked | done
 owner_agent: backend-implementer
-paths: [src/Infrastructure/Middleware/**]
+reviewer_agent: independent-verifier
+paths: [src/Infrastructure/Middleware/*]
+depends_on: [T016]
 rework_rounds: 1
+base: 9c1e4f0a7b2d       # the commit the item was claimed at
+worktree: ../repo.worktrees/004-audit-identity-T017   # only when it is worked in an isolated copy
+history:
+  - {state: ready, by: orchestrator, at: "2026-11-21T09:00:00Z"}
+  - {state: in-progress, by: backend-implementer, at: "2026-11-21T09:05:00Z"}
+  - {state: in-review, by: backend-implementer, at: "2026-11-21T09:40:00Z"}
 handoff:
   done: Moved audit middleware after authentication in nine services
   evidence: [specs/004-audit-identity/evidence/T017-test-run.txt]
   open_questions: []
+  files: [src/Infrastructure/Middleware/AuditMiddleware.cs]   # recorded by the kit from the diff
+findings:
+  - {round: 1, by: independent-verifier, text: The tenant id is read before authentication runs}
 ```
+Legal moves: ready → in-progress; in-progress → in-review; in-review → done or rework; rework → in-review; any working state → blocked; blocked → ready, in-progress, in-review or done. Nothing leaves done.
+
+## Escalation (AGT-6)
+`.specify/agentic/work/<spec>/escalations/<item>.yml`, written when a reviewer returns an item a third time.
+```yaml
+schema: agentic-escalation/1
+spec: 004-audit-identity
+item: T017
+reason: rework-limit
+accountable_role: backend
+author: {agent: backend-implementer, position: The middleware order is now correct}
+reviewer: {agent: independent-verifier, position: The tenant id is still read before authentication}
+status: open            # a person in roles.yml sets it to resolved
+resolution: {decided_by: sam, decision: The reviewer is right, review_ref: "pull/12#review-88"}
+```
+
+## Run (AGT-7)
+`.specify/agentic/runs/<spec>/<run>.yml`
+```yaml
+schema: agentic-run/1
+id: r1
+spec: 004-audit-identity
+mode: parallel
+budget: {steps: 200, minutes: 240}
+steps: 37
+started: "2026-11-21T09:00:00Z"
+last: "2026-11-21T10:12:00Z"
+state: running          # running | stopped | completed
+stop_reason: null       # budget-steps | budget-minutes | completed | ...
+report: null            # written when the run stops
+```
+
+## Golden-task results (AGT-13)
+`.specify/agentic/golden/results.yml`: for each mode, the driver (`scripted` or `agent`), each task with the gates it stopped at and what was observed, each seeded defect with who caught it and how, and a hash of the agent specs the run used.
+
+## Slices 0.5 and 0.6 (added 2026-11-22)
+
+| File | Schema | Written by | Holds |
+|---|---|---|---|
+| `.specify/agentic/intake/<id>.yml` | `agentic-intake/1` | `connect fetch`, `intake add` | `source {platform, key, url, revision, fetched}`, `title`, `body`, `hash`, `status`, `via`, and when closed `disposition {decision, target, reason, decided_by}`; `latest` and `acknowledged` when the source changed |
+| `specs/<spec>/origin.yml` | `agentic-origin/1` | `product specify`; people add decisions | `intake: [ids]`, `candidates: [{target, suggested_by}]` added by agents or people, `dispositions: [{target, decision, reason, decided_by}]` |
+| `specs/<spec>/deltas/<capability>.md` | front matter plus `## ADDED / MODIFIED / REMOVED / RENAMED Requirements` | Agent drafts, a person approves at the first gate | Requirement blocks (`### Requirement:`), each with `Verifies: FR-…` and `#### Scenario:` blocks |
+| `.specify/agentic/product/capabilities/<id>/spec.md` | generated | `product merge` only | The living spec: purpose, requirements, scenarios, and the changes each requirement came from |
+| `.specify/agentic/product/index.yml` | `agentic-product-index/1` | `product init`, `product merge` | `exempt: [specs older than adoption]`, `order: [merges applied]` |
+| `.specify/agentic/product/merges/<id>.yml` | `agentic-merge/1` | `product merge` | `merged_on`, `deltas {path: sha256}`, `result` per capability; for adoption, `approved_by` |
+| `.specify/agentic/product/glossary.yml` | `agentic-glossary/1` | People | `terms: [{term, definition, avoid}]` |
+| `specs/<spec>/outcomes.yml`, `outcomes-review.yml` | `agentic-outcomes/1` | Agent drafts; a Product Owner reviews | `outcomes: [{id, hypothesis, metric, baseline, target, source, review_by}]`; `reviews: [{outcome, result, measured, evidence, reviewed_by, follow_up}]` |
+| `specs/<spec>/SEALED.yml` | `agentic-seal/1` | `product archive` | `sealed_on`, `files {path: sha256}` |
+| `.specify/agentic/connect.yml` | `agentic-connect/1` | People | `sources`, `notify {channels, routes, templates, links, deadline_days}`, `pipeline_secrets`. Secrets by variable name only |
+| `.specify/agentic/context/<spec>/<item>.md` | `agentic-context/1` | `work claim`, `team context --write` | Front matter `sources {path: sha256}`, `trimmed`; then the pack |
+| `.specify/agentic/tools.yml` | `agentic-tools/1` | People | `mcp_servers: [{name, command, args | url, reviewed_by, reason}]` |
+
+Settings added to `kit.yml`: `intake.screen`, `intake.owner_roles`, `intake.dedupe.threshold`, `requirements.style | weak_words | allow_words | limits`, `product.merge_days | archive_days | outcomes.from_tier`, `team.context.max_chars`, `team.tools.files`.
+

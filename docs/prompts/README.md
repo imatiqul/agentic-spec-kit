@@ -15,13 +15,15 @@ reason. Nothing is stated twice; files point to each other by requirement ID.
 | `spec/13-change-packs.md` | Rules for changing a kind of thing | Data stores, contracts, shared components, external apps, supply chain, infrastructure, release | A kind of change needs new rules |
 | `spec/14-quality-packs.md` | How deep the checking goes | Security, privacy, test depth, AI governance, operability, feedback loops | Quality bar changes |
 | `spec/15-agent-team.md` | Who does the work | Roster, coordination, isolation, agent operations | The team design changes |
-| `spec/16-adapters.md` | Vendor- and technology-specific bindings | GitHub, database engines, agent runtimes, HIPAA, trackers | A platform is added or changes |
+| `spec/16-adapters.md` | Vendor- and technology-specific bindings | GitHub, database engines, agent runtimes, HIPAA, trackers, chat, CI systems | A platform is added or changes |
+| `spec/17-product-truth.md` | What was asked for and what the system does | Intake, requirement quality, living capability specs, duplicates, outcomes | The model of intent changes |
+| `spec/18-connected-delivery.md` | Running unattended and telling people | Pipeline contract, secrets, review mirroring, events and notifications | How the kit is run or announced changes |
 | `reference/20-healthq.md` | The system used as proof | Stack, constitution topics, findings, showcases | The healthcare repo changes |
 | `30-phases.md` | Order of work | What to do in each phase, what to load, where to stop | The plan changes |
 | `90-acceptance.md` | How we know it is done | Acceptance per release slice and overall | The bar for done changes |
 
 ## Separation rules (keep these true when editing)
-1. **Policy, mechanism, binding.** `spec/10`–`15` state rules and the checks that
+1. **Policy, mechanism, binding.** `spec/10`–`15`, `17` and `18` state rules and the checks that
    enforce them in neutral terms. Product and vendor names appear only in
    `spec/16-adapters.md`.
 2. **Kit versus example.** `spec/` never mentions the healthcare system.
@@ -30,7 +32,7 @@ reason. Nothing is stated twice; files point to each other by requirement ID.
 3. **What versus when.** `spec/` has no phases or ordering. `30-phases.md` has no
    requirements of its own; it cites IDs.
 4. **Concept versus release slice.** Files are organised by concept. Each
-   requirement carries a slice tag `[0.1]`–`[0.4]` saying when it ships.
+   requirement carries a slice tag `[0.1]`–`[0.6]` saying when it ships.
 5. **Human versus agent.** Decisions that are mine live in `00-charter.md`. An
    agent may propose a change to them but never edits that file.
 6. **Dependency direction.** phases → spec → charter. reference → spec. Nothing

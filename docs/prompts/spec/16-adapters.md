@@ -52,4 +52,29 @@ convention-only, and its own passing and failing fixtures (TRC-17).
 
 ## Work trackers (binds TRC-15)
 - ADP-16 [0.4] GitHub Issues and Projects, and Azure DevOps Boards. The repo stays
-  the source of truth; trackers are views.
+  the source of truth; trackers are views. Superseded by ADP-18.
+
+## Outbound connections (binds PIP-3, PIP-4, NTF-6)
+- ADP-17 [0.6] One transport carries everything that leaves the repository: https
+  only, a short bounded retry, and replaceable in tests by a recorded script. No
+  adapter test opens a network connection.
+
+## Requirement sources (binds INT-1, NTF-4)
+- ADP-18 [0.6] Azure DevOps Boards, Jira Cloud, ClickUp, GitHub Issues and Projects,
+  and documents on disk (Markdown, text, HTML, CSV, JSON). An exported or pasted
+  Claude artifact comes in as a document. Each adapter fetches work items and posts
+  one note on a work item, once.
+
+## Notification channels (binds NTF-4)
+- ADP-19 [0.6] Slack incoming webhooks, Microsoft Teams Workflows webhooks with an
+  Adaptive Card, and SMTP email.
+
+## CI/CD systems (binds PIP-1, PIP-5)
+- ADP-20 [0.6] GitHub Actions, Azure Pipelines and GitLab CI, each with a template
+  that says how the platform keeps secrets from a proposed change, and a written
+  contract for any other system. Reading approvals stays bound to ADP-3 until
+  ADP-4 is built.
+
+## Agent tool configurations (binds AGT-20)
+- ADP-21 [0.4] The MCP server configuration files of Claude Code, Cursor, VS Code,
+  Gemini CLI, Kiro and Codex.

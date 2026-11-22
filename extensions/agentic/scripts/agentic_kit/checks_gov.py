@@ -27,14 +27,43 @@ PROTECTED = [f"{KIT_DIR}/roles.yml", f"{KIT_DIR}/kit.yml", f"{KIT_DIR}/constitut
              f"{KIT_DIR}/waivers/baseline.yml", ".specify/memory/constitution.md"]
 
 
-def gate_roles(ctx: Context, gate: str, spec: str | None = None) -> list[str]:
-    """Roles that must approve a gate: the profile's defaults plus any a sibling extension derives for this spec."""
+#: On the fast lane these gates are folded into G4, which then carries their evidence and their approvers (GOV-17).
+FAST_MERGED = ("G1", "G2", "G3")
+
+
+def lane(ctx: Context, spec: str | None) -> str:
+    """'fast' or 'standard'. Computed by impact analysis through LANE_HOOKS; a spec cannot choose its own lane."""
+    if not spec or spec == "_constitution" or ctx.profile == "lite":
+        return "standard"
+    if ((ctx.kit().get("lanes") or {}).get("fast") or {}).get("enabled") is False:
+        return "standard"
+    from .core import LANE_HOOKS
+    return "fast" if any(hook(ctx, spec) == "fast" for hook in LANE_HOOKS) else "standard"
+
+
+def required_gates(ctx: Context, spec: str | None = None) -> tuple[str, ...]:
+    gates = PROFILE_GATES[ctx.profile]
+    if lane(ctx, spec) == "fast":
+        return tuple(g for g in gates if g not in FAST_MERGED)
+    return gates
+
+
+def _own_roles(ctx: Context, gate: str, spec: str | None) -> list[str]:
     override = ((ctx.kit().get("gates") or {}).get("approvers") or {}).get(gate)
     roles = list(override) if override else list(DEFAULT_APPROVERS[gate])
     if spec:
         from .core import ROLE_HOOKS
         for hook in ROLE_HOOKS:
             roles += [r for r in hook(ctx, spec, gate) if r not in roles]
+    return roles
+
+
+def gate_roles(ctx: Context, gate: str, spec: str | None = None) -> list[str]:
+    """Roles that must approve a gate: the profile's defaults plus any a sibling extension derives for this spec."""
+    roles = _own_roles(ctx, gate, spec)
+    if gate == "G4" and lane(ctx, spec) == "fast":
+        for merged in FAST_MERGED:
+            roles += [r for r in _own_roles(ctx, merged, spec) if r not in roles]
     return roles
 
 
@@ -89,7 +118,7 @@ def ck_profile(ctx: Context, res: Result) -> None:
     if profile == "regulated" and not packs:
         res.fail("the regulated profile needs at least one domain pack", path)
     for pack in packs:
-        if not ctx.src.exists(f"{KIT_DIR}/packs/{pack}.yml"):
+        if ctx.pack(str(pack)) is None:
             res.fail(f"domain pack {pack!r} is not installed ({KIT_DIR}/packs/{pack}.yml is missing)", path)
     enforcement = (kit.get("enforcement") or {}).get("adapter")
     if enforcement not in ("github", "file"):
@@ -300,7 +329,6 @@ def _has_commit(ctx: Context, commit: str) -> bool | None:
 
 @check("CK-GATE-RECORD", ("GOV-4", "GOV-5", "TRC-18", "AGT-5"), "gate decisions are complete, ordered and bound to their evidence")
 def ck_gate_record(ctx: Context, res: Result) -> None:
-    required = PROFILE_GATES[ctx.profile]
     need_hash = (ctx.kit().get("gates") or {}).get("require_evidence_hash", ctx.profile != "lite")
     approved: dict[str, set[str]] = {}
     for rel, rec in decisions(ctx):
@@ -344,6 +372,7 @@ def ck_gate_record(ctx: Context, res: Result) -> None:
         if decision in ("approve", "approve-with-conditions"):
             approved.setdefault(spec, set()).add(gate)
     for spec in ctx.specs():
+        required = required_gates(ctx, spec)
         have = approved.get(spec, set())
         for gate in sorted(have):
             if gate in required:
@@ -471,6 +500,11 @@ def ck_gate_mirror(ctx: Context, res: Result) -> None:
                 recorded.add((change, review.id, line[0]))
             if need_hash and (gate, decision, digest) not in lines:
                 res.fail(f"review {ap.get('review_ref')} does not state `gate {gate} {decision} {digest[:19]}…`", rel)
+        for earlier in rec.get("superseded") or []:  # reviews behind a decision that was later made again are accounted for
+            for ap in earlier.get("approvals") or []:
+                change, review = _review(adapter, ap.get("review_ref"))
+                if review is not None:
+                    recorded.add((change, review.id, gate))
     for change in sorted(changes):
         for review in adapter.reviews(change):
             for gate, decision, digest in parse_approval_lines(review.body):
@@ -586,10 +620,10 @@ def ck_waiver(ctx: Context, res: Result) -> None:
        profiles=("regulated",))
 def ck_domain_sections(ctx: Context, res: Result) -> None:
     for pack in ctx.kit().get("domain_packs") or []:
-        rel = f"{KIT_DIR}/packs/{pack}.yml"
-        if not ctx.src.exists(rel):
+        body = ctx.pack(str(pack))
+        if body is None:
             raise KitError(f"domain pack {pack} is not installed")
-        required = (ctx.src.yaml(rel) or {}).get("required_sections") or []
+        required = body.get("required_sections") or []
         for spec in ctx.specs():
             text = ctx.src.read(f"specs/{spec}/spec.md")
             for heading in required:

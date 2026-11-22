@@ -15,3 +15,6 @@ node_modules/
 !.env.example
 *.local.*
 .pytest_cache/
+
+# archives used to copy files into this working tree; safe to delete
+.transfer/

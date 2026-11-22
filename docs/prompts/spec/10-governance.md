@@ -55,9 +55,10 @@ Build only what upstream and the community do not already provide (charter D7).
 - GOV-16 [0.1] Waivers on Critical-tier principles need Security & Compliance
   approval and are listed in every release evidence bundle.
 - GOV-21 [0.1] Adoption baseline: when the kit is first applied to an existing
-  codebase, existing suppressions may be recorded as one baseline, grouped by rule,
-  each group with an owner, reason and expiry, approved once at a gate. New
-  suppressions need individual waivers. The count in each group may only go down.
+  codebase, existing suppressions and unmet standing rules (rules that hold for the
+  whole codebase, such as pinning and versioning) may be recorded as one baseline,
+  grouped by rule, each group with an owner, reason and expiry, approved once at a
+  gate. New ones need individual waivers. The count in each group may only go down.
 
 ## Lanes
 - GOV-17 [0.4] Fast lane: Low-tier changes may merge G1–G4 into one review. The

@@ -18,6 +18,8 @@ __version__ = "0.2.0"
 
 core.ROLE_HOOKS.append(checks_map.role_hook)
 core.MANIFEST_HOOKS.append(checks_map.manifest_hook)
+core.LANE_HOOKS.append(checks_map.lane_hook)
+core.BRIEF_HOOKS.append(checks_map.brief_hook)
 core.SAMPLE_HOOKS.append(sample.extend_sample)
 core.FIXTURE_HOOKS.append(sample.fixtures)
 

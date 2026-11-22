@@ -593,10 +593,8 @@ def ck_synth_data(ctx: Context, res: Result) -> None:
     globs = list(cfg.get("paths") or DATA_GLOBS)
     allow = list(cfg.get("allow") or [])
     extra = []
-    for pack in ctx.kit().get("domain_packs") or []:
-        rel = f"{KIT_DIR}/packs/{pack}.yml"
-        if ctx.src.exists(rel):
-            extra += list(((ctx.src.yaml(rel) or {}).get("personal_data_patterns") or {}).items())
+    for _, body in ctx.packs():
+        extra += list((body.get("personal_data_patterns") or {}).items())
     extra = [(name, re.compile(rx)) for name, rx in extra + list((cfg.get("patterns") or {}).items())]
     scanned = 0
     for rel in ctx.src.files():
@@ -826,10 +824,8 @@ def ck_external_dep(ctx: Context, res: Result) -> None:
     smap = load_map(ctx)
     _carried(ctx, res)
     agreement = None
-    for pack in ctx.kit().get("domain_packs") or []:
-        rel = f"{KIT_DIR}/packs/{pack}.yml"
-        if ctx.src.exists(rel) and (ctx.src.yaml(rel) or {}).get("agreement"):
-            agreement = (ctx.src.yaml(rel) or {})["agreement"]
+    for _, body in ctx.packs():
+        agreement = body.get("agreement") or agreement
     protected = restricted_classes(ctx)
     for nid, n in smap.nodes.items():
         if n.get("type") not in EXTERNAL_TYPES:

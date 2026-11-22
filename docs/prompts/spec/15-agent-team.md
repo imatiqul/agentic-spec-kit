@@ -70,3 +70,17 @@ agents (GOV-4 to GOV-7).
   hash, tools used, cost and duration.
 - AGT-18 [0.4] Agent memory and instruction files are versioned, linted for
   contradictions with the constitution, and changed only through review.
+
+## What an agent is given
+- AGT-19 [0.4] An agent's context for a task is built by the kit by fixed rules, not
+  gathered by the agent: the task, the criteria it carries, the behaviour they
+  change, what the system does today around the files in play, the components and
+  their owners, the principles and decisions the spec names, and the rules. Every
+  source is recorded with its hash when the task is claimed. A check fails when a
+  source changes while the task is in progress, when the pack is edited, and when
+  it draws on a sealed change. The pack has a size budget and says what it left out.
+- AGT-20 [0.4] An agent reaches only the tool servers on an allowlist that names a
+  reviewer and a reason for each. A server must be launched exactly as reviewed and
+  pinned to a version or a digest. The allowlist is read from the base branch, so a
+  change cannot add a server and approve it itself. A setting that trusts every
+  configured server fails, and so does a credential stored in a tool configuration.

@@ -101,6 +101,50 @@ def role_hook(ctx: Context, spec: str, gate: str) -> list[str]:
     return compute_impact(ctx, smap, spec)["required_approvers"][gate] if smap else []
 
 
+def lane_hook(ctx: Context, spec: str) -> str | None:
+    """GOV-17: the fast lane is for a spec whose every touched node is Low tier and which triggers no change pack."""
+    if ctx.profile not in SYS or not ctx.src.exists(f"specs/{spec}/spec.md"):
+        return None
+    smap = load_map(ctx, required=False)
+    if smap is None:
+        return None
+    declared = touches(ctx, spec)
+    impact = compute_impact(ctx, smap, spec)
+    if not declared or sorted(declared) != impact["touches"]:  # touches nothing, or something the map does not know
+        return None
+    low = impact["tier_computed"] == "low" and spec_front(ctx, spec).get("tier_declared") == "low"
+    return "fast" if low and not impact["packs_triggered"] else None
+
+
+def brief_hook(ctx: Context, spec: str, gate: str) -> list[tuple[str, list[str]]]:
+    smap = load_map(ctx, required=False)
+    if smap is None or ctx.profile not in SYS:
+        return []
+    impact = compute_impact(ctx, smap, spec)
+    near = [a for a in impact["affected"] if a["distance"] == 1]
+    lines = [f"- Touches: {', '.join(impact['touches']) or 'nothing in the system map'}",
+             f"- Tier from the map: {impact['tier_computed'] or 'none'}. Change packs: {', '.join(impact['packs_triggered']) or 'none'}",
+             f"- Reaches {len(impact['affected'])} other node(s), {len(near)} directly"
+             + (": " + ", ".join(a["node"] for a in near[:6]) + (" and more" if len(near) > 6 else "") if near else "")]
+    risks = []
+    protected = restricted_classes(ctx)
+    hit = [t for t in impact["touches"] if smap.nodes[t].get("classification") in protected]
+    if hit:
+        risks.append(f"- Touches protected data: {', '.join(hit)}")
+    critical = [t for t in impact["touches"] if smap.nodes[t].get("tier") == "critical"]
+    if critical:
+        risks.append(f"- Touches Critical-tier nodes: {', '.join(critical)}")
+    assumed = [t for t in impact["touches"] if smap.nodes[t].get("origin") == "assumed"]
+    if assumed:
+        risks.append(f"- Relies on map entries nobody has confirmed: {', '.join(assumed)}")
+    plan = f"specs/{spec}/data-change-plan.md"
+    if ctx.src.exists(plan):
+        cls = front_matter(ctx.src.read(plan)).get("classification")
+        if cls in ("breaking", "destructive"):
+            risks.append(f"- The data change is declared {cls}")
+    return [("Impact", lines), ("Risks", risks)]
+
+
 def manifest_hook(ctx: Context, spec: str, manifest: dict) -> None:
     """TRC-2: requirements link to the system-map nodes their spec touches."""
     smap = load_map(ctx, required=False)

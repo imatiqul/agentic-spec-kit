@@ -153,6 +153,27 @@ class Context:
             raise KitError(f"{path} must be a mapping")
         return data
 
+    def pack(self, name: str) -> dict | None:
+        """A domain pack, read from the base like kit.yml, so a change cannot weaken a pack it is checked against.
+
+        Falls back to the working tree only when the base has no copy (the change that installs the pack).
+        """
+        path = f"{KIT_DIR}/packs/{name}.yml"
+        holder = self.trusted if self.trusted.exists(path) else self.src
+        if not holder.exists(path):
+            return None
+        data = holder.yaml(path)
+        return data if isinstance(data, dict) else {}
+
+    def packs(self) -> list[tuple[str, dict]]:
+        """(name, content) of each active domain pack that is installed."""
+        out = []
+        for name in self.kit().get("domain_packs") or []:
+            body = self.pack(str(name))
+            if body is not None:
+                out.append((str(name), body))
+        return out
+
     def specs(self) -> list[str]:
         """Spec ids: directories under specs/ that contain spec.md."""
         return sorted({p.split("/")[1] for p in self.src.files("specs") if p.count("/") >= 2 and p.endswith("/spec.md")})
@@ -175,6 +196,9 @@ MANIFEST_HOOKS: list = []  # (ctx, spec, manifest) -> None; may add fields to th
 CLI_HOOKS: list = []       # (subparsers) -> None; adds commands
 SAMPLE_HOOKS: list = []    # (root) -> None; extends the self-test sample project before decisions are written
 FIXTURE_HOOKS: list = []   # () -> dict of extra self-test fixtures
+LANE_HOOKS: list = []      # (ctx, spec) -> "fast" when impact analysis puts a spec on the fast lane, else None
+BRIEF_HOOKS: list = []     # (ctx, spec, gate) -> list of (heading, lines) added to the reviewer brief
+VIEW_HOOKS: dict = {}      # report name -> (ctx) -> markdown; sibling extensions add views
 FINDER_HOOKS: list = []    # (ctx) -> list of {rule, path, line, text}: findings that waivers and the baseline can cover
 RULE_OWNERS: dict[str, str] = {}  # suppression rule id -> check id that reports it (default CK-WAIVER)
 
@@ -188,10 +212,12 @@ def load_plugins(launcher_dir: Path) -> list[str]:
     import sys
     loaded = []
     extensions = launcher_dir.parent.parent
-    for scripts in sorted(extensions.glob("agentic-*/scripts")):
+    folders = sorted(extensions.glob("agentic-*/scripts"))
+    for scripts in folders:  # every extension is importable before any is imported: one may build on another
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+    for scripts in folders:
         for pkg in sorted(scripts.glob("agentic_kit_*/__init__.py")):
-            if str(scripts) not in sys.path:
-                sys.path.insert(0, str(scripts))
             importlib.import_module(pkg.parent.name)
             loaded.append(pkg.parent.name)
     return loaded

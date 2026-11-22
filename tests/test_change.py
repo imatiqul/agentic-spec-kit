@@ -480,6 +480,18 @@ def test_protected_data_needs_an_agreement_status_and_never_the_document(shop):
     assert run(shop, "CK-EXTERNAL-DEP").ok
 
 
+def test_a_change_cannot_weaken_a_domain_pack_it_is_checked_against(shop):
+    edit(shop, ".specify/agentic/kit.yml", "domain_packs: []", "domain_packs: [hipaa]")
+    (shop / ".specify/agentic/packs").mkdir()
+    shutil.copy(ROOT / "extensions/agentic-hipaa/pack.yml", shop / ".specify/agentic/packs/hipaa.yml")
+    edit(shop, "system-map/map.yml", "    tier: high\n    classification: internal\n", "    tier: high\n    classification: restricted\n")
+    commit(shop)
+    assert any("business associate agreement" in m for m in msgs(run(shop, "CK-EXTERNAL-DEP")))
+    pack = shop / ".specify/agentic/packs/hipaa.yml"
+    pack.write_text(pack.read_text().replace("agreement:", "retired_agreement:"))
+    assert any("business associate agreement" in m for m in msgs(run(shop, "CK-EXTERNAL-DEP")))  # the base copy still applies
+
+
 # ── supply chain ────────────────────────────────────────────────────────────────
 
 def test_floating_references_fail_and_pinned_ones_pass(shop):

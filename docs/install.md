@@ -1,4 +1,4 @@
-# Install (slice 0.1)
+# Install
 
 Needs: Spec Kit 1.4.3 (`specify --version`), Python 3.10 or later with PyYAML, git. For real approvals: a GitHub repository and the `gh` CLI.
 
@@ -10,7 +10,7 @@ path/to/agentic-spec-kit/scripts/install.sh . standard          # or lite, or: r
 ```powershell
 path\to\agentic-spec-kit\scripts\install.ps1 -Project . -Profile standard      # add -Pack hipaa for regulated
 ```
-The script runs five ordinary `specify` commands: the `agentic` extension, an optional domain pack, the profile preset, the `agentic-gate` step and the `agentic-sdd` workflow.
+The script runs ordinary `specify` commands: the `agentic` extension, an optional domain pack, the `agentic-team` extension, the profile preset, the `agentic-gate` step and three workflows (`agentic-sdd`, `agentic-sdd-team`, `agentic-sdd-sequential`).
 
 For Standard and Regulated the script also installs `agentic-system` (the system map and impact analysis). After installing, draft the map with `agentic.py map discover --write`, give every node an owner, tier and classification, and save it as `system-map/map.yml`. Until that file exists the map checks report "not run".
 
@@ -20,6 +20,11 @@ Bundles are in `bundles/` but cannot be installed yet. Spec Kit 1.4.3 resolves a
 ```bash
 python .specify/extensions/agentic/scripts/agentic.py init --profile standard --repository owner/name
 ```
+```bash
+python .specify/extensions/agentic/scripts/agentic.py team init --runtimes claude,copilot,sequential   # name the runtimes you use
+```
+`team init` copies the agent specs for your profile into `.specify/agentic/agents/` and renders the runtime files. See `docs/adapters/agent-runtime.md` for what each runtime enforces.
+
 Then, by hand:
 1. List real people and their roles in `.specify/agentic/roles.yml`. Use account names from the enforcement channel. Never list an agent or CI account.
 2. Add a CODEOWNERS file that covers `.specify/`.

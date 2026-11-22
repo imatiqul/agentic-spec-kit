@@ -61,6 +61,12 @@ class FileAdapter:
     def authors(self, change: str) -> set[str]:
         return {a.lower() for a in self._change(change).get("authors", [])}
 
+    def agent_credential(self) -> dict:
+        """What the credential available to agents can do: {identity, permissions, scopes}. Simulated for tests."""
+        if "agent_credential" not in self.data:
+            raise KitError("the file adapter holds no description of the agent credential")
+        return dict(self.data["agent_credential"])
+
     def setup_report(self) -> list[dict]:
         # A fixture may simulate a configured channel; `doctor` still says the file adapter proves nothing.
         return self.data.get("setup") or [{"item": "enforcement adapter", "status": "fail",
@@ -84,6 +90,10 @@ class GitHubAdapter:
     def _gh(self, path: str):
         if not shutil.which("gh"):
             raise KitError("the gh CLI is not installed, so the enforcement channel cannot be read")
+        if path == "__token_scopes__":  # classic tokens state their scopes in a response header; fine-grained tokens do not
+            p = subprocess.run(["gh", "api", "-i", "user"], capture_output=True, text=True)
+            m = re.search(r"(?im)^x-oauth-scopes:\s*(.*)$", p.stdout or "")
+            return [x.strip() for x in m.group(1).split(",") if x.strip()] if m else []
         p = subprocess.run(["gh", "api", "--paginate", path], capture_output=True, text=True)
         if p.returncode:
             raise KitError(f"gh api {path} failed: {p.stderr.strip()[:200]}")
@@ -102,6 +112,17 @@ class GitHubAdapter:
 
     def ci_identity(self):
         return "github-actions[bot]"
+
+    def agent_credential(self) -> dict:
+        """What the token in use can do on this repository, as GitHub reports it for the calling identity."""
+        user = self._run("user") or {}
+        repo = self._run(f"repos/{self._repo()}") or {}
+        try:
+            scopes = self._run("__token_scopes__") or []
+        except KitError:
+            scopes = []
+        return {"identity": user.get("login", ""), "account_type": user.get("type", ""),
+                "permissions": repo.get("permissions") or {}, "scopes": list(scopes)}
 
     @staticmethod
     def _number(change: str) -> str:

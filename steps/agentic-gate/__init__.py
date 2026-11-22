@@ -78,6 +78,8 @@ class AgenticGateStep(StepBase):
                                       "message": f"{gate} is not required by the {profile} profile"})
 
         code, info = self._kit(root, "gate", "--spec", spec, "--gate", gate, "--json")
+        if code == 0 and info.get("required") is False:  # folded into another gate by the lane the kit computed
+            return StepResult(output={"gate": gate, "spec": spec, "choice": "not-required", "message": info.get("status", "")})
         if code != 0 or "hash" not in info:
             return StepResult(status=StepStatus.FAILED, error=f"agentic-gate: {info.get('error', 'could not read the gate')}")
         output = {"gate": gate, "spec": spec, "hash": info["hash"], "evidence": info["evidence"],

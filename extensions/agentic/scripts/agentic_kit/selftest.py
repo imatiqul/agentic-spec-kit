@@ -13,7 +13,7 @@ from typing import Callable
 
 import yaml
 
-from . import checks_gov, checks_trace  # noqa: F401  (registers the checks)
+from . import checks_gov, checks_trace, lanes  # noqa: F401  (registers the checks)
 from .checks_trace import build_manifest
 from .core import KIT_DIR, REGISTRY, Context, Result, Source, approval_line, audit_append, check, evidence_hash, run_check
 
@@ -78,6 +78,7 @@ def build_sample(root: Path) -> None:
         "schema": "agentic-kit/1", "profile": "regulated", "domain_packs": ["demo"],
         "enforcement": {"adapter": "file", "default_branch": "main"}, "upstream": {"speckit": "1.4.3"},
         "gates": {"single_approver_exception": "allowed", "require_evidence_hash": True},
+        "lanes": {"emergency": {"days": 7}},
         "metrics": [{"id": "lead-time-per-gate", "source": "audit-log"}]})
     _dump(root, f"{KIT_DIR}/packs/demo.yml", {"schema": "agentic-pack/1", "id": "demo", "required_sections": ["Data Classification"]})
     _dump(root, f"{KIT_DIR}/roles.yml", {
@@ -122,6 +123,8 @@ def build_sample(root: Path) -> None:
             if role not in [r for _, r in approvals]:
                 approvals.append((sorted(holders[role])[0], role))
         paths = [f"{base}/{f}" for f in files if (root / base / f).exists()]
+        _write(root, lanes.brief_path(SPEC, gate), lanes.build_brief(ctx, SPEC, gate, paths))  # the reviewer's one page, bound with the rest
+        paths.append(lanes.brief_path(SPEC, gate))
         digest = evidence_hash(ctx.src, SPEC, gate, paths)
         entry = audit_append(root, SPEC, {"type": "kit", "id": "selftest"}, "gate.evidence", spec=SPEC, gate=gate, commit=COMMIT)
         recorded = []
@@ -135,8 +138,17 @@ def build_sample(root: Path) -> None:
             "schema": "agentic-decision/1", "spec": SPEC, "gate": gate, "decision": "approve", "commit": COMMIT,
             "evidence": {"hash": digest, "files": paths}, "approvals": recorded,
             "single_approver_exception": False, "audit_head": entry["hash"]})
+    n += 1
+    reviews.append({"id": str(n), "reviewer": "bob", "type": "User", "state": "APPROVED", "commit": COMMIT,
+                    "body": "Emergency E-001: approve the fix now; retrospective to follow."})
+    _dump(root, f"{lanes.EMERGENCIES}/E-001.yml", {
+        "schema": "agentic-emergency/1", "id": "E-001", "summary": "Restart loop after a bad configuration push",
+        "declared": "2026-11-20", "declared_by": {"reviewer": "bob", "role": "devops-sre", "review_ref": f"pull/1#review-{n}"},
+        "commit": COMMIT, "paths": ["ops/*"], "retrospective": {"spec": SPEC, "due": "2026-11-27"}, "status": "open"})
     _write(root, f"{KIT_DIR}/_adapter/reviews.json", json.dumps(
         {"agent_identity": "kit-agent", "ci_identity": "ci-bot",
+         "agent_credential": {"identity": "kit-agent", "permissions": {"admin": False, "maintain": False, "push": True, "pull": True},
+                              "scopes": []},
          "setup": [{"item": "pull request reviews required", "status": "pass", "detail": "simulated"}],
          "changes": {"pull/1": {"authors": ["carol"], "reviews": reviews}}}, indent=2))
 
@@ -206,6 +218,12 @@ FIXTURES: dict[str, tuple[str, Callable[[Path], None], dict, dict]] = {
     "CK-METRIC-SOURCE": ("a metric has no data source", _edit(KIT, "source: audit-log", "source: guess"), {}, {}),
     "CK-VERIFY-INPUTS": ("the verifier was given the author's notes",
                          _edit(f"specs/{SPEC}/verification/G6-inputs.yml", "- src/demo/greet.py", f"- specs/{SPEC}/notes/author.md"), {}, {}),
+    "CK-LANE": ("the author put the spec on the fast lane by hand", _edit(SPECFILE, "tier_declared: high\n", "tier_declared: high\nlane: fast\n"), {}, {}),
+    "CK-EMERGENCY-DEADLINE": ("an emergency change's retrospective is overdue", lambda root: None, {}, {"today": "2026-12-15"}),
+    "CK-AMENDMENT": ("the plan changed after G3 approved it", lambda root: None, {},
+                     {"approved_files": {f"specs/{SPEC}/plan.md": "# Plan\n\nA different plan was approved.\n"}}),
+    "CK-BRIEF": ("a gate was decided without the reviewer brief in its evidence",
+                 _edit(f"{KIT_DIR}/decisions/{SPEC}/G3.yml", f"  - specs/{SPEC}/briefs/G3.md\n", ""), {}, {}),
     "CK-DOMAIN-SECTIONS": ("a section the domain pack requires is missing",
                            _edit(SPECFILE, "## Data Classification\nSynthetic data only.\n", ""), {}, {}),
 }

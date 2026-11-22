@@ -191,12 +191,15 @@ def ck_drift_spec(ctx: Context, res: Result) -> None:
         if spec not in closed:
             continue
         paths = spec_front(ctx, spec).get("paths") or []
+        from .lanes import emergency_paths
+        expected = emergency_paths(ctx)  # an open emergency change is allowed ahead of its retrospective spec
         for c in changed:
-            if match_any(c, paths):
+            if match_any(c, paths) and not match_any(c, expected):
                 res.fail(f"{c} belongs to approved spec {spec} but changed with no spec in the same change", c)
 
 
-KNOWN_SOURCES = {"audit-log"}
+#: metric source -> does it hold any data? Sibling extensions add sources (incidents, runs).
+KNOWN_SOURCES = {"audit-log": lambda ctx: any(p.endswith(".jsonl") for p in ctx.src.files(f"{KIT_DIR}/audit"))}
 
 
 @check("CK-METRIC-SOURCE", ("TRC-11", "TRC-14"), "every configured metric has a data source that exists")
@@ -205,8 +208,8 @@ def ck_metric_source(ctx: Context, res: Result) -> None:
         source = m.get("source")
         if source not in KNOWN_SOURCES:
             res.fail(f"metric {m.get('id')} has no usable data source ({source!r})", f"{KIT_DIR}/kit.yml")
-        elif source == "audit-log" and not any(p.endswith(".jsonl") for p in ctx.src.files(f"{KIT_DIR}/audit")):
-            res.fail(f"metric {m.get('id')} reads the audit log, which is empty", f"{KIT_DIR}/kit.yml")
+        elif not KNOWN_SOURCES[source](ctx):
+            res.fail(f"metric {m.get('id')} reads {source}, which is empty", f"{KIT_DIR}/kit.yml")
 
 
 @check("CK-VERIFY-INPUTS", ("QLT-1",), "the independent verifier received only the artifact, spec, constitution and map")

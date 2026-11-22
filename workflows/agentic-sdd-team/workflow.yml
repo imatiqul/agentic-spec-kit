@@ -1,0 +1,94 @@
+schema_version: "1.0"
+workflow:
+  id: "agentic-sdd-team"
+  name: "Agentic SDD with an agent team"
+  version: "0.3.0"
+  author: "Atiqul Islam"
+  description: "The Orchestrator dispatches each stage's agents, then the run pauses at gates G1-G7 until people approve through the enforcement channel"
+
+requires:
+  speckit_version: ">=1.4.3"
+
+inputs:
+  spec:
+    type: string
+    required: true
+    prompt: "Describe what you want to build"
+  spec_id:
+    type: string
+    required: true
+    prompt: "Spec folder under specs/"
+  integration:
+    type: string
+    default: "auto"
+
+steps:
+  - id: spec
+    command: speckit.agentic-team.orchestrate
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "stage=spec spec={{ inputs.spec_id }} request={{ inputs.spec }}"
+  - id: g1-spec
+    type: agentic-gate
+    gate: G1
+    spec: "{{ inputs.spec_id }}"
+
+  - id: clarify
+    command: speckit.agentic-team.orchestrate
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "stage=clarify spec={{ inputs.spec_id }}"
+  - id: g2-clarify
+    type: agentic-gate
+    gate: G2
+    spec: "{{ inputs.spec_id }}"
+
+  - id: plan
+    command: speckit.agentic-team.orchestrate
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "stage=plan spec={{ inputs.spec_id }}"
+  - id: g3-plan
+    type: agentic-gate
+    gate: G3
+    spec: "{{ inputs.spec_id }}"
+
+  - id: tasks
+    command: speckit.agentic-team.orchestrate
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "stage=tasks spec={{ inputs.spec_id }}"
+  - id: g4-tasks
+    type: agentic-gate
+    gate: G4
+    spec: "{{ inputs.spec_id }}"
+
+  - id: implement
+    command: speckit.agentic-team.orchestrate
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "stage=implement spec={{ inputs.spec_id }}"
+  - id: g5-implement
+    type: agentic-gate
+    gate: G5
+    spec: "{{ inputs.spec_id }}"
+
+  - id: verify
+    command: speckit.agentic-team.orchestrate
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "stage=verify spec={{ inputs.spec_id }}"
+  - id: g6-verify
+    type: agentic-gate
+    gate: G6
+    spec: "{{ inputs.spec_id }}"
+
+  - id: release
+    command: speckit.agentic-team.orchestrate
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "stage=release spec={{ inputs.spec_id }}"
+  - id: g7-release
+    type: agentic-gate
+    gate: G7
+    spec: "{{ inputs.spec_id }}"

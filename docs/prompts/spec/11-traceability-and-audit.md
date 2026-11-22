@@ -43,3 +43,8 @@
 ## Self-tests
 - TRC-17 [0.1] Every check ships with a passing fixture and a deliberately broken
   fixture, and CI proves the broken one fails.
+
+## Lineage
+- TRC-19 [0.5] From a file or a line, one command walks back to the task that
+  changed it, the criteria that task carried, the requirement, the capability, the
+  request that asked for it, and the people who approved each gate.
