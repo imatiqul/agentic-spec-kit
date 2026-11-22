@@ -25,7 +25,7 @@ ROLE_IDS = ["product-owner", "solutions-architect", "backend", "frontend", "ai-e
 GATE_PLAN = {  # gate -> (evidence files, [(reviewer, role)])
     "G1": (["spec.md"], [("alice", "product-owner")]),
     "G2": (["spec.md"], [("alice", "product-owner"), ("alice", "solutions-architect")]),
-    "G3": (["plan.md"], [("alice", "solutions-architect")]),
+    "G3": (["plan.md", "impact.md"], [("alice", "solutions-architect")]),  # impact.md exists once the system extension is loaded
     "G4": (["tasks.md", "trace-manifest.json"], [("bob", "engineering-manager"), ("bob", "qa")]),
     "G5": (["trace-manifest.json", "evidence/junit.xml"], [("bob", "qa")]),
 }
@@ -107,11 +107,21 @@ def build_sample(root: Path) -> None:
     _dump(root, f"{base}/verification/G6-inputs.yml", {
         "verifier": "independent-verifier", "author": "backend-implementer",
         "inputs": [f"{base}/spec.md", ".specify/memory/constitution.md", "src/demo/greet.py"]})
+    from .core import SAMPLE_HOOKS
+    for hook in SAMPLE_HOOKS:
+        hook(root)
     ctx = context(root)
     _write(root, f"{base}/trace-manifest.json", json.dumps(build_manifest(ctx, SPEC), indent=2) + "\n")
+    from .checks_gov import gate_roles, people_by_role
+    holders = people_by_role(ctx.roles())
     reviews, n = [], 0
-    for gate, (files, approvals) in GATE_PLAN.items():
-        paths = [f"{base}/{f}" for f in files]
+    for gate, (files, planned) in GATE_PLAN.items():
+        # Sibling extensions may require more roles (for example the owner of a touched node).
+        approvals = list(planned)
+        for role in gate_roles(ctx, gate, SPEC):
+            if role not in [r for _, r in approvals]:
+                approvals.append((sorted(holders[role])[0], role))
+        paths = [f"{base}/{f}" for f in files if (root / base / f).exists()]
         digest = evidence_hash(ctx.src, SPEC, gate, paths)
         entry = audit_append(root, SPEC, {"type": "kit", "id": "selftest"}, "gate.evidence", spec=SPEC, gate=gate, commit=COMMIT)
         recorded = []
@@ -201,9 +211,17 @@ FIXTURES: dict[str, tuple[str, Callable[[Path], None], dict, dict]] = {
 }
 
 
+def all_fixtures() -> dict:
+    from .core import FIXTURE_HOOKS
+    merged = dict(FIXTURES)
+    for hook in FIXTURE_HOOKS:
+        merged.update(hook())
+    return merged
+
+
 @check("CK-SELFTEST", ("TRC-17",), "every check has a passing and a failing fixture")
 def ck_selftest(ctx: Context, res: Result) -> None:
-    fixtures = ctx.options.get("fixtures", FIXTURES)
+    fixtures = ctx.options.get("fixtures", all_fixtures())
     for cid in sorted(REGISTRY):
         if cid != "CK-SELFTEST" and cid not in fixtures:
             res.fail(f"{cid} has no fixtures")
@@ -212,6 +230,7 @@ def ck_selftest(ctx: Context, res: Result) -> None:
 def run_selftest() -> tuple[bool, list[dict]]:
     """Run every fixture. Returns (all good, rows)."""
     rows, good = [], True
+    FIXTURES = all_fixtures()  # noqa: N806 - shadows the core table with the merged one
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp) / "base"
         build_sample(base)

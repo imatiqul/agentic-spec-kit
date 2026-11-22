@@ -1,0 +1,17 @@
+schema: agentic-roles/1
+people:
+  - {id: pat, roles: [product-owner, solutions-architect]}
+  - {id: sam, roles: [backend, qa, engineering-manager]}
+  - {id: lee, roles: [platform, data-owner, security-compliance, devops-sre]}
+roles:
+  product-owner: {title: Product Owner}
+  solutions-architect: {title: Solutions Architect}
+  backend: {title: Backend}
+  frontend: {title: Frontend}
+  ai-engineer: {title: AI Engineer}
+  data-owner: {title: Data Owner}
+  platform: {title: Platform}
+  qa: {title: QA}
+  security-compliance: {title: Security & Compliance}
+  devops-sre: {title: DevOps/SRE}
+  engineering-manager: {title: Engineering Manager}

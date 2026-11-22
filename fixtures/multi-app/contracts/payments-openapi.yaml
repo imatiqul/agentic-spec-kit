@@ -1,0 +1,25 @@
+openapi: 3.0.3
+info: {title: Payments (external stub), version: 2.1.0}
+paths:
+  /charges:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount_cents, currency]
+              properties:
+                amount_cents: {type: integer}
+                currency: {type: string}
+      responses:
+        "201":
+          description: Charge created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: {type: string}
+                  status: {type: string}

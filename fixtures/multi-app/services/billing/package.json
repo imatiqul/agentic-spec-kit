@@ -1,0 +1,2 @@
+{"name": "@shop/billing", "version": "0.1.0", "private": true, "scripts": {"start": "node src/index.js"},
+ "dependencies": {"express": "4.19.2", "@shop/shared-lib": "1.2.0"}}

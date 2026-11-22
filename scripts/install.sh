@@ -11,6 +11,7 @@ cd "$project"
 [ -d .specify ] || { echo "run 'specify init' in $project first" >&2; exit 2; }
 specify extension add --dev "$kit/extensions/agentic" --force
 [ -n "$pack" ] && specify extension add --dev "$kit/extensions/agentic-$pack" --force
+[ "$profile" != lite ] && specify extension add --dev "$kit/extensions/agentic-system" --force
 specify preset add --dev "$kit/presets/agentic-$profile"
 specify workflow step add agentic-gate --dev "$kit/steps/agentic-gate" --force
 specify workflow add --dev "$kit/workflows/agentic-sdd"

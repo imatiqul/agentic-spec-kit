@@ -122,7 +122,7 @@ def cmd_gate(args) -> int:
     info = {"spec": args.spec, "gate": args.gate, "evidence": files, "hash": digest, "status": state,
             "approved": bool(record and record.get("decision") in ("approve", "approve-with-conditions")
                              and (record.get("evidence") or {}).get("hash") == digest),
-            "required_roles": gate_roles(ctx, args.gate),
+            "required_roles": gate_roles(ctx, args.gate, args.spec),
             "paste": approval_line(args.gate, "approve", digest)}
     if args.json:
         print(json.dumps(info, indent=2))
@@ -323,6 +323,10 @@ def main(argv: list[str] | None = None) -> int:
     sp = sub.add_parser("selftest", help="prove every check fails on its broken fixture"); sp.add_argument("--json", action="store_true")
     sp.set_defaults(fn=cmd_selftest)
     sp = sub.add_parser("list", help="list checks"); sp.set_defaults(fn=cmd_list)
+
+    from .core import CLI_HOOKS
+    for hook in CLI_HOOKS:
+        hook(sub, common)
 
     args = p.parse_args(argv)
     try:

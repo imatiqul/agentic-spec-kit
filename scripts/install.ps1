@@ -12,6 +12,7 @@ if (-not (Test-Path ".specify")) { throw "Run 'specify init' in $Project first."
 function Invoke-Specify { specify @args; if ($LASTEXITCODE -ne 0) { throw "specify $args failed" } }
 Invoke-Specify extension add --dev "$kit\extensions\agentic" --force
 if ($Pack) { Invoke-Specify extension add --dev "$kit\extensions\agentic-$Pack" --force }
+if ($Profile -ne "lite") { Invoke-Specify extension add --dev "$kit\extensions\agentic-system" --force }
 Invoke-Specify preset add --dev "$kit\presets\agentic-$Profile"
 Invoke-Specify workflow step add agentic-gate --dev "$kit\steps\agentic-gate" --force
 Invoke-Specify workflow add --dev "$kit\workflows\agentic-sdd"

@@ -109,8 +109,13 @@ def build_manifest(ctx: Context, spec: str) -> dict:
             failures.append(f"{ac}: gap (no passing test and no open task carries it)")
         rows.append({"principles": principles, "requirement": fr, "criterion": ac,
                      "tasks": [t for t, _ in tasks], "tests": [n for n, _ in results], "state": state})
-    return {"format": "agentic-trace/1", "spec": spec,
-            "gate": {"ok": not failures, "failures": sorted(set(failures))}, "rows": rows}
+    manifest = {"format": "agentic-trace/1", "spec": spec,
+                "gate": {"ok": not failures, "failures": sorted(set(failures))}, "rows": rows}
+    from .core import MANIFEST_HOOKS
+    for hook in MANIFEST_HOOKS:
+        hook(ctx, spec, manifest)
+    manifest["gate"]["ok"] = not manifest["gate"]["failures"]
+    return manifest
 
 
 @check("CK-TRACE", ("TRC-1", "TRC-3"), "principles, requirements, criteria, tasks and tests are linked with no gaps or orphans")

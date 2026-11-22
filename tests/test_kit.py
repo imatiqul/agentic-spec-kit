@@ -94,7 +94,7 @@ def test_single_approver_exception_must_be_recorded(sample):
     reviews(sample, lambda d: d["changes"]["pull/1"]["authors"].append("alice"))
     r = run(sample, "CK-APPROVER")
     assert any("single_approver_exception is not recorded" in f.message for f in r.findings)
-    for gate in ("G1", "G2", "G3"):
+    for gate in ("G1", "G2", "G3", "G4", "G5"):  # wherever alice approved; sibling extensions may add her at later gates
         edit(sample, f"{KIT_DIR}/decisions/001-demo/{gate}.yml", "single_approver_exception: false", "single_approver_exception: true")
     assert run(sample, "CK-APPROVER").ok
 
@@ -324,7 +324,7 @@ def test_cli_exit_codes(sample, capsys):
 def test_gate_command_prints_the_line_to_paste(sample, capsys):
     assert main(["--root", str(sample), "gate", "--spec", "001-demo", "--gate", "G3", "--json"]) == 0
     info = json.loads(capsys.readouterr().out)
-    assert info["approved"] and info["paste"].startswith("gate G3 approve sha256:") and info["required_roles"] == ["solutions-architect"]
+    assert info["approved"] and info["paste"].startswith("gate G3 approve sha256:") and "solutions-architect" in info["required_roles"]
     edit(sample, "specs/001-demo/plan.md", "One function", "Changed")
     main(["--root", str(sample), "gate", "--spec", "001-demo", "--gate", "G3", "--json"])
     assert not json.loads(capsys.readouterr().out)["approved"]

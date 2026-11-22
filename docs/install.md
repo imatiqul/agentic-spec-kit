@@ -12,6 +12,8 @@ path\to\agentic-spec-kit\scripts\install.ps1 -Project . -Profile standard      #
 ```
 The script runs five ordinary `specify` commands: the `agentic` extension, an optional domain pack, the profile preset, the `agentic-gate` step and the `agentic-sdd` workflow.
 
+For Standard and Regulated the script also installs `agentic-system` (the system map and impact analysis). After installing, draft the map with `agentic.py map discover --write`, give every node an owner, tier and classification, and save it as `system-map/map.yml`. Until that file exists the map checks report "not run".
+
 Bundles are in `bundles/` but cannot be installed yet. Spec Kit 1.4.3 resolves a bundle's components only through catalogs, and this kit has not published one.
 
 ## 2. Configure

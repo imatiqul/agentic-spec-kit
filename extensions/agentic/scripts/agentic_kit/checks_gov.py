@@ -27,9 +27,15 @@ PROTECTED = [f"{KIT_DIR}/roles.yml", f"{KIT_DIR}/kit.yml", f"{KIT_DIR}/constitut
              f"{KIT_DIR}/waivers/baseline.yml", ".specify/memory/constitution.md"]
 
 
-def gate_roles(ctx: Context, gate: str) -> list[str]:
+def gate_roles(ctx: Context, gate: str, spec: str | None = None) -> list[str]:
+    """Roles that must approve a gate: the profile's defaults plus any a sibling extension derives for this spec."""
     override = ((ctx.kit().get("gates") or {}).get("approvers") or {}).get(gate)
-    return list(override) if override else list(DEFAULT_APPROVERS[gate])
+    roles = list(override) if override else list(DEFAULT_APPROVERS[gate])
+    if spec:
+        from .core import ROLE_HOOKS
+        for hook in ROLE_HOOKS:
+            roles += [r for r in hook(ctx, spec, gate) if r not in roles]
+    return roles
 
 
 def people_by_role(roles: dict) -> dict[str, set[str]]:
@@ -421,7 +427,7 @@ def ck_approver(ctx: Context, res: Result) -> None:
             if not problems and ap.get("role"):
                 covered.add(ap["role"])
         if decision != "reject":
-            needed = gate_roles(ctx, gate)
+            needed = gate_roles(ctx, gate, str(rec.get("spec")))
             if ctx.profile == "lite":
                 if not covered & set(needed):
                     res.fail(f"gate {gate} needs a valid approval from one of: {', '.join(needed)}", rel)
@@ -537,7 +543,11 @@ def ck_waiver(ctx: Context, res: Result) -> None:
             used.add(hit)
         else:
             unwaived.setdefault(s["rule"], []).append(s)
+    from .core import RULE_OWNERS
+    mine = ctx.options.get("rule_owner", "CK-WAIVER")
     for rule in sorted(set(unwaived) | set(groups)):
+        if RULE_OWNERS.get(rule, "CK-WAIVER") != mine:
+            continue
         items = unwaived.get(rule, [])
         allowed, rel = groups.get(rule, (0, ""))
         if len(items) > allowed:

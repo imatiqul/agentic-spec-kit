@@ -1,0 +1,26 @@
+schema: agentic-map/1
+nodes:
+  - {id: shop-orders, type: service, owner: backend, tier: high, classification: internal, origin: derived,
+     evidence: services/orders/package.json, discovered_by: node}
+  - {id: shop-billing, type: service, owner: backend, tier: high, classification: internal, origin: derived,
+     evidence: services/billing/package.json, discovered_by: node}
+  - {id: shop-shared-lib, type: shared-library, owner: platform, tier: medium, classification: none, origin: derived,
+     evidence: packages/shared-lib/package.json, discovered_by: node}
+  - {id: shop-db, type: data-store, engine: postgresql, engine_version: "16", owner: data-owner, tier: high,
+     classification: internal, origin: derived, evidence: docker-compose.yml, discovered_by: compose}
+  - {id: contract-payments-openapi, type: api-contract, owner: solutions-architect, tier: high, classification: internal,
+     origin: derived, evidence: contracts/payments-openapi.yaml, discovered_by: contracts}
+edges:
+  - {from: shop-orders, rel: builds-with, to: shop-shared-lib, origin: derived, evidence: services/orders/package.json}
+  - {from: shop-billing, rel: builds-with, to: shop-shared-lib, origin: derived, evidence: services/billing/package.json}
+  - {from: shop-orders, rel: writes, to: shop-db, origin: derived, evidence: services/orders/src/index.js}
+  - {from: shop-billing, rel: writes, to: shop-db, origin: derived, evidence: services/billing/src/index.js}
+  - {from: shop-orders, rel: calls, to: contract-payments-openapi, origin: derived, evidence: services/orders/src/index.js}
+index:
+  - {paths: ["services/orders/*"], node: shop-orders}
+  - {paths: ["services/billing/*"], node: shop-billing}
+  - {paths: ["packages/shared-lib/*"], node: shop-shared-lib}
+  - {paths: ["db/*"], node: shop-db}
+  - {paths: ["contracts/*"], node: contract-payments-openapi}
+discovery:
+  ignore: ["multi-app"]

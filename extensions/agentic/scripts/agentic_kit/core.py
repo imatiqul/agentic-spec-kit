@@ -169,6 +169,32 @@ class Check:
 
 REGISTRY: dict[str, Check] = {}
 
+# Extension points for sibling extensions (agentic-system, agentic-team). Each is a list of callables.
+ROLE_HOOKS: list = []      # (ctx, spec, gate) -> extra roles that must approve
+MANIFEST_HOOKS: list = []  # (ctx, spec, manifest) -> None; may add fields to the trace manifest
+CLI_HOOKS: list = []       # (subparsers) -> None; adds commands
+SAMPLE_HOOKS: list = []    # (root) -> None; extends the self-test sample project before decisions are written
+FIXTURE_HOOKS: list = []   # () -> dict of extra self-test fixtures
+RULE_OWNERS: dict[str, str] = {}  # suppression rule id -> check id that reports it (default CK-WAIVER)
+
+
+def load_plugins(launcher_dir: Path) -> list[str]:
+    """Import agentic_kit_* packages from sibling extensions so their checks and commands register.
+
+    Layout, both in this repository and when installed: <extensions>/<id>/scripts/<package>/.
+    """
+    import importlib
+    import sys
+    loaded = []
+    extensions = launcher_dir.parent.parent
+    for scripts in sorted(extensions.glob("agentic-*/scripts")):
+        for pkg in sorted(scripts.glob("agentic_kit_*/__init__.py")):
+            if str(scripts) not in sys.path:
+                sys.path.insert(0, str(scripts))
+            importlib.import_module(pkg.parent.name)
+            loaded.append(pkg.parent.name)
+    return loaded
+
 
 def check(id: str, requirements: tuple[str, ...], summary: str, profiles: tuple[str, ...] = PROFILES):
     def wrap(fn: Callable[[Context, Result], None]):

@@ -1,0 +1,6 @@
+schema: agentic-kit/1
+profile: standard
+domain_packs: []
+enforcement: {adapter: file, default_branch: main}
+upstream: {speckit: "1.4.3"}
+gates: {single_approver_exception: forbidden, require_evidence_hash: true}
