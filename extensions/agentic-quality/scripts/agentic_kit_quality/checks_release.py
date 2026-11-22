@@ -116,9 +116,15 @@ def ck_progressive(ctx: Context, res: Result) -> None:
         if _empty(str(doc.get("rollback_trigger") or "")):
             res.fail("the rollout states no rollback trigger", rel)
         if tier == "critical":
+            # A rollback can only be rehearsed once the change is built, so the plan says how it will be rehearsed
+            # and the release shows that it was.
             rehearsal = doc.get("rollback_rehearsal") or {}
-            if as_date(rehearsal.get("date")) is None or not rehearsal.get("evidence") or not ctx.src.exists(str(rehearsal["evidence"])):
-                res.fail("a critical change needs a rollback rehearsal with a date and evidence that exists", rel)
+            rehearsed = as_date(rehearsal.get("date")) is not None and bool(rehearsal.get("evidence")) and ctx.src.exists(str(rehearsal["evidence"]))
+            if gate_record(ctx, spec, "G7") is not None:
+                if not rehearsed:
+                    res.fail("G7 is approved but the rollback of this critical change was not rehearsed: the rollout needs the rehearsal's date and evidence that exists", rel)
+            elif not rehearsed and _empty(str(rehearsal.get("plan") or "")):
+                res.fail("a critical change needs a rollback rehearsal before release: the rollout must say how the rollback will be rehearsed (rollback_rehearsal.plan)", rel)
 
 
 @check("CK-FLAG", ("CHG-20",), "every feature flag has an owner, a default and a removal date that has not passed", profiles=SYS)

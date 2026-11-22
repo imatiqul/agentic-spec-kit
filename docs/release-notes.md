@@ -32,6 +32,10 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 ## Since the slices, from using the kit on the reference project
 - The pinning check (CK-PIN) reads the containers a .NET Aspire application host starts, and treats a tag that ends in `-latest` as floating. Before, finding N8 of the reference (two floating tags in such a file) was one the kit could not see.
 - Writing a reviewer brief that has not changed no longer adds a second `gate.ready` entry to the audit log.
+- Discovery finds Dapr event topics in C#, with who publishes and who subscribes, reading calls that name their arguments across lines. The reference map had been drawn without two publishers, and a reviewer caught it; the drift check could not have.
+- Impact analysis reaches the events a touched component publishes, and their subscribers. Before, a change to a publisher did not reach the services that act on its events.
+- A Critical change plans its rollback rehearsal at G3 and shows it at G7. Before, the check asked for the rehearsal's evidence as soon as a plan existed, which no plan could have.
+- A Critical change's test strategy answers for each external system it may rely on: a resilience test, or a stated reason why the change does not rely on it. Systems the spec lists under `depends_on` are included and cannot be reasoned away; a placeholder no longer passes.
 
 ## Installing
 `scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.

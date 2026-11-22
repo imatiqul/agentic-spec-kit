@@ -8,7 +8,11 @@ The healthcare repository is only read. Rules, all of them mechanical:
   becomes `restricted` until a person says otherwise, so that Security and Compliance is asked whenever it is touched;
 - a derived fact must cite a file that exists. Where the draft cited a description, the file is looked up in the
   repository; where none is found the fact is downgraded to `assumed`, which is what it is;
-- the path index is built from the files and folders each node cites.
+- the path index is built from the files and folders each node cites;
+- the kit's own discovery is then run over the repository. A node it finds under a folder the map already indexes becomes an
+  alias of that map node, so that the drift check can compare the two. An event topic, or an edge, that discovery finds and the
+  draft lacks is added, marked as such. This was added in Phase 6, after a review comment on pull request 72 of the healthcare
+  repository showed that the Phase 1 draft had missed publishers: its pattern did not read calls that name their arguments.
 """
 import re
 import subprocess
@@ -17,6 +21,8 @@ from collections import Counter
 from pathlib import Path
 
 import yaml
+
+KIT = Path(__file__).resolve().parents[3] / "extensions" / "agentic" / "scripts"
 
 OWNERS = {"Backend": "backend", "Solutions Architect": "solutions-architect", "Platform": "platform", "Data Owner": "data-owner",
           "AI Engineer": "ai-engineer", "Frontend": "frontend", "Security & Compliance": "security-compliance", "DevOps/SRE": "devops-sre"}
@@ -33,9 +39,58 @@ EXTRA_NODES += [
      "evidence": "Directory.Build.props", "note": "Not in the Phase 1 draft; added in Phase 5 because findings M1, M4 and M5 change it"},
     {"id": "dev-apphost", "type": "infrastructure", "owner": "devops-sre", "tier": "medium", "classification": "none", "origin": "derived",
      "evidence": "src/HealthQCopilot.AppHost/Program.cs", "note": "Not in the Phase 1 draft; added in Phase 5 because finding N8 changes it"}]
+#: What discovery finds that is deliberately not a component of the map, each with its reason.
+IGNORE = {"healthq-copilot-frontend": "the workspace root of the front ends, not a package of its own",
+          "servicebus-emulator": "a development-only container the application host starts; the map has it as part of dev-apphost",
+          "sql-servicebus": "a development-only container the application host starts; the map has it as part of dev-apphost"}
+FOUND_NOTE = "Not in the Phase 1 draft; found by the kit's discovery in Phase 6"
 EXTRA_INDEX = [{"paths": [".github/workflows/**", "frontend/e2e/**", "frontend/e2e-cloud/**"], "node": "ci-pipeline"},
                {"paths": ["Directory.Build.props", ".editorconfig", ".gitignore", "global.json", "README.md", "LICENSE"], "node": "repo-config"},
                {"paths": ["src/HealthQCopilot.AppHost/**"], "node": "dev-apphost"}]
+
+
+def reconcile(repo: Path, nodes: list, edges: list, index: list, stats: Counter) -> None:
+    """Bring the map in line with what the kit's discovery finds in the repository. Nothing is removed."""
+    sys.path.insert(0, str(KIT))
+    from agentic_kit import core
+    core.load_plugins(KIT)
+    from agentic_kit_system import discover
+    from agentic_kit_system.mapmodel import SystemMap
+
+    src = core.Source(repo)
+    found = discover.discover(core.Context(src, src, {}))
+    smap = SystemMap({"schema": "agentic-map/1", "nodes": nodes, "edges": edges, "index": index})
+    by_id = {n["id"]: n for n in nodes}
+    resolved: dict[str, str] = {}
+    for n in found["nodes"]:
+        if n["id"] in IGNORE:
+            continue
+        if n["id"] in by_id:
+            resolved[n["id"]] = n["id"]
+        elif n["type"] == "event":
+            nodes.append({"id": n["id"], "type": "event", "owner": "solutions-architect", "tier": "high", "classification": "restricted",
+                          "origin": "derived", "evidence": n["evidence"],
+                          "note": FOUND_NOTE + ". Not classified; treated as restricted until a person classifies it"})
+            by_id[n["id"]] = nodes[-1]
+            resolved[n["id"]] = n["id"]
+            stats["event topic added from discovery"] += 1
+        else:
+            target = smap.node_for(n["evidence"])
+            if target:
+                aliases = by_id[target].setdefault("aliases", [])
+                if n["id"] not in aliases:
+                    aliases.append(n["id"])
+                resolved[n["id"]] = target
+                stats["discovery id recorded as an alias"] += 1
+            else:
+                stats["found by discovery and not placed: " + n["id"]] += 1
+    have = {(e["from"], e["rel"], e["to"]) for e in edges}
+    for e in found["edges"]:
+        a, b = resolved.get(e["from"]), resolved.get(e["to"])
+        if a and b and a != b and (a, e["rel"], b) not in have:
+            edges.append({"from": a, "rel": e["rel"], "to": b, "origin": "derived", "evidence": e["evidence"], "note": FOUND_NOTE})
+            have.add((a, e["rel"], b))
+            stats[f"{e['rel']} edge added from discovery"] += 1
 
 
 def main(draft: Path, repo: Path, out: Path) -> None:
@@ -143,7 +198,8 @@ def main(draft: Path, repo: Path, out: Path) -> None:
 
     nodes += [dict(n) for n in EXTRA_NODES if exists(n["evidence"])]
     index += [dict(i) for i in EXTRA_INDEX]
-    doc = {"schema": "agentic-map/1", "nodes": nodes, "edges": edges, "index": index}
+    reconcile(repo, nodes, edges, index, stats)
+    doc = {"schema": "agentic-map/1", "discovery": {"ignore": sorted(IGNORE)}, "nodes": nodes, "edges": edges, "index": index}
     header = (f"# System map of HealthQ Copilot, in agentic-spec-kit's format.\n"
               f"# Converted by examples/healthq/phase-5/convert_map.py from the Phase 1 draft, against the repository at commit {commit}.\n"
               "# Owners, tiers and classifications are an agent's proposals from Phase 1. A person confirms them when a plan is reviewed (G3).\n"

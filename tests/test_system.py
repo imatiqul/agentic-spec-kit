@@ -109,6 +109,71 @@ def test_tier_must_rise_to_the_highest_touched(shop):
     assert any("declared low but touches shop-shared-lib, which is medium" in f.message for f in run(shop, "CK-TIER-RAISE").findings)
 
 
+def test_a_change_to_a_publisher_reaches_the_subscribers_of_what_it_publishes(shop):
+    m = shop / "system-map/map.yml"
+    m.write_text(m.read_text()
+                 .replace("nodes:\n", "nodes:\n  - {id: topic-order.paid, type: event, owner: solutions-architect, tier: high, classification: internal, origin: assumed}\n")
+                 .replace("edges:\n", "edges:\n  - {from: shop-orders, rel: publishes, to: topic-order.paid, origin: assumed}\n"
+                                       "  - {from: shop-billing, rel: subscribes, to: topic-order.paid, origin: assumed}\n"))
+    spec = shop / "specs/001-money-format/spec.md"
+    spec.write_text(spec.read_text().replace("touches: [shop-shared-lib]", "touches: [shop-orders]"))
+    c = ctx(shop)
+    impact = checks_map.compute_impact(c, load_map(c), "001-money-format")
+    reach = {a["node"]: (a["distance"], a["via"]) for a in impact["affected"]}
+    assert reach["topic-order.paid"] == (1, "is published by shop-orders"), "what a touched component publishes is in play"
+    assert reach["shop-billing"] == (2, "subscribes topic-order.paid"), "and so is everyone who subscribes to it"
+    assert "solutions-architect" in impact["required_approvers"]["G3"], "the owner of the event is asked about the plan"
+    spec.write_text(spec.read_text().replace("touches: [shop-orders]", "touches: [shop-billing]"))
+    reach = {a["node"] for a in checks_map.compute_impact(ctx(shop), load_map(ctx(shop)), "001-money-format")["affected"]}
+    assert "topic-order.paid" not in reach and "shop-orders" not in reach, "a change to a subscriber does not reach the publisher"
+
+
+DAPR = {
+    "src/Clinic.Triage/Clinic.Triage.csproj": '<Project Sdk="Microsoft.NET.Sdk.Web"></Project>\n',
+    "src/Clinic.Billing/Clinic.Billing.csproj": '<Project Sdk="Microsoft.NET.Sdk.Web"></Project>\n',
+    "tests/Clinic.Tests/Clinic.Tests.csproj": '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><IsTestProject>true</IsTestProject></PropertyGroup></Project>\n',
+    "src/Clinic.Triage/Handlers.cs": (
+        'class Handlers {\n'
+        '  async Task One() { await dapr.PublishEventAsync("pubsub", "triage.completed", new { Id = 1 }); }\n'
+        '  async Task Two() {\n'
+        '    await dapr.PublishEventAsync(\n'
+        '        pubsubName: "pubsub",\n'
+        '        topicName: "escalation.required",\n'
+        '        data: new { Reason = "needs a person, urgently" },\n'
+        '        cancellationToken: ct);\n'
+        '  }\n'
+        '  async Task Three(Workflow w) {\n'
+        '    var topicName = w.Status == "Approved" ? "review.approved" : "review.denied";\n'
+        '    await dapr.PublishEventAsync("pubsub", topicName, w);\n'
+        '  }\n'
+        '  async Task Four(string computed) { await dapr.PublishEventAsync("pubsub", computed + ".done", 1); await dapr.PublishEventAsync("pubsub", Name(), 1); }\n'
+        '}\n'),
+    "src/Clinic.Billing/Subscriber.cs": (
+        'class Subscriber {\n'
+        '  [Topic("pubsub", "triage.completed")]\n'
+        '  [HttpPost("/dapr/sub/triage-completed")]\n'
+        '  public Task Handle(Payload p) => Task.CompletedTask;\n'
+        '}\n'),
+    "tests/Clinic.Tests/HandlerTests.cs": 'class T { void M() { dapr.PublishEventAsync("pubsub", "only.in.a.test", 1); } }\n',
+}
+
+
+def test_dapr_topics_are_discovered_with_who_publishes_and_who_subscribes(tmp_path):
+    for rel, text in DAPR.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    found = discover.discover(ctx(tmp_path))
+    events = {n["id"]: n for n in found["nodes"] if n["type"] == "event"}
+    assert set(events) == {"topic-triage.completed", "topic-escalation.required", "topic-review.approved", "topic-review.denied"}, \
+        "a call that names its arguments across lines is read; a condition's own strings and a test project's topics are not topics"
+    assert events["topic-escalation.required"]["evidence"] == "src/Clinic.Triage/Handlers.cs"
+    edges = {(e["from"], e["rel"], e["to"]) for e in found["edges"]}
+    assert {("clinic-triage", "publishes", "topic-triage.completed"), ("clinic-triage", "publishes", "topic-escalation.required"),
+            ("clinic-triage", "publishes", "topic-review.approved"), ("clinic-triage", "publishes", "topic-review.denied"),
+            ("clinic-billing", "subscribes", "topic-triage.completed")} <= edges
+    assert not any("computed" in e["to"] or "Name" in e["to"] for e in found["edges"]), "a name built at run time is not seen, and is not guessed"
+
+
 def test_new_dependency_in_code_is_drift(shop):
     pkg = shop / "services/billing/package.json"
     pkg.write_text(pkg.read_text().replace('"@shop/shared-lib": "1.2.0"', '"@shop/shared-lib": "1.2.0", "@shop/orders": "0.1.0"'))

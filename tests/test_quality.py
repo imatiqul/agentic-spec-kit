@@ -114,6 +114,50 @@ def test_debt_register_lists_waivers_and_the_baseline(sample):
     assert code == 0 and "W-001" in out
 
 
+def test_a_critical_change_tests_each_external_system_it_relies_on_or_says_why_it_does_not(sample):
+    edit(sample, f"{BASE}/spec.md", "tier_declared: high", "tier_declared: critical")
+    strategy = sample / BASE / "test-strategy.yml"
+    acs = sorted(set(__import__("re").findall(r"AC-[0-9]+", (sample / BASE / "spec.md").read_text(encoding="utf-8"))))
+    base = (strategy.read_text(encoding="utf-8").replace("tier: high", "tier: critical")
+            + "  performance: {evidence: specs/001-demo/evidence/junit.xml}\n  resilience: {evidence: specs/001-demo/evidence/junit.xml}\n"
+            + "mutation: {threshold: 60, score: 71, report: specs/001-demo/evidence/junit.xml}\n"
+            + "negative_boundary: {" + ", ".join(f"{ac}: tests/demo.spec.ts" for ac in acs) + "}\n")
+
+    def findings(extra):
+        strategy.write_text(base + extra, encoding="utf-8")
+        return [f.message for f in run(sample, "CK-TEST-STRATEGY").findings]
+
+    assert any("demo-mail has none" in m for m in findings("")), "demo-app calls the mail service, so the change may rely on it"
+    assert any("demo-mail has none" in m for m in findings("resilience: {demo-mail: TBD}\n")), "a placeholder is not an answer"
+    assert findings("resilience: {demo-mail: tests/doubles/mail.py}\n") == []
+    assert findings("resilience: {demo-mail: {not_relied_on: The change formats a greeting and sends no mail}}\n") == [], \
+        "a touched service may call a system the change has nothing to do with; a stated reason is an answer a reviewer can read"
+    edit(sample, f"{BASE}/spec.md", "touches: [", "depends_on: {nodes: [demo-mail]}\ntouches: [")
+    assert any("the spec lists it under depends_on" in m
+               for m in findings("resilience: {demo-mail: {not_relied_on: The change formats a greeting and sends no mail}}\n")), \
+        "what the spec itself says it relies on cannot be waved away"
+    assert findings("resilience: {demo-mail: tests/doubles/mail.py}\n") == []
+
+
+def test_a_critical_change_plans_its_rollback_rehearsal_and_shows_it_at_release(sample):
+    assert run(sample, "CK-PROGRESSIVE").ok, "the sample is a high-tier change: no rehearsal is asked of it"
+    edit(sample, f"{BASE}/spec.md", "tier_declared: high", "tier_declared: critical")
+    r = run(sample, "CK-PROGRESSIVE")
+    assert [f.message for f in r.findings] == ["a critical change needs a rollback rehearsal before release: the rollout must say how the rollback "
+                                               "will be rehearsed (rollback_rehearsal.plan)"]
+    rollout = sample / BASE / "rollout.yml"
+    planned = rollout.read_text(encoding="utf-8")
+    rollout.write_text(planned + "rollback_rehearsal: {plan: Roll the canary back in staging and compare the greetings table before and after}\n", encoding="utf-8")
+    assert run(sample, "CK-PROGRESSIVE").ok, "a rollback cannot be rehearsed before the change is built; at plan time the plan is what is asked"
+    g5 = (sample / core.KIT_DIR / "decisions" / SPEC / "G5.yml").read_text(encoding="utf-8")
+    (sample / core.KIT_DIR / "decisions" / SPEC / "G7.yml").write_text(g5.replace("gate: G5", "gate: G7"), encoding="utf-8")
+    r = run(sample, "CK-PROGRESSIVE")
+    assert len(r.findings) == 1 and r.findings[0].message.startswith("G7 is approved but the rollback of this critical change was not rehearsed")
+    (sample / BASE / "release" / "rollback-rehearsal.md").write_text("# Rollback rehearsal\n\nRolled back in staging; the table was unchanged.\n", encoding="utf-8")
+    rollout.write_text(planned + f"rollback_rehearsal: {{date: 2026-11-20, evidence: {BASE}/release/rollback-rehearsal.md}}\n", encoding="utf-8")
+    assert run(sample, "CK-PROGRESSIVE").ok
+
+
 def test_flag_past_its_removal_date_fails_on_that_date_only(sample):
     assert run(sample, "CK-FLAG").ok
     edit(sample, MAP_PATH, "remove_by: 2099-01-01", "remove_by: 2026-11-30")

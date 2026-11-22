@@ -7,6 +7,8 @@ enforcement:
   default_branch: main
 upstream:
   speckit: "1.4.3"
+adoption:
+  mode: brownfield            # an existing codebase: a spec with a plan says whether it changes existing code, and pins that code down first
 gates:
   single_approver_exception: allowed     # allowed | forbidden. Charter D3: one person holds every role, so each decision states the exception
   require_evidence_hash: true

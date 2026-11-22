@@ -73,7 +73,8 @@ def skeletons(ctx, spec: str) -> list[tuple[str, str]]:
         strategy += "mutation: {threshold: 60, score: null, report: TBD}\nnegative_boundary: {}   # AC id -> the negative and boundary tests for it\n"
         deps = checks_quality.external_dependencies(ctx, smap, spec)
         if deps:
-            strategy += "resilience:\n" + "".join(f"  {d}: TBD\n" for d in deps)
+            strategy += ("resilience:   # per dependency: the resilience test, or {not_relied_on: <why the change does not rely on it>}\n"
+                         + "".join(f"  {d}: TBD\n" for d in deps))
     out.append((f"{base}/test-strategy.yml", strategy))
     if smap is not None:
         protected = restricted_classes(ctx)

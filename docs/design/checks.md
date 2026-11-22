@@ -35,7 +35,7 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 | CK-MAP-SCHEMA | Map is invalid; unknown node or edge type; edge points at a missing node | MAP-1 to MAP-3 | L, CI | Edge to an unknown node |
 | CK-MAP-OWNER | A node has no owner, tier or classification | MAP-4 | L, CI | Node without `owner` |
 | CK-MAP-EVIDENCE | A node or edge marked derived cites a file that does not exist | MAP-5, ADP-9 | L, CI | Evidence path that was deleted |
-| CK-MAP-DRIFT | Discovery finds nodes or edges not in the map, or the map has derived entries discovery no longer finds | MAP-6, TRC-9 | CI | New project reference not in the map |
+| CK-MAP-DRIFT | Discovery finds nodes or edges not in the map, or the map has derived entries discovery no longer finds | MAP-6, TRC-9 | CI | New project reference, or a new event topic or publisher, not in the map |
 | CK-MAP-FEDERATION | A federated map reference is not pinned or cannot be read | MAP-7 | L, CI | Reference to a branch name |
 | CK-TOUCH | A change modifies files indexed to a node the spec does not declare in `touches` | MAP-8, MAP-9 | L, A, CI | Edit to a file under an undeclared node |
 | CK-IMPACT | `impact.md` is missing or stale against the map and spec; a required approver from it is absent at the gate | MAP-10 to MAP-12 | L, CI | Impact report older than the spec |
@@ -195,3 +195,7 @@ Detail the summaries leave out:
 | CK-THREAT-MODEL | Each planned spec has a threat model whose threats link to a requirement and an abuse-case test | QLT-3, QLT-4 | Standard, Regulated |
 
 None of these checks runs a scanner, an evaluation or an accessibility tool. Each requires the record that one ran, bound by hash to the files it ran on (`docs/limits.md`).
+
+Detail the summaries leave out:
+- CK-PROGRESSIVE asks a Critical change for a rollback rehearsal in two steps. While the spec is planned, the rollout must say how the rollback will be rehearsed (`rollback_rehearsal.plan`): a rollback cannot be rehearsed before the change is built. Once G7 is approved, the rehearsal must have a date and evidence that exists.
+- CK-TEST-STRATEGY asks a Critical change for a resilience test per external system it relies on. Those are the external systems its touched components call, and the ones the spec lists under `depends_on`. For one a touched component calls and the change has nothing to do with, the strategy may say so: `{not_relied_on: <reason>}`. That is not accepted for a system the spec itself lists, and a placeholder is not an answer.

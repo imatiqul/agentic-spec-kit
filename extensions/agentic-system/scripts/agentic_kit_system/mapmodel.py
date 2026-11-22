@@ -30,6 +30,9 @@ class SystemMap:
     def owned_by(self, node: str) -> list[str]:
         return [e["to"] for e in self.edges if e.get("from") == node and e.get("rel") == "owns"]
 
+    def published_by(self, node: str) -> list[str]:
+        return [e["to"] for e in self.edges if e.get("from") == node and e.get("rel") == "publishes"]
+
     def blast_radius(self, touched: list[str]) -> list[dict]:
         """Direct and transitive dependants of the touched nodes, nearest first (MAP-10)."""
         seen = {t: (0, "") for t in touched}
@@ -37,12 +40,15 @@ class SystemMap:
         while frontier:
             current = frontier.pop(0)
             dist = seen[current][0]
-            reached = self.consumers(current)
-            if dist == 0:  # what a touched component owns is in play too
-                reached += [(o, "owns") for o in self.owned_by(current)]
-            for other, rel in reached:
+            reached = [(other, f"{rel} {current}") for other, rel in self.consumers(current)]
+            if dist == 0:
+                # What a touched component owns or publishes is in play too: a change to a publisher can change
+                # what every subscriber of its events receives.
+                reached += [(o, f"is owned by {current}") for o in self.owned_by(current)]
+                reached += [(t, f"is published by {current}") for t in self.published_by(current)]
+            for other, via in reached:
                 if other in self.nodes and other not in seen:
-                    seen[other] = (dist + 1, f"{rel} {current}")
+                    seen[other] = (dist + 1, via)
                     frontier.append(other)
         out = [{"node": n, "distance": d, "via": via, "owner": self.nodes[n].get("owner", "")}
                for n, (d, via) in seen.items() if d > 0]

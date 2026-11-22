@@ -5,6 +5,7 @@ tier_declared: critical
 owner_role: data-owner
 principles: [P-18, P-19]
 touches: [lib-infrastructure, identity-service, voice-service, agent-service, fhir-service, ocr-service, scheduling-service, notification-service, pophealth-service, revenue-service, identity-db, voice-db, agent-db, fhir-db, ocr-db, scheduling-db, notification-db, pophealth-db, revenue-db]
+changes_existing_code: true
 depends_on:
   nodes: [postgres]
   specs: [001-fail-closed-auth, 003-identity-from-token, 004-audit-identity, 005-triage-validation, 007-audit-export-complete, 008-audit-append-only, 009-phi-protection, 015-audit-write-durable, 016-audit-record-content]

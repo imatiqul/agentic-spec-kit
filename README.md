@@ -2,7 +2,7 @@
 
 > **Status: pre-alpha, public.** All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture.
 > Nothing has been run against a live GitHub repository, a real coding agent, or a live tracker or chat service yet. The
-> reference example has an approved constitution (Phase 4, now version 2) and twenty-five specs (Phase 5): sixteen approved at gates G1 and G2, in conversation and not yet by a pull-request review, and nine drafts that wait at those gates. Do not rely on any of this for real work.
+> reference example has an approved constitution (Phase 4, now version 2) and twenty-five specs (Phase 5): sixteen approved at gates G1 and G2, in conversation and not yet by a pull-request review, and nine drafts that wait at those gates. Six of the specs have a draft plan (Phase 6). Do not rely on any of this for real work.
 > `docs/limits.md` lists what the kit does not do.
 >
 > The owner decided on 2026-11-22 to keep this repository public. Charter decision D2 says so, as updated on his approval.
@@ -58,7 +58,8 @@ who must approve.
 | 3e | Build the rest of slice 0.4; role guide, limits, release notes | Built, 2026-11-22. Its decisions 21 to 35 approved by the owner, 2026-11-22 ("Needs you: approve"). See `docs/phase-reports/phase-3e-slice-0.4.md` |
 | 4 | Reference constitution | Approved by the owner at gate G0, 2026-11-22 ("Needs you: approve"), as drafted. `examples/healthq/phase-4/`; `docs/phase-reports/phase-4-constitution.md` |
 | 5 | Reference specs, in four batches by tier | Batch 1 (Critical: C1 to C6, N1, N2) approved by the owner at G1 and G2, 2026-11-22 ("G1: yes", "G2: approve"), with four clinical conditions for G3. See `docs/phase-reports/phase-5-batch-1-critical.md`. Batch 2 (High: H1 to H6, N3, N4) approved the same day ("Batch 2, waiting on you: go ahead"); see `docs/phase-reports/phase-5-batch-2-high.md`. Batch 1 is merged into the healthcare repo's `main` (pull request #72). Batches 3 and 4 (Medium and Low: M1 to M5, N6 to N10) are drafted and wait at G1 and G2; see `docs/phase-reports/phase-5-batch-3-4-medium-low.md` |
-| 6–7 | Plans and tasks, C4 walkthrough | Not started. Each ends at a human gate |
+| 6 | Plans and tasks for C1 and C3 to C6, a data-change plan for H5, a breakdown of C2 | Drafted, 2026-11-22; they wait at G3 and G4. The kit's gate check fails on them, as it should: no pull-request review has approved a gate. Planning corrected one Phase 1 finding and the map, and found nine things in the code that Phase 1 had not. See `docs/phase-reports/phase-6-plans.md` |
+| 7 | C4 walkthrough | Not started |
 | 8–10 | The halves that need the reference: acceptance of the reference example, slice 0.4 applied to the showcase findings, a sample evidence pack for the C4 change | Not started; they need Phases 5 to 7 |
 
 ## Try it

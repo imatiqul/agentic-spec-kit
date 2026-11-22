@@ -189,8 +189,8 @@ Node types and edge types are the lists in MAP-2 and MAP-3. `classification` val
 spec: 004-audit-identity
 touches: [lib-infrastructure, phi-audit-logs]
 affected:
-  - {node: identity-service, distance: 1, via: builds-with, owner: backend}
-  - {node: identity-db, distance: 1, via: owns, owner: data-owner}
+  - {node: identity-service, distance: 1, via: builds-with lib-infrastructure, owner: backend}
+  - {node: identity-db, distance: 1, via: is owned by identity-service, owner: data-owner}
 tier_computed: critical
 required_approvers:
   G3: [solutions-architect, platform, security-compliance, data-owner]

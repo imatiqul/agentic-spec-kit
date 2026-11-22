@@ -13,7 +13,7 @@ import subprocess
 from agentic_kit.checks_gov import spec_front
 from agentic_kit.core import Context, Result, check
 
-from agentic_kit_system.checks_change import DATA_EXT, DATA_GLOBS, EXTERNAL_TYPES, users_of
+from agentic_kit_system.checks_change import DATA_EXT, DATA_GLOBS, EXTERNAL_TYPES, _empty, users_of
 from agentic_kit_system.mapmodel import CONTRACT_TYPES, DATA_TYPES, restricted_classes
 
 from .common import SYS, gate_record, load_map, need_sections, plan_specs, spec_ids, spec_tier, touched, touches
@@ -145,12 +145,22 @@ def mandatory_kinds(ctx: Context, smap, spec: str, tier: str) -> list[str]:
     return [k for k in KINDS if k in kinds]
 
 
+def declared_dependencies(ctx: Context, smap, spec: str) -> set[str]:
+    """External systems the spec itself says it relies on (`depends_on.nodes`)."""
+    if smap is None:
+        return set()
+    nodes = (spec_front(ctx, spec).get("depends_on") or {}).get("nodes") or []
+    return {str(n) for n in nodes if (smap.nodes.get(str(n)) or {}).get("type") in EXTERNAL_TYPES}
+
+
 def external_dependencies(ctx: Context, smap, spec: str) -> list[str]:
+    """External systems the change may rely on: those its touched nodes call, and those the spec lists under depends_on."""
     if smap is None:
         return []
     mine = set(touches(ctx, spec))
-    return sorted({e["to"] for e in smap.edges if e.get("from") in mine and e.get("rel") == "calls"
-                   and (smap.nodes.get(e.get("to")) or {}).get("type") in EXTERNAL_TYPES})
+    called = {e["to"] for e in smap.edges if e.get("from") in mine and e.get("rel") == "calls"
+              and (smap.nodes.get(e.get("to")) or {}).get("type") in EXTERNAL_TYPES}
+    return sorted(called | declared_dependencies(ctx, smap, spec))
 
 
 @check("CK-TEST-STRATEGY", ("QLT-7", "QLT-8"), "each spec plans the test kinds its tier requires, and shows them at G5", profiles=SYS)
@@ -188,9 +198,17 @@ def ck_test_strategy(ctx: Context, res: Result) -> None:
         for ac in sorted(spec_ids(ctx, spec, "AC")):
             if not covered.get(ac):
                 res.fail(f"a critical spec needs negative and boundary tests for every acceptance criterion; {ac} has none", rel)
+        declared = declared_dependencies(ctx, smap, spec)
         for dep in external_dependencies(ctx, smap, spec):
-            if not (doc.get("resilience") or {}).get(dep):
-                res.fail(f"a critical spec needs a resilience test for each external dependency it relies on; {dep} has none", rel)
+            entry = (doc.get("resilience") or {}).get(dep)
+            # A touched service may call an external system the change has nothing to do with. Saying so, with a reason
+            # a reviewer can read, is an answer; silence is not, and neither is a placeholder.
+            if isinstance(entry, dict) and not _empty(str(entry.get("not_relied_on") or "")):
+                if dep in declared:
+                    res.fail(f"the strategy says the change does not rely on {dep}, but the spec lists it under depends_on; it needs a resilience test", rel)
+            elif not entry or isinstance(entry, dict) or _empty(str(entry)):
+                res.fail(f"a critical spec needs a resilience test for each external dependency it relies on; {dep} has none, "
+                         "and no reason why the change does not rely on it (not_relied_on)", rel)
 
 
 @check("CK-CHARACTERIZATION", ("QLT-9",), "code that already existed is pinned down by characterization tests before a spec changes it", profiles=SYS)

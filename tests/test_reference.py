@@ -34,7 +34,13 @@ DECIDED = [{"002-endpoint-authorization", "003-identity-from-token"}, {"005-tria
 WAITING = [{"014-pipeline-gates", "019-skipped-tests"}, {"014-pipeline-gates", "021-advisories-and-review"},
            {"019-skipped-tests", "021-advisories-and-review"}]
 SPEC_CHECKS = ["CK-CONSTITUTION", "CK-ROLES", "CK-REQ-QUALITY", "CK-SPEC-SIZE", "CK-DOMAIN-SECTIONS", "CK-TIER", "CK-TIER-RAISE", "CK-TOUCH", "CK-TRACE",
-               "CK-CROSS-SPEC", "CK-PROGRAMME", "CK-IMPACT", "CK-MAP-SCHEMA", "CK-MAP-OWNER", "CK-GATE-RECORD", "CK-BRIEF", "CK-LANE", "CK-AUDIT-CHAIN"]
+               "CK-CROSS-SPEC", "CK-PROGRAMME", "CK-IMPACT", "CK-MAP-SCHEMA", "CK-MAP-OWNER", "CK-BRIEF", "CK-LANE", "CK-AUDIT-CHAIN",
+               # Phase 6: what a plan and a task list must have, which an agent can write
+               "CK-TRACE-GENERATED", "CK-PRIVACY-IMPACT", "CK-TEST-STRATEGY", "CK-ROLLOUT", "CK-PROGRESSIVE", "CK-FLAG", "CK-DATA-PLAN", "CK-DATA-CLASS"]
+#: Phase 6. Specs with a plan; all but 013 also have a task list. Drafted on the owner's instruction to carry on: G3 and G4 are not passed.
+PLANNED = ["001-fail-closed-auth", "003-identity-from-token", "004-audit-identity", "005-triage-validation", "006-eval-production-path",
+           "013-migrations-production-engine"]
+TASKED = PLANNED[:-1]
 
 
 def run(cid, root=PROJECT):
@@ -64,13 +70,31 @@ def test_one_person_holds_every_role_as_the_charter_says():
 
 def test_the_map_is_in_the_kits_format_and_classifies_every_node():
     smap = yaml.safe_load((PROJECT / "system-map/map.yml").read_text(encoding="utf-8"))
-    assert smap["schema"] == "agentic-map/1" and len(smap["nodes"]) == 80 and len(smap["edges"]) == 168, \
-        "77 from Phase 1, then the pipeline, the repository's build configuration and the development host"
+    assert smap["schema"] == "agentic-map/1" and len(smap["nodes"]) == 100 and len(smap["edges"]) == 197, \
+        "77 from Phase 1; the pipeline, the build configuration and the development host; and 20 event topics the kit's discovery found"
     added = {n["id"] for n in smap["nodes"] if "added in Phase 5" in str(n.get("note"))}
     assert added == {"ci-pipeline", "repo-config", "dev-apphost"}, "each node the findings needed and Phase 1 did not draw says so"
+    found = [x for x in smap["nodes"] + smap["edges"] if "found by the kit's discovery in Phase 6" in str(x.get("note"))]
+    assert len(found) == 49 and all(x["origin"] == "derived" and x.get("evidence") for x in found), "20 topics, 22 publishers, 7 build edges, each citing a file"
+    edges = {(e["from"], e["rel"], e["to"]) for e in smap["edges"]}
+    assert {("agent-service", "publishes", "topic-triage.completed"), ("agent-service", "publishes", "topic-escalation.required")} <= edges, \
+        "the two publishers the Phase 1 draft missed, which a review of pull request 72 pointed out"
+    events = {n["id"] for n in smap["nodes"] if n["type"] == "event"}
+    unpublished = events - {to for _, rel, to in edges if rel == "publishes"}
+    assert unpublished == {"topic-healthq-dlq", "topic-revenue.prior-auth.status-changed"}, "the dead-letter topic, and one topic nobody publishes"
     assert {n["classification"] for n in smap["nodes"]} == {"restricted", "internal", "none"}
     unknown = [n for n in smap["nodes"] if "Not classified in Phase 1" in str(n.get("note"))]
     assert len(unknown) == 20 and all(n["classification"] == "restricted" for n in unknown), "what nobody classified is treated as protected"
+    unclassified = [n for n in smap["nodes"] if "Not classified" in str(n.get("note"))]
+    assert len(unclassified) == 40 and all(n["classification"] == "restricted" for n in unclassified), "20 from Phase 1 and the 20 topics found since"
+
+
+def test_a_change_to_the_agent_service_reaches_the_subscribers_of_its_events():
+    impact = yaml.safe_load((PROJECT / "specs/005-triage-validation/impact.md").read_text(encoding="utf-8").split("---")[1])
+    reached = {a["node"]: a["distance"] for a in impact["affected"]}
+    assert reached["topic-triage.completed"] == 1 and reached["topic-escalation.required"] == 1
+    assert {reached[n] for n in ("scheduling-service", "pophealth-service", "revenue-service", "notification-service")} == {2}
+    assert "solutions-architect" in impact["required_approvers"]["G3"], "the owner of the events is asked about the plan"
 
 
 def test_there_is_one_spec_for_each_finding_drafted_so_far():
@@ -142,6 +166,58 @@ def test_the_specs_that_share_a_component_are_ordered_and_nothing_waits_on_the_a
     assert out.returncode == 0, "the order in the specs is the one order_specs.py derives: " + out.stdout
 
 
+def failures(cid, root=PROJECT) -> set[tuple[str, str]]:
+    """(spec, message) of each finding of a check."""
+    out = set()
+    for f in run(cid, root).findings:
+        parts = str(f.path).split("/")
+        out.add((parts[1] if len(parts) > 1 and parts[0] == "specs" else str(f.path), f.message))
+    return out
+
+
+def test_the_plans_are_drafts_that_wait_at_g3_and_the_task_lists_at_g4():
+    for name in PLANNED:
+        folder = PROJECT / "specs" / name
+        assert "Draft, waiting at gate G3" in (folder / "plan.md").read_text(encoding="utf-8"), name
+        assert front(folder)["changes_existing_code"] is True, "an adopted codebase: each planned spec says it changes existing code"
+        for gate in ("G3",) + (("G4",) if name in TASKED else ()):
+            assert f"Brief for {gate} of {name}" in (folder / "briefs" / f"{gate}.md").read_text(encoding="utf-8")
+        assert (folder / "tasks.md").is_file() == (name in TASKED), "013 is spec and plan only"
+        if name in TASKED:
+            assert "Draft, waiting at gate G4" in (folder / "tasks.md").read_text(encoding="utf-8"), name
+    planned = sorted(s.name for s in specs() if (s / "plan.md").is_file())
+    assert planned == PLANNED, "plans for C1, C3 to C6 and H5; C2 has a breakdown and no plan"
+    breakdown = (PROJECT / "specs/002-endpoint-authorization/programme.md").read_text(encoding="utf-8")
+    assert "A proposal, waiting for the owner" in breakdown and "programme" not in front(PROJECT / "specs/002-endpoint-authorization"), \
+        "making 002 a programme is an amendment to an approved spec: it is proposed, not applied"
+
+
+def test_what_only_a_person_can_do_still_fails_and_nothing_else_does():
+    # No pull-request review has approved a gate, so a plan or a task list is ahead of its gates. The kit says so.
+    expect = {(n, f"plan.md exists but gate {g} has no approving decision record") for n in PLANNED for g in ("G1", "G2")} | \
+             {(n, "tasks.md exists but gate G3 has no approving decision record") for n in TASKED}
+    assert failures("CK-GATE-RECORD") == expect
+    # Nobody has run the tests that pin today's behaviour: the agent cannot restore the solution's packages, and no pipeline runs.
+    got = failures("CK-CHARACTERIZATION")
+    assert {n for n, _ in got} == set(PLANNED)
+    assert ("004-audit-identity", "the characterization tests did not pass (result: not-run)") in got, "they exist for 004; they have not been run"
+    # No clinician has signed a golden set or accepted a safety case, and nobody in roles.yml is one.
+    assert {n for n, _ in failures("CK-AI-EVAL")} == {n for n, _ in failures("CK-AI-SAFETY-CASE")} == {"005-triage-validation", "006-eval-production-path"}
+    assert all("accepted through the enforcement channel" in m for _, m in failures("CK-AI-SAFETY-CASE"))
+    # Two threats of 004 are tested by criteria the approved spec did not write as abuse cases. Marking them is the owner's amendment.
+    assert failures("CK-THREAT-MODEL") == {("004-audit-identity", f"{ac} tests threat {th} but is not written as an abuse case in the spec")
+                                           for ac, th in (("AC-004", "TH-2"), ("AC-005", "TH-3"))}
+
+
+def test_the_rollout_orders_follow_who_reads_whose_events():
+    for name in ("004-audit-identity", "013-migrations-production-engine"):
+        deploy = yaml.safe_load((PROJECT / "specs" / name / "rollout.yml").read_text(encoding="utf-8"))["deploy"]
+        services = [d for d in deploy if d.endswith("-service")]
+        assert services.index("agent-service") < services.index("scheduling-service") < services.index("fhir-service"), \
+            "scheduling reads the agent service's events, and FHIR reads scheduling's"
+        assert services.index("voice-service") < services.index("agent-service") and services[-1] == "notification-service"
+
+
 @pytest.mark.skipif(not os.environ.get("HEALTHQ_REPO"), reason="set HEALTHQ_REPO to a clone of the healthcare repository")
 def test_every_derived_fact_in_the_map_cites_a_file_in_the_healthcare_repository(tmp_path):
     repo = Path(os.environ["HEALTHQ_REPO"])
@@ -152,4 +228,12 @@ def test_every_derived_fact_in_the_map_cites_a_file_in_the_healthcare_repository
     overlay.build(repo, work)
     r = run("CK-MAP-EVIDENCE", work)
     assert r.ok, [f.message for f in r.findings][:5]
+    r = run("CK-MAP-DRIFT", work)
+    assert r.ok, "the map matches what the kit's discovery finds in the code: " + str([f.message for f in r.findings][:5])
+    # Finding C6, found by the kit: the evaluation harness never calls the classifier.
+    assert failures("CK-AI-PROD-PATH", work) == {
+        (n, "the harness never refers to ClassifyUrgency in src/HealthQCopilot.Agents/Plugins/TriagePlugin.cs: it does not exercise the production code path")
+        for n in ("tests/HealthQCopilot.Tests.Eval/ClinicalAccuracyHarnessTests.cs",)}
+    # With the source present, the tests that pin 004's code exist. What is missing is a run of them.
+    assert {m for n, m in failures("CK-CHARACTERIZATION", work) if n == "004-audit-identity"} == {"the characterization tests did not pass (result: not-run)"}
     assert subprocess.run(["git", "-C", str(repo), "status", "--porcelain"], capture_output=True, text=True, check=True).stdout == before, "the repository is only read"

@@ -126,7 +126,90 @@ def contracts(ctx: Context, files: list[str], nodes: dict, edges: list) -> None:
             nodes[f"contract-{_slug(stem)}"] = {"id": f"contract-{_slug(stem)}", "type": "api-contract", "evidence": rel, "adapter": "contracts"}
 
 
-ADAPTERS = {"dotnet": dotnet, "node": node, "compose": compose, "aspire": aspire, "contracts": contracts}
+_PUBLISH = re.compile(r"\bPublishEventAsync\s*(?:<[^>()]*>)?\s*\(")
+_SUBSCRIBE = re.compile(r'(?:\[\s*Topic|\.WithTopic)\s*\(\s*"[^"]*"\s*,\s*"([^"]+)"')
+_LITERAL = re.compile(r'"([^"\\]+)"')
+_TOPIC_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def _arguments(text: str, start: int) -> list[str]:
+    """The top-level arguments of a call whose opening bracket ends at `start`. Reads across lines."""
+    depth, cur, out, quote, i = 0, "", [], False, start
+    while i < len(text):
+        ch = text[i]
+        if quote:
+            cur += ch
+            if ch == "\\" and i + 1 < len(text):
+                cur += text[i + 1]
+                i += 1
+            elif ch == '"':
+                quote = False
+        elif ch == '"':
+            quote, cur = True, cur + ch
+        elif ch in "([{":
+            depth, cur = depth + 1, cur + ch
+        elif ch in ")]}":
+            if depth == 0:
+                break
+            depth, cur = depth - 1, cur + ch
+        elif ch == "," and depth == 0:
+            out.append(cur.strip())
+            cur = ""
+        else:
+            cur += ch
+        i += 1
+    return out + [cur.strip()]
+
+
+def _topics(text: str, call_start: int, argument: str) -> list[str]:
+    """Topic names an argument can stand for: a literal, or a local set from literals before the call (`cond ? "a" : "b"`)."""
+    found = _LITERAL.findall(argument)
+    if found or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", argument):
+        return found
+    assigned = list(re.finditer(rf"\b{re.escape(argument)}\s*=(?!=)([^;]*);", text[:call_start]))
+    if not assigned:
+        return []
+    value = assigned[-1].group(1)
+    choice = re.search(r"(?<![?])\?(?![?.\[])", value)  # `cond ? a : b`: the condition's own literals are not topics
+    return _LITERAL.findall(value[choice.end():] if choice else value)
+
+
+def dapr(ctx: Context, files: list[str], nodes: dict, edges: list) -> None:
+    """Dapr publish and subscribe in C#: `PublishEventAsync` calls and `[Topic]` or `.WithTopic` declarations.
+
+    A topic becomes an event node; the project the file belongs to publishes it or subscribes to it. A topic name that
+    is built at run time from anything but literals is not seen.
+    """
+    projects = sorted(((rel.rsplit("/", 1)[0] + "/" if "/" in rel else "", _slug(rel.rsplit("/", 1)[-1][:-7]))
+                       for rel in files if rel.endswith(".csproj")), key=lambda p: -len(p[0]))
+
+    def add(owner: str, rel_kind: str, topic: str, rel: str) -> None:
+        if not _TOPIC_ID.fullmatch(topic):
+            return
+        tid = f"topic-{topic}"
+        nodes.setdefault(tid, {"id": tid, "type": "event", "evidence": rel, "adapter": "dapr"})
+        edges.append({"from": owner, "rel": rel_kind, "to": tid, "evidence": rel, "adapter": "dapr"})
+
+    for rel in files:
+        if not rel.endswith(".cs"):
+            continue
+        owner = next((nid for folder, nid in projects if rel.startswith(folder)), None)
+        if owner is None or owner not in nodes:
+            continue  # a test project, or a file outside any project
+        text = ctx.src.read(rel)
+        if "PublishEventAsync" in text:
+            for m in _PUBLISH.finditer(text):
+                args = _arguments(text, m.end())
+                named = next((a.split(":", 1)[1].strip() for a in args if re.match(r"topicName\s*:", a)), None)
+                topic = named if named is not None else (args[1] if len(args) > 1 else "")
+                for name in _topics(text, m.start(), topic):
+                    add(owner, "publishes", name, rel)
+        if "Topic(" in text:
+            for m in _SUBSCRIBE.finditer(text):
+                add(owner, "subscribes", m.group(1), rel)
+
+
+ADAPTERS = {"dotnet": dotnet, "node": node, "compose": compose, "aspire": aspire, "contracts": contracts, "dapr": dapr}
 
 
 def discover(ctx: Context) -> dict:
