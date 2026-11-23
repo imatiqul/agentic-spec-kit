@@ -42,7 +42,7 @@ NOTES = {
     "TRC-7": ("document", "`docs/design/architecture.md` and `docs/limits.md`"),
     "TRC-13": ("feature", "`agentic.py report metrics`: time to decision per gate, approvals by people, agent steps, time and spend"),
     "TRC-15": ("feature", "`agentic.py report <view>`: gates, waivers, trace, metrics, map, debt, spend, capabilities"),
-    "TRC-19": ("feature", "`agentic.py why <file>[:<line>]`"),
+    "TRC-19": ("feature", "`agentic.py why <file>[:<line>]`. With a system map it also names the component, what the spec touches and depends on, and what it reaches"),
 }
 
 def build() -> tuple[str, str]:

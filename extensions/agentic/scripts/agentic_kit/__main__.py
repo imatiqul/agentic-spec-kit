@@ -25,6 +25,8 @@ DEFAULT_EVIDENCE = {
 }
 for _gate in list(DEFAULT_EVIDENCE):  # every gate also binds its reviewer brief, when one has been generated (GOV-20)
     DEFAULT_EVIDENCE[_gate].append(f"briefs/{_gate}.md")
+    # ... and what a reviewing agent wrote for that gate (reviews/G5-security.md), so a decision is made on the findings too
+    DEFAULT_EVIDENCE[_gate].append(f"reviews/{_gate}-*")
 DOCTOR_CHECKS = ["CK-PROFILE", "CK-ROLES", "CK-UPSTREAM-PIN", "CK-ENFORCE-SETUP"]
 
 

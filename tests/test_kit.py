@@ -269,6 +269,21 @@ def test_lite_reports_setup_gaps_without_failing(sample):
     assert r.ok and any("not enforced" in n for n in r.notes)
 
 
+def test_a_reviewing_agents_findings_are_part_of_the_evidence_of_the_gate_they_were_written_for(sample):
+    """A decision at a gate is bound to what the reviewers found for it, and to nothing they wrote for another gate."""
+    from agentic_kit.__main__ import _evidence_files
+    ctx = selftest.context(sample)
+    before = _evidence_files(ctx, "001-demo", "G5", None)
+    reviews = sample / "specs" / "001-demo" / "reviews"
+    reviews.mkdir()
+    (reviews / "G5-security.md").write_text("# Security review\n\nS-1: must fix.\n")
+    (reviews / "G3-security.md").write_text("# Security review of the plan\n")
+    ctx = selftest.context(sample)
+    assert _evidence_files(ctx, "001-demo", "G5", None) == sorted(before + ["specs/001-demo/reviews/G5-security.md"])
+    assert "specs/001-demo/reviews/G3-security.md" in _evidence_files(ctx, "001-demo", "G3", None)
+    assert not [f for f in _evidence_files(ctx, "001-demo", "G4", None) if "/reviews/" in f]
+
+
 def test_evidence_hash_may_be_optional_only_in_lite(sample):
     edit(sample, KIT, "require_evidence_hash: true", "require_evidence_hash: false")
     assert any("only in the lite profile" in f.message for f in run(sample, "CK-PROFILE").findings)
@@ -328,6 +343,24 @@ def test_gate_command_prints_the_line_to_paste(sample, capsys):
     edit(sample, "specs/001-demo/plan.md", "One function", "Changed")
     main(["--root", str(sample), "gate", "--spec", "001-demo", "--gate", "G3", "--json"])
     assert not json.loads(capsys.readouterr().out)["approved"]
+
+
+def test_a_file_is_parsed_once_and_each_caller_gets_a_copy_of_its_own(tmp_path, monkeypatch):
+    from agentic_kit import core
+    (tmp_path / "a.yml").write_text("only-in-this-test: [1, 2]\n", encoding="utf-8")
+    src, parsed, real = Source(tmp_path), [], core.yaml.safe_load
+    monkeypatch.setattr(core.yaml, "safe_load", lambda text: parsed.append(text) or real(text))
+    core._PARSED.clear()
+    first = src.yaml("a.yml")
+    first["only-in-this-test"].append(3)
+    assert src.yaml("a.yml") == {"only-in-this-test": [1, 2]}, "changing what one caller was given does not change what the next one gets"
+    assert Source(tmp_path).yaml("a.yml") == {"only-in-this-test": [1, 2]} and len(parsed) == 1, "the same text is parsed once"
+    (tmp_path / "a.yml").write_text("only-in-this-test: [9]\n", encoding="utf-8")
+    assert src.yaml("a.yml") == {"only-in-this-test": [9]} and len(parsed) == 2, "text that changed is parsed again"
+    (tmp_path / "a.yml").write_text("only-in-this-test: [9\n", encoding="utf-8")
+    for _ in range(2):
+        with pytest.raises(core.KitError, match="a.yml is not valid YAML"):
+            src.yaml("a.yml")
 
 
 def test_init_writes_a_valid_lite_setup(tmp_path, capsys):

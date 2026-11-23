@@ -32,6 +32,7 @@ def brief_hook(ctx, spec: str, gate: str) -> list[tuple[str, list[str]]]:
 
 
 core.BRIEF_HOOKS.append(brief_hook)
+core.ARTIFACT_HOOKS.append(work.artifact_paths)
 
 TEAM_CHECKS = ["CK-AGENT-SPEC", "CK-WORKITEM", "CK-PATH-LOCK", "CK-PATH-DIFF", "CK-REWORK-LIMIT", "CK-BUDGET",
                "CK-AUTHOR-NEQ-VERIFIER", "CK-CRED", "CK-GOLDEN", "CK-CONTEXT", "CK-TOOL-ALLOWLIST",
@@ -90,6 +91,21 @@ def brief(ctx, agent_id: str, spec: str | None) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _set_block(text: str, key: str, value: dict) -> str:
+    """Replace or add one top-level block of a YAML file. The rest of the file, its comments included, stays as it is."""
+    block = yaml.safe_dump({key: value}, sort_keys=False)
+    lines = text.splitlines(keepends=True)
+    start = next((n for n, line in enumerate(lines) if line.startswith(f"{key}:")), None)
+    if start is None:
+        return text + ("" if not text or text.endswith("\n") else "\n") + block
+    end = start + 1
+    while end < len(lines) and (lines[end][:1] in (" ", "\t") or not lines[end].strip()):
+        end += 1
+    while end > start + 1 and not lines[end - 1].strip():  # blank lines after the block belong to what follows
+        end -= 1
+    return "".join(lines[:start]) + block + "".join(lines[end:])
+
+
 @_guarded
 def cmd_team(args) -> int:
     from agentic_kit.__main__ import _context, _report
@@ -105,8 +121,7 @@ def cmd_team(args) -> int:
             for r in team["runtimes"]:
                 if r not in agents.RUNTIMES:
                     return _err(f"unknown runtime {r!r}; choose from {', '.join(agents.RUNTIMES)}", 2)
-            cfg["team"] = team
-            kit_path.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8", newline="\n")
+            kit_path.write_text(_set_block(kit_path.read_text(encoding="utf-8"), "team", team), encoding="utf-8", newline="\n")
             ctx = _context(args)
         for rel in agents.install(ctx):
             print(f"wrote {rel}")

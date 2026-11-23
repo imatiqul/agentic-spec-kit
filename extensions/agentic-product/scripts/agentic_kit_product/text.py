@@ -60,10 +60,10 @@ def cosine(a: Counter, b: Counter, weights: dict[str, float]) -> tuple[float, li
     def w(doc: Counter) -> dict[str, float]:
         return {t: (1 + math.log(c)) * weights.get(t, 1.0) for t, c in doc.items()}
     wa, wb = w(a), w(b)
-    shared = set(wa) & set(wb)
+    shared = sorted(set(wa) & set(wb))   # sorted, so that neither the sum nor the list depends on the order a set gives
     dot = sum(wa[t] * wb[t] for t in shared)
     norm = math.sqrt(sum(v * v for v in wa.values())) * math.sqrt(sum(v * v for v in wb.values()))
-    top = sorted(shared, key=lambda t: -(wa[t] * wb[t]))
+    top = sorted(shared, key=lambda t: (-(wa[t] * wb[t]), t))
     return (dot / norm if norm else 0.0), top[:5]
 
 

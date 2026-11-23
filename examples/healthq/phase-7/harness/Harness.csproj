@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A stand-in for the healthcare solution's unit test project, for a machine that cannot restore
+       NuGet packages. It compiles the real files spec 004-audit-identity changes, under the
+       repository's own Directory.Build.props and .editorconfig, against small stand-ins for xUnit,
+       FluentAssertions, NSubstitute and EF Core's in-memory provider, and runs the tests with a
+       reflection runner. The ASP.NET Core framework underneath is the real one.
+
+       It shows that the changed files compile and that the tests' logic passes.
+       It is not a run of the solution's own test project. See README.md. -->
+  <Import Project="$(HQ_REPO)/Directory.Build.props" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Harness</RootNamespace>
+    <AssemblyName>HealthQCopilot.Tests.Unit</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Repo>$(HQ_REPO)</Repo>
+    <Unit>$(Repo)/tests/HealthQCopilot.Tests.Unit</Unit>
+    <Infra>$(Repo)/src/HealthQCopilot.Infrastructure</Infra>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- The repository's .editorconfig applies to the real files without being named here:
+         the compiler finds it from the directories those files are in. -->
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Shims/*.cs" />
+    <Compile Include="Runner.cs" />
+    <!-- The real files, unmodified, from the working copy of the healthcare repository. -->
+    <Compile Include="$(Infra)/Middleware/PhiAuditMiddleware.cs" Link="real/PhiAuditMiddleware.cs" />
+    <Compile Include="$(Infra)/Middleware/TenantContextMiddleware.cs" Link="real/TenantContextMiddleware.cs" />
+    <Compile Include="$(Infra)/Messaging/IEventHubAuditService.cs" Link="real/IEventHubAuditService.cs" />
+    <Compile Include="$(Infra)/Messaging/AuditEvent.cs" Link="real/AuditEvent.cs" />
+    <Compile Include="$(Unit)/Infrastructure/PhiAuditMiddlewareTests.cs" Link="real/PhiAuditMiddlewareTests.cs" />
+    <Compile Include="$(Unit)/Infrastructure/PhiAuditPipelineTests.cs" Link="real/PhiAuditPipelineTests.cs" Condition="Exists('$(Unit)/Infrastructure/PhiAuditPipelineTests.cs')" />
+    <Compile Include="$(Unit)/Architecture/*.cs" LinkBase="real/Architecture" />
+  </ItemGroup>
+</Project>

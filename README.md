@@ -1,8 +1,8 @@
 # agentic-spec-kit
 
 > **Status: pre-alpha, public.** All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture.
-> Nothing has been run against a live GitHub repository, a real coding agent, or a live tracker or chat service yet. The
-> reference example has an approved constitution (Phase 4, now version 2) and twenty-five specs (Phase 5): sixteen approved at gates G1 and G2, in conversation and not yet by a pull-request review, and nine drafts that wait at those gates. Six of the specs have a draft plan (Phase 6). Do not rely on any of this for real work.
+> It has been used once on real work: one change to the reference system was written and reviewed by agents under it, on a local branch. Nothing has been run against a live GitHub repository or a live tracker or chat service yet. The
+> reference example has an approved constitution (Phase 4, now version 2) and twenty-five specs (Phase 5): sixteen approved at gates G1 and G2, in conversation and not yet by a pull-request review, and nine drafts that wait at those gates. Six of the specs have a draft plan (Phase 6). One change, for finding C4, is written and has been reviewed twice by agents that did not write it (Phase 7); it has not been built or run by the reference system's own tests, and no gate is passed for it. Do not rely on any of this for real work.
 > `docs/limits.md` lists what the kit does not do.
 >
 > The owner decided on 2026-11-22 to keep this repository public. Charter decision D2 says so, as updated on his approval.
@@ -37,11 +37,12 @@ who must approve.
 | `presets/`, `steps/`, `workflows/`, `bundles/` | Profile presets, the `agentic-gate` step, the lifecycle workflow, bundle manifests. |
 | `scripts/` | Install scripts for bash and PowerShell. |
 | `tests/` | Unit tests. Self-tests live in the CLI: `agentic.py selftest`. |
+| `.github/workflows/tests.yml` | This repository's own pipeline: the unit tests, the self-test and the golden tasks, on pull requests and pushes to `main`. Read-only, no secret. Added 2026-11-22; it has not run yet. |
 | `docs/install.md`, `docs/admin-setup.md` | How to install, and what an administrator must configure. |
 | `docs/guide/roles.md` | What each role approves, what they look at, and where. |
 | `docs/limits.md` | What the kit does not enforce, cannot see, and has never been run against. Read this before relying on anything. |
 | `docs/release-notes.md` | What each slice contains. Nothing has been released. |
-| `examples/healthq/` | Reference example: the Phase 1 findings script and draft map, the approved constitution (`phase-4/`), and `project/`: the reference as a project the kit checks, with its system map and specs. `overlay.py` lays it over a clone of the healthcare repo, and `export.py` writes it as it goes into that repo. No source code from that repo is copied here. |
+| `examples/healthq/` | Reference example: the Phase 1 findings script and draft map, the approved constitution (`phase-4/`), `phase-7/` (the stand-in test project for the C4 change, the pull-request texts, and how the branches reached the owner's machine), `phase-10/` (a sample evidence pack), and `project/`: the reference as a project the kit checks, with its system map and specs. `overlay.py` lays it over a clone of the healthcare repo, and `export.py` writes it as it goes into that repo. No source code from that repo is copied here. |
 | `NOTICE.md` | Upstream and community attribution. |
 
 ## Progress
@@ -59,8 +60,8 @@ who must approve.
 | 4 | Reference constitution | Approved by the owner at gate G0, 2026-11-22 ("Needs you: approve"), as drafted. `examples/healthq/phase-4/`; `docs/phase-reports/phase-4-constitution.md` |
 | 5 | Reference specs, in four batches by tier | Batch 1 (Critical: C1 to C6, N1, N2) approved by the owner at G1 and G2, 2026-11-22 ("G1: yes", "G2: approve"), with four clinical conditions for G3. See `docs/phase-reports/phase-5-batch-1-critical.md`. Batch 2 (High: H1 to H6, N3, N4) approved the same day ("Batch 2, waiting on you: go ahead"); see `docs/phase-reports/phase-5-batch-2-high.md`. Batch 1 is merged into the healthcare repo's `main` (pull request #72). Batches 3 and 4 (Medium and Low: M1 to M5, N6 to N10) are drafted and wait at G1 and G2; see `docs/phase-reports/phase-5-batch-3-4-medium-low.md` |
 | 6 | Plans and tasks for C1 and C3 to C6, a data-change plan for H5, a breakdown of C2 | Drafted, 2026-11-22; they wait at G3 and G4. The kit's gate check fails on them, as it should: no pull-request review has approved a gate. Planning corrected one Phase 1 finding and the map, and found nine things in the code that Phase 1 had not. See `docs/phase-reports/phase-6-plans.md` |
-| 7 | C4 walkthrough | Not started |
-| 8–10 | The halves that need the reference: acceptance of the reference example, slice 0.4 applied to the showcase findings, a sample evidence pack for the C4 change | Not started; they need Phases 5 to 7 |
+| 7 | C4 walkthrough | Done as far as an agent can take it, 2026-11-22, on a local branch for the owner to push: the change (14 files, 80 tests), the run log, a security review and an independent verification by agents that had not written it, one rework round, and the trace from each changed line. The reviews found four things wrong in the change and its tests, four in the plan's documents and seven in the approved spec; the first two groups are fixed, the third is proposed to the owner. Not built or run by the solution's own tests: the package registry cannot be reached, and no workflow runs there. No gate is passed. See `docs/phase-reports/phase-7-c4-walkthrough.md` |
+| 8–10 | The halves that need the reference: acceptance of the reference example, slice 0.4 applied to the showcase findings, a sample evidence pack for the C4 change | Done where the reference allows, 2026-11-22: a proposed adoption baseline for 635 suppressions, a threat model and an authorization matrix for C2 as analysis, finding H4 reproduced by the kit, and a sample evidence pack. Of the 54 acceptance lines, 38 are met, 5 are met only with a stand-in, 7 in part, 3 are not met and 1 was not measured; of the six for the reference example, two are not met and one is met in part, and each of those needs a person or a build. The report also looks at the whole kit again: what held, what using it on real work showed, and what is still weak. See `docs/phase-reports/phase-10-final.md` |
 
 ## Try it
 ```bash

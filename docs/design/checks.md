@@ -25,7 +25,7 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 | CK-AUDIT-CHAIN | A log entry's hash or previous-hash is wrong; sequence numbers skip; a decision record's `audit_head` is not in the log | TRC-5, TRC-6 | L, CI | One edited entry |
 | CK-DRIFT-SPEC | After merge, a file under a spec's declared paths changed with no spec, or the trace manifest no longer builds clean | TRC-8 | CI (default branch) | Change to a traced file with no spec |
 | CK-METRIC-SOURCE | A metric is displayed with no data source | TRC-11, TRC-14 | L, CI | Metric configured with no source |
-| CK-VERIFY-INPUTS | The verifier's input manifest lists anything other than the artifact, spec, constitution and map, or the verifier's agent id equals the author's | QLT-1 | L, CI | Manifest that includes the author's notes |
+| CK-VERIFY-INPUTS | The verifier's input manifest lists anything other than the artifact, spec, constitution and map, or the verifier's agent id equals the author's. The artifact is the paths the spec names, the paths its task list names, and the files of the components it says it touches; a verifier may also read the files of the components the spec says it depends on. The work records, notes and other verification files are never allowed | QLT-1 | L, CI | Manifest that includes the author's notes |
 | CK-DOMAIN-SECTIONS | A spec in a Regulated project lacks a section the active pack requires | ADP-14 | L, CI | HIPAA spec without the safeguards section |
 | CK-SELFTEST | Any check lacks a passing or failing fixture, or its failing fixture passes | TRC-17 | CI | A check directory with one fixture |
 
@@ -184,7 +184,7 @@ Detail the summaries leave out:
 | CK-FLAG | Every feature flag has an owner, a default and a removal date that has not passed | CHG-20 | Standard, Regulated |
 | CK-INCIDENT-LOOP | Each postmortem names the spec, the gate that should have caught it, a finding and a proposed change | QLT-22, TRC-12 | Standard, Regulated |
 | CK-INFRA-CHANGE | An infrastructure change states its impact, passes policy checks and fits a stated budget | CHG-16 | Standard, Regulated |
-| CK-METRIC-PROVENANCE | Every figure shown to users or in reports traces to a recorded evaluation or telemetry source | QLT-19 | Standard, Regulated |
+| CK-METRIC-PROVENANCE | Every figure shown to users or in reports traces to a recorded evaluation or telemetry source. It reads the files `metric_claims.scan` names: percentages in prose, and in code or data also a number given to a name that says what it measures | QLT-19 | Standard, Regulated |
 | CK-OPS-READINESS | A release states its operational readiness: objectives, telemetry, alerts, dashboards, runbooks | QLT-20 | Standard, Regulated |
 | CK-POST-RELEASE | Criteria that can only be checked in production are checked after release, and the result closes the trace | CHG-21 | Standard, Regulated |
 | CK-PRIVACY-IMPACT | A spec that touches protected data states purpose, minimum fields, lineage, retention and access | QLT-6 | Standard, Regulated |

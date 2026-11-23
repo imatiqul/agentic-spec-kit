@@ -111,3 +111,9 @@ Decisions 56 and 57 change the kit's code. Each has a test: `tests/test_change.p
 - The counts in the findings are from Phase 1, from file listings on 2026-11-22, and from the kit's own checks over a copy of the repository. None was re-derived by building or running the code.
 - The pattern search behind item 5 of section 4 is one regular expression over tracked files. It is not a secret scan.
 - No adoption baseline has been drafted yet. `014`, `017`, `019` and `021` assume one. It is part of the work that follows.
+
+## Corrections made after this report
+
+- **Spec `025-event-contracts` was rewritten in Phase 6.** Finding N9 as Phase 1 stated it was wrong: the search behind it had missed two publishers. The row for 025 in section 2 describes the first draft. The spec now asks for one catalogue of topics, a build that fails on a topic outside it, a map that lists every topic, and a decision on the one topic that has a subscriber and no publisher. See `docs/phase-reports/phase-6-plans.md` and section 9 of the Phase 1 report.
+- **The system map has 100 components and 206 dependencies**, not the numbers of this report's day: Phase 6 added 20 event topics, 22 publishers and 7 build edges that the kit's discovery found, and Phase 7 added the nine services as writers of the audit event stream.
+- **An adoption baseline has been drafted, as a proposal** (`examples/healthq/project/.specify/agentic/proposals/adoption-baseline.md`, Phase 9). Nobody has approved it, and the kit reads none.

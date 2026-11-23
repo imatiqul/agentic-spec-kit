@@ -210,6 +210,34 @@ def test_changes_that_were_already_there_at_claim_are_not_blamed_on_the_item(pro
         "packages/shared-lib/src/index.js", f"specs/{SPEC}/evidence/e.txt"]
 
 
+def test_rework_in_a_shared_working_copy_is_not_blamed_for_what_others_did_meanwhile(proj):
+    """AGT-10: when an item comes back for rework, what other items and the reviewers wrote since its first claim is not its work."""
+    work.create_from_tasks(ctx(proj), SPEC)
+    do(proj, "T001")
+    work.review(ctx(proj), SPEC, "T001", VERIFIER, accept=False, finding="handle the empty case")
+    git(proj, "add", "-A")
+    git(proj, "commit", "-q", "-m", "T001, first round")
+    # meanwhile: a reviewer writes a report, and someone edits a file that belongs to nobody's item
+    report = proj / "specs" / SPEC / "reviews" / "round-1.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text("findings\n")
+    (proj / "docs.md").write_text("notes\n")
+
+    item = work.claim(ctx(proj), SPEC, "T001", IMPL)  # taking the rework up: what is there now is the starting point
+    assert item["state"] == "rework" and "docs.md" in item["dirty_at_claim"]
+    path = proj / item["paths"][0]
+    path.write_text(path.read_text() + "\n// the empty case\n")
+    handed = work.handoff(ctx(proj), SPEC, "T001", IMPL, "handled the empty case", [evidence(proj, "T001-rework.txt")])
+    assert sorted(handed["handoff"]["files"]) == sorted([item["paths"][0], f"specs/{SPEC}/evidence/T001-rework.txt"])
+
+    # a change outside the item made after the rework was taken up is still refused
+    work.review(ctx(proj), SPEC, "T001", VERIFIER, accept=False, finding="once more")
+    work.claim(ctx(proj), SPEC, "T001", IMPL)
+    (proj / "services" / "billing" / "src" / "index.js").write_text("// not mine\n")
+    with pytest.raises(core.KitError, match="outside its declared paths"):
+        work.handoff(ctx(proj), SPEC, "T001", IMPL, "again", [evidence(proj, "T001-rework.txt")])
+
+
 def test_isolated_working_copy_commit_with_trailers_and_integration(proj):
     work.create_from_tasks(ctx(proj), SPEC)
     base = git(proj, "rev-parse", "HEAD")
@@ -280,6 +308,59 @@ def test_a_change_cannot_widen_its_own_agents_limits(proj):
 
 
 # ── review, rework and escalation ───────────────────────────────────────────────
+
+def test_installing_the_team_keeps_the_rest_of_the_settings_file_as_it_was(tmp_path):
+    root = tmp_path / "p"
+    (root / core.KIT_DIR).mkdir(parents=True)
+    settings = root / core.KIT_DIR / "kit.yml"
+    before = ("schema: agentic-kit/1\nprofile: standard      # lite | standard | regulated\n"
+              "gates:\n  require_evidence_hash: true   # a comment someone wrote\n")
+    settings.write_text(before)
+    (root / core.KIT_DIR / "roles.yml").write_text("schema: agentic-roles/1\nroles: []\n")
+
+    assert cli(root, "team", "init", "--runtimes", "sequential") == 0
+    after = settings.read_text()
+    assert after.startswith(before), "nothing above the new block changed, comments included"
+    assert yaml.safe_load(after)["team"] == {"runtimes": ["sequential"], "mode": "sequential", "budget": {"steps": 200, "minutes": 240}}
+
+    settings.write_text(after + "\nmetrics: []   # after the team block\n")
+    assert cli(root, "team", "init", "--runtimes", "sequential", "--mode", "parallel") == 0
+    again = settings.read_text()
+    assert yaml.safe_load(again)["team"]["mode"] == "parallel"
+    assert again.startswith(before) and again.endswith("\nmetrics: []   # after the team block\n"), "only the team block was replaced"
+    assert again.count("team:") == 1
+
+    unchanged = settings.read_text()
+    assert cli(root, "team", "init") == 0 and settings.read_text() == unchanged, "with nothing to change, the file is not written"
+
+
+def test_a_verifier_may_be_given_what_its_spec_changes_and_nothing_of_the_authors(proj):
+    """QLT-1: the artifact is the files the spec's tasks name and the files of the components it says it touches."""
+    folder = proj / "specs" / SPEC / "verification"
+    folder.mkdir()
+    with (proj / "specs" / SPEC / "tasks.md").open("a") as tasks:
+        tasks.write("- [x] T006 Written before the team started: `docs/guide/setup.md`\n")
+
+    def given(*inputs):
+        (folder / "G6-inputs.yml").write_text(yaml.safe_dump({"verifier": VERIFIER, "author": IMPL, "inputs": list(inputs)}))
+        return msgs(run(proj, "CK-VERIFY-INPUTS"))
+
+    assert given(f"specs/{SPEC}/spec.md", "system-map/map.yml",
+                 "services/orders/src/index.js",      # named by a task
+                 "db/migrations/002_a.sql",           # named by a task, not written yet
+                 "docs/guide/setup.md",               # named by a task that was already finished
+                 "services/orders/package.json",      # not named by a task; part of a component the spec touches
+                 ) == []
+    assert given("contracts/payments-openapi.yaml") == ["contracts/payments-openapi.yaml is not an allowed verifier input"], \
+        "a component the spec does not say it touches"
+    assert given("docs/guide/other.md") == ["docs/guide/other.md is not an allowed verifier input"], "no task names it and no component owns it"
+    assert given(f"specs/{SPEC}/notes/author.md") == [f"specs/{SPEC}/notes/author.md is not an allowed verifier input"]
+    assert given(f".specify/agentic/work/{SPEC}/T001.yml") == [f".specify/agentic/work/{SPEC}/T001.yml is not an allowed verifier input"]
+
+    spec = proj / "specs" / SPEC / "spec.md"
+    spec.write_text(spec.read_text().replace("touches:", "depends_on: {nodes: [contract-payments-openapi]}\ntouches:", 1))
+    assert given("contracts/payments-openapi.yaml") == [], "a verifier may read what the spec says it depends on"
+
 
 def test_the_author_cannot_review_and_only_a_reviewing_agent_can(proj):
     work.create_from_tasks(ctx(proj), SPEC)

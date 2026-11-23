@@ -7,4 +7,4 @@ Draft, waiting at gate G4.
 - [ ] T003 Add `tests/HealthQCopilot.Tests.Unit/Infrastructure/AuthenticationStartupCheckTests.cs` @test-agent. Carries: AC-001, AC-002, AC-003, AC-004, AC-006
 - [ ] T004 [P] Make the deploy job fail when the identity provider variables are unset, in `.github/workflows/microservice-deploy.yml` @release-agent. Carries: AC-005
 - [ ] T005 [P] Add `tests/HealthQCopilot.Tests.Unit/Architecture/AuthenticatedIdentitySourcesTests.cs` @test-agent. Carries: AC-007
-- [ ] T006 Verify the change against the spec, the constitution and the system map @independent-verifier. Carries: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006, AC-007
+- [ ] T006 Verify the change against the spec, the constitution and the system map, and write `specs/001-fail-closed-auth/verification/G6-report.md` @independent-verifier. Carries: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006, AC-007

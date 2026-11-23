@@ -116,6 +116,63 @@ def lane_hook(ctx: Context, spec: str) -> str | None:
     return "fast" if low and not impact["packs_triggered"] else None
 
 
+def artifact_hook(ctx: Context, spec: str) -> list[str]:
+    """QLT-1: the files of the components a spec says it touches are part of what its verifier may read."""
+    smap = load_map(ctx, required=False)
+    if smap is None:
+        return []
+    return _paths_of(smap, set(touches(ctx, spec)))
+
+
+def reading_hook(ctx: Context, spec: str) -> list[str]:
+    """QLT-1: a verifier may read the files of the components a spec says it depends on. They are not part of its change."""
+    smap = load_map(ctx, required=False)
+    if smap is None:
+        return []
+    depends = (spec_front(ctx, spec).get("depends_on") or {}).get("nodes") or []
+    return _paths_of(smap, {str(d) for d in depends})
+
+
+def _paths_of(smap: SystemMap, nodes: set[str]) -> list[str]:
+    return [glob for entry in smap.raw.get("index") or [] if entry.get("node") in nodes for glob in entry.get("paths") or []]
+
+
+#: How the `why` trace names what a change reaches, in the order it lists them.
+REACH_KINDS = [("data stores", DATA_TYPES | {"event-stream"}), ("contracts and events", CONTRACT_TYPES),
+               ("shared components", SHARED_TYPES), ("external systems", {"external-application", "external-service"})]
+
+
+def why_hook(ctx: Context, path: str, spec: str) -> list[str]:
+    """TRC-19, forward: the component a file belongs to, and everything the spec's change reaches, by kind."""
+    smap = load_map(ctx, required=False)
+    if smap is None:
+        return []
+    lines = []
+    node = smap.node_for(path)
+    if node and node in smap.nodes:
+        n = smap.nodes[node]
+        lines.append(f"- **Component:** `{node}` ({n.get('type')}, owner {n.get('owner') or 'not named'}, tier {n.get('tier') or 'not set'})")
+    impact = compute_impact(ctx, smap, spec)
+    reached = impact["touches"] + [a["node"] for a in impact["affected"]]
+    if not reached:
+        return lines
+    lines.append(f"- **The spec touches:** {', '.join(f'`{t}`' for t in impact['touches'])}")
+    depends = [str(d) for d in (spec_front(ctx, spec).get("depends_on") or {}).get("nodes") or [] if str(d) in smap.nodes]
+    if depends:
+        lines.append("- **The spec depends on:** " + ", ".join(f"`{d}` ({smap.nodes[d].get('type')})" for d in depends))
+    rest = [r for r in reached if r not in impact["touches"] and r not in depends]
+    named: set[str] = set()
+    for label, types in REACH_KINDS:
+        found = sorted(r for r in rest if smap.nodes[r].get("type") in types)
+        named.update(found)
+        if found:
+            lines.append(f"- **Reaches {label} ({len(found)}):** {', '.join(f'`{r}`' for r in found)}")
+    other = sorted(r for r in rest if r not in named)
+    if other:
+        lines.append(f"- **Reaches applications and other components ({len(other)}):** {', '.join(f'`{r}`' for r in other)}")
+    return lines
+
+
 def brief_hook(ctx: Context, spec: str, gate: str) -> list[tuple[str, list[str]]]:
     smap = load_map(ctx, required=False)
     if smap is None or ctx.profile not in SYS:

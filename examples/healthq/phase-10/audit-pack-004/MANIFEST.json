@@ -1,0 +1,238 @@
+{
+  "schema": "agentic-audit-pack/1",
+  "statement": "This pack supports an audit. It does not certify compliance with any law, regulation or standard.",
+  "generated_on": "2026-11-22",
+  "kit": {
+    "version": "0.1.0",
+    "upstream": "1.4.3",
+    "profile": "regulated",
+    "domain_packs": [
+      "hipaa"
+    ]
+  },
+  "scope": {
+    "specs": [
+      "004-audit-identity"
+    ]
+  },
+  "controls": [
+    {
+      "pack": "hipaa",
+      "reference": "45 CFR 164.312(a)(1)",
+      "section": "Access Control",
+      "asks": "Who may reach the PHI this change touches, how each access is authorised, and how emergency access works",
+      "specs": {
+        "004-audit-identity": {
+          "present": true,
+          "sha256": "sha256:15893b9c69ba925b2c06dabc01823f17e06e395140943294e0e2ef80517130c8",
+          "where": "specs/004-audit-identity/spec.md, section 'Access Control'"
+        }
+      }
+    },
+    {
+      "pack": "hipaa",
+      "reference": "45 CFR 164.312(b)",
+      "section": "Audit Controls",
+      "asks": "What is recorded when PHI is read or changed, with which user, tenant and patient, and where the record is kept",
+      "specs": {
+        "004-audit-identity": {
+          "present": true,
+          "sha256": "sha256:8caec0d7e253ade277eea486798b028d1ae9c73ff164cfb0ae8e1b87daabd0ab",
+          "where": "specs/004-audit-identity/spec.md, section 'Audit Controls'"
+        }
+      }
+    },
+    {
+      "pack": "hipaa",
+      "reference": "45 CFR 164.312(c)(1)",
+      "section": "Integrity",
+      "asks": "How PHI is protected from improper alteration or destruction",
+      "specs": {
+        "004-audit-identity": {
+          "present": true,
+          "sha256": "sha256:bdff80cd8fb95184bd619d73888da2e627e66ecbc5773358c21d5fa9ea1e2ddd",
+          "where": "specs/004-audit-identity/spec.md, section 'Integrity'"
+        }
+      }
+    },
+    {
+      "pack": "hipaa",
+      "reference": "45 CFR 164.312(d)",
+      "section": "Authentication",
+      "asks": "How the person or system seeking access is verified, and where identity comes from",
+      "specs": {
+        "004-audit-identity": {
+          "present": true,
+          "sha256": "sha256:6f7e9a99ae226dc8680d4d313b77d15a738319f0d7dbc2131de643168458557c",
+          "where": "specs/004-audit-identity/spec.md, section 'Authentication'"
+        }
+      }
+    },
+    {
+      "pack": "hipaa",
+      "reference": "45 CFR 164.312(e)(1)",
+      "section": "Transmission Security",
+      "asks": "How PHI is protected in transit, including to model providers and other external services",
+      "specs": {
+        "004-audit-identity": {
+          "present": true,
+          "sha256": "sha256:bbed39abcbad1ae988eadd6b1267d303cc100dcf244c127a70271a7d7a4916f8",
+          "where": "specs/004-audit-identity/spec.md, section 'Transmission Security'"
+        }
+      }
+    },
+    {
+      "pack": "hipaa",
+      "reference": "45 CFR 164.502(b)",
+      "section": "Minimum Necessary",
+      "asks": "Which PHI fields are used and why each is needed; what is redacted or left out",
+      "specs": {
+        "004-audit-identity": {
+          "present": true,
+          "sha256": "sha256:35a1104a7822d17858c973d3cf45d718a0a191a560f938d2d03dd254062e06c3",
+          "where": "specs/004-audit-identity/spec.md, section 'Minimum Necessary'"
+        }
+      }
+    },
+    {
+      "pack": "hipaa",
+      "reference": "45 CFR 160.103 (definitions)",
+      "section": "PHI Involved",
+      "asks": "Which PHI this change reads, writes, stores or sends; say 'none' and why if none",
+      "specs": {
+        "004-audit-identity": {
+          "present": true,
+          "sha256": "sha256:2089c28a2195badedee915a266a9d1462552d9776b4380a1e19ea4a7762d177d",
+          "where": "specs/004-audit-identity/spec.md, section 'PHI Involved'"
+        }
+      }
+    }
+  ],
+  "approvals": [],
+  "waivers": [],
+  "exceptions": [],
+  "checks": {
+    "CK-A11Y": "pass",
+    "CK-ADR": "pass",
+    "CK-AGENT-MEMORY": "pass",
+    "CK-AGENT-SPEC": "pass",
+    "CK-AI-EVAL": "fail",
+    "CK-AI-PROD-PATH": "fail",
+    "CK-AI-RETRIEVAL": "pass",
+    "CK-AI-RUNTIME": "pass",
+    "CK-AI-SAFETY-CASE": "fail",
+    "CK-AI-VERSION": "fail",
+    "CK-AMENDMENT": "pass",
+    "CK-APPROVER": "pass",
+    "CK-ARCHIVE": "pass",
+    "CK-AUDIT-CHAIN": "pass",
+    "CK-AUDIT-PACK": "pass",
+    "CK-AUTHOR-NEQ-VERIFIER": "pass",
+    "CK-BRIEF": "pass",
+    "CK-BUDGET": "pass",
+    "CK-CAPABILITY-COVERAGE": "pass",
+    "CK-CHARACTERIZATION": "fail",
+    "CK-CONNECT-CONFIG": "pass",
+    "CK-CONSTITUTION": "pass",
+    "CK-CONSUMER-MATRIX": "skipped",
+    "CK-CONTEXT": "pass",
+    "CK-CONTRACT-BREAK": "skipped",
+    "CK-CONTRACT-CONSUMER": "fail",
+    "CK-CONTRACT-DRIFT": "fail",
+    "CK-CONTRACT-VERSION": "fail",
+    "CK-CRED": "fail",
+    "CK-CROSS-SPEC": "pass",
+    "CK-DATA-CLASS": "pass",
+    "CK-DATA-PLAN": "pass",
+    "CK-DELTA-MERGED": "pass",
+    "CK-DELTA-VALID": "pass",
+    "CK-DEPRECATION": "pass",
+    "CK-DOMAIN-SECTIONS": "pass",
+    "CK-DRIFT-SPEC": "skipped",
+    "CK-DUPLICATE": "fail",
+    "CK-EMERGENCY-DEADLINE": "pass",
+    "CK-ENFORCE-SETUP": "fail",
+    "CK-ENV-PARITY": "fail",
+    "CK-EXTERNAL-DEP": "fail",
+    "CK-FINDING-EVIDENCE": "pass",
+    "CK-FLAG": "pass",
+    "CK-GATE-MIRROR": "pass",
+    "CK-GATE-RECORD": "fail",
+    "CK-GLOSSARY": "pass",
+    "CK-GOLDEN": "pass",
+    "CK-GOLDEN-BASELINE": "pass",
+    "CK-IMPACT": "pass",
+    "CK-INCIDENT-LOOP": "pass",
+    "CK-INFRA-CHANGE": "pass",
+    "CK-INJECTION": "pass",
+    "CK-INTAKE-DRIFT": "pass",
+    "CK-INTAKE-RECORD": "pass",
+    "CK-LANE": "pass",
+    "CK-LIVING-SPEC": "pass",
+    "CK-MAP-DRIFT": "pass",
+    "CK-MAP-EVIDENCE": "pass",
+    "CK-MAP-FEDERATION": "pass",
+    "CK-MAP-OWNER": "pass",
+    "CK-MAP-SCHEMA": "pass",
+    "CK-METRIC-PROVENANCE": "pass",
+    "CK-METRIC-SOURCE": "pass",
+    "CK-MIGRATION-DRIFT": "fail",
+    "CK-MIGRATION-ENGINE": "fail",
+    "CK-NOTIFY-CONTENT": "pass",
+    "CK-OPS-READINESS": "pass",
+    "CK-OUTCOME": "pass",
+    "CK-PATH-DIFF": "skipped",
+    "CK-PATH-LOCK": "pass",
+    "CK-PIN": "fail",
+    "CK-PIPELINE-SECRETS": "pass",
+    "CK-POST-RELEASE": "pass",
+    "CK-PRIVACY-IMPACT": "pass",
+    "CK-PROFILE": "pass",
+    "CK-PROGRAMME": "pass",
+    "CK-PROGRESSIVE": "pass",
+    "CK-REQ-QUALITY": "pass",
+    "CK-REWORK-LIMIT": "pass",
+    "CK-ROLES": "pass",
+    "CK-ROLLOUT": "pass",
+    "CK-ROUTING": "pass",
+    "CK-RUN-RECORD": "fail",
+    "CK-SBOM": "fail",
+    "CK-SECURITY-EVIDENCE": "pass",
+    "CK-SHARED-SEMVER": "fail",
+    "CK-SHARED-STORE": "pass",
+    "CK-SPEC-COLLISION": "pass",
+    "CK-SPEC-SIZE": "pass",
+    "CK-SYNTH-DATA": "pass",
+    "CK-TEST-DATA": "pass",
+    "CK-TEST-STRATEGY": "pass",
+    "CK-THREAT-MODEL": "fail",
+    "CK-TIER": "pass",
+    "CK-TIER-RAISE": "pass",
+    "CK-TOOL-ALLOWLIST": "pass",
+    "CK-TOUCH": "skipped",
+    "CK-TRACE": "pass",
+    "CK-TRACE-GENERATED": "pass",
+    "CK-UPSTREAM-PIN": "not run",
+    "CK-VERIFY-INPUTS": "pass",
+    "CK-WAIVER": "fail",
+    "CK-WORKITEM": "pass"
+  },
+  "audit_log": "intact",
+  "sources": {
+    ".specify/agentic/audit/004-audit-identity.jsonl": "sha256:75daea019eeba2a6cdec6a7ba5583b320d81acb64a8c69c77914952970137347",
+    ".specify/agentic/kit.yml": "sha256:0b3db4a5bcc6895a0346932c3295650a3c056709b1a65c7b00627172084beed0",
+    ".specify/agentic/roles.yml": "sha256:1167ee6f95608d1ea4419e6b3bd107a6ab6dbe078f2a0285cdb669095f264533",
+    ".specify/memory/constitution.md": "sha256:fa34c6068447e88f480f7540a2fb3baa04cbf5697e038f30ace51ef345f15c09",
+    "specs/004-audit-identity/spec.md": "sha256:de4a0c965a7a2b117e596142a2f6a9686094a6b1c1ddf108261cc5ec5905e82b",
+    "specs/004-audit-identity/trace-manifest.json": "sha256:0c1ee5410c2da2c39787faa85df0fd61ede2b4386508d81dce3abfaca6a8bbd7"
+  },
+  "files": {
+    "audit/004-audit-identity.jsonl": "sha256:75daea019eeba2a6cdec6a7ba5583b320d81acb64a8c69c77914952970137347",
+    "config/constitution.md": "sha256:fa34c6068447e88f480f7540a2fb3baa04cbf5697e038f30ace51ef345f15c09",
+    "config/kit.yml": "sha256:0b3db4a5bcc6895a0346932c3295650a3c056709b1a65c7b00627172084beed0",
+    "config/roles.yml": "sha256:1167ee6f95608d1ea4419e6b3bd107a6ab6dbe078f2a0285cdb669095f264533",
+    "evidence/specs/004-audit-identity/spec.md": "sha256:de4a0c965a7a2b117e596142a2f6a9686094a6b1c1ddf108261cc5ec5905e82b",
+    "trace/004-audit-identity.json": "sha256:0c1ee5410c2da2c39787faa85df0fd61ede2b4386508d81dce3abfaca6a8bbd7",
+    "README.md": "sha256:c485027d9987dd2e321c5eb206d8fd0fd7eab49f94f5044a8bfa44f3abfda3cb"
+  }
+}

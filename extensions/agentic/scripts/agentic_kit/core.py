@@ -4,6 +4,7 @@ Nothing here talks to the network. Checks are pure functions of files, plus one 
 """
 from __future__ import annotations
 
+import copy
 import fnmatch
 import hashlib
 import json
@@ -30,6 +31,9 @@ DECISIONS = ("approve", "reject", "approve-with-conditions")
 
 class KitError(Exception):
     """A problem with inputs that stops a check from running at all."""
+
+
+_PARSED: dict[str, Any] = {}   # parsed YAML by the hash of its text; see Source.yaml
 
 
 class Source:
@@ -85,10 +89,23 @@ class Source:
         return sorted(x for x in listing.splitlines() if x)
 
     def yaml(self, rel: str) -> Any:
-        try:
-            return yaml.safe_load(self.read(rel))
-        except yaml.YAMLError as exc:
-            raise KitError(f"{rel} is not valid YAML: {exc}") from exc
+        """The file, parsed. The same text is parsed once in a process, and every caller gets a copy of its own.
+
+        A check asks for the same file many times: on a project of 25 specs the duplicate check asked for the system
+        map about 1,300 times, and parsing it each time took more than a minute. The file is still read each time,
+        so text that changed is parsed again.
+        """
+        text = self.read(rel)
+        key = hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()
+        if key not in _PARSED:
+            try:
+                value = yaml.safe_load(text)
+            except yaml.YAMLError as exc:
+                raise KitError(f"{rel} is not valid YAML: {exc}") from exc
+            if len(_PARSED) >= 512:
+                _PARSED.clear()
+            _PARSED[key] = value
+        return copy.deepcopy(_PARSED[key])
 
 
 @dataclass
@@ -201,6 +218,9 @@ BRIEF_HOOKS: list = []     # (ctx, spec, gate) -> list of (heading, lines) added
 VIEW_HOOKS: dict = {}      # report name -> (ctx) -> markdown; sibling extensions add views
 METRIC_HOOKS: list = []    # (ctx) -> list of {metric, value, source}; a row with no value is not shown (TRC-14)
 FINDER_HOOKS: list = []    # (ctx) -> list of {rule, path, line, text}: findings that waivers and the baseline can cover
+ARTIFACT_HOOKS: list = []  # (ctx, spec) -> list of path patterns: files that are part of what the spec changes (QLT-1)
+READING_HOOKS: list = []   # (ctx, spec) -> list of path patterns a verifier may also read: what the spec depends on (QLT-1)
+WHY_HOOKS: list = []       # (ctx, path, spec) -> list of lines for the `why` trace: what the file is and what the spec reaches (TRC-19)
 RULE_OWNERS: dict[str, str] = {}  # suppression rule id -> check id that reports it (default CK-WAIVER)
 
 

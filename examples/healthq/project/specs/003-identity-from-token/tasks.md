@@ -9,4 +9,4 @@ Draft, waiting at gate G4. T007 cannot start until the spec's `touches` includes
 - [ ] T005 Add break-glass tests to `tests/HealthQCopilot.Tests.Integration/IdentityEndpointTests.cs` @test-agent. Carries: AC-003, AC-004
 - [ ] T006 [P] Add `tests/HealthQCopilot.Tests.Unit/Architecture/CallerAssertedIdentityTests.cs` @test-agent. Carries: AC-006
 - [ ] T007 Replace the three header reads in `src/HealthQCopilot.Agents/Services/GuideOrchestrator.cs` and `src/HealthQCopilot.Agents/Services/TriageOrchestrator.cs` with the caller context @backend-implementer. Carries: AC-001
-- [ ] T008 Verify the change against the spec, the constitution and the system map @independent-verifier. Carries: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006
+- [ ] T008 Verify the change against the spec, the constitution and the system map, and write `specs/003-identity-from-token/verification/G6-report.md` @independent-verifier. Carries: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006

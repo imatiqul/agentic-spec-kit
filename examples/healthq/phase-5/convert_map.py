@@ -44,6 +44,11 @@ IGNORE = {"healthq-copilot-frontend": "the workspace root of the front ends, not
           "servicebus-emulator": "a development-only container the application host starts; the map has it as part of dev-apphost",
           "sql-servicebus": "a development-only container the application host starts; the map has it as part of dev-apphost"}
 FOUND_NOTE = "Not in the Phase 1 draft; found by the kit's discovery in Phase 6"
+#: Who writes to the audit event stream. The Phase 1 draft has the stream with nobody writing to it. Found in Phase 7, while
+#: tracing the change for finding C4: each of the nine services registers the writer in its Program.cs.
+AUDIT_STREAM_WRITERS = {"identity-service": "Identity", "voice-service": "Voice", "agent-service": "Agents", "fhir-service": "Fhir",
+                        "ocr-service": "Ocr", "scheduling-service": "Scheduling", "notification-service": "Notifications",
+                        "pophealth-service": "PopulationHealth", "revenue-service": "RevenueCycle"}
 EXTRA_INDEX = [{"paths": [".github/workflows/**", "frontend/e2e/**", "frontend/e2e-cloud/**"], "node": "ci-pipeline"},
                {"paths": ["Directory.Build.props", ".editorconfig", ".gitignore", "global.json", "README.md", "LICENSE"], "node": "repo-config"},
                {"paths": ["src/HealthQCopilot.AppHost/**"], "node": "dev-apphost"}]
@@ -196,6 +201,12 @@ def main(draft: Path, repo: Path, out: Path) -> None:
             edge["evidence"] = "; ".join(cited)
         edges.append(edge)
 
+    for service, project in AUDIT_STREAM_WRITERS.items():
+        program = f"src/HealthQCopilot.{project}/Program.cs"
+        if exists(program) and "AddEventHubAudit()" in (repo / program).read_text(encoding="utf-8"):
+            edges.append({"from": service, "rel": "writes", "to": "event-hubs-audit", "origin": "derived", "evidence": f"{program} (AddEventHubAudit)",
+                          "note": "Not in the Phase 1 draft; found in Phase 7, while tracing the change for finding C4"})
+            stats["writer of the audit event stream, added in Phase 7"] += 1
     nodes += [dict(n) for n in EXTRA_NODES if exists(n["evidence"])]
     index += [dict(i) for i in EXTRA_INDEX]
     reconcile(repo, nodes, edges, index, stats)

@@ -436,3 +436,5 @@ A metric is a row `{metric, value, source}`. Extensions add rows through `METRIC
 | `team.memory.forbid: [{pattern, why}]` | More things an instruction file may not grant | none |
 | `team.memory.allow_missing` | Paths an instruction file may name although they do not exist | none |
 | `team.tools.files` | More MCP configuration files to read | none |
+| `metric_claims.scan` | Files CK-METRIC-PROVENANCE reads for figures, as path patterns. In prose a figure is a percentage on a line that names a measure; in any other file it is also a number given to a name that says what it measures (`accuracy = 0.94`) | `[README.md]` |
+| `metric_claims.allow` | Regular expressions; a line that matches one is not read for figures | none |

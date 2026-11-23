@@ -7,7 +7,7 @@ import re
 import xml.etree.ElementTree as ET
 
 from .checks_gov import constitution_map, decisions, spec_front
-from .core import GENESIS, KIT_DIR, Context, KitError, Result, check, entry_hash, match_any
+from .core import ARTIFACT_HOOKS, READING_HOOKS, GENESIS, KIT_DIR, Context, KitError, Result, check, entry_hash, match_any
 
 _FR = re.compile(r"^\s*[-*]\s*\*\*(FR-[0-9]{3,})\*\*", re.M)
 _AC = re.compile(r"^\s*[-*]\s*\*\*(AC-[0-9]{3,})\*\*\s*\(verifies\s+(FR-[0-9]{3,})\)", re.M)
@@ -215,8 +215,12 @@ def ck_metric_source(ctx: Context, res: Result) -> None:
 @check("CK-VERIFY-INPUTS", ("QLT-1",), "the independent verifier received only the artifact, spec, constitution and map")
 def ck_verify_inputs(ctx: Context, res: Result) -> None:
     for spec in ctx.specs():
+        # The artifact: the paths the spec names, and what sibling extensions add (the files its tasks name, the
+        # files of the components it says it touches). A verifier may also read what the spec says it depends on.
         allowed = [f"specs/{spec}/*", ".specify/memory/constitution.md", f"{KIT_DIR}/constitution.map.yml",
                    "system-map/*"] + list(spec_front(ctx, spec).get("paths") or [])
+        for hook in ARTIFACT_HOOKS + READING_HOOKS:
+            allowed += hook(ctx, spec)
         banned = [f"specs/{spec}/notes/*", f"specs/{spec}/verification/*", f"{KIT_DIR}/work/*"]
         for rel in ctx.src.files(f"specs/{spec}/verification"):
             if not rel.endswith("-inputs.yml"):

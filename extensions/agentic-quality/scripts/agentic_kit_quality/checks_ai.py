@@ -25,6 +25,10 @@ from .common import AI_KINDS, SYS, gate_record, load_map, need_sections, plan_sp
 CLAIMS = f"{KIT_DIR}/metric-claims.yml"
 METRIC_WORDS = r"accura|precision|recall|\bf1\b|uptime|availab|latency|faster|slower|reduc|improv|success rate|error rate|coverage|satisf|conversion"
 _FIGURE = re.compile(r"(?<![\w.])\d{1,3}(?:[.,]\d+)?\s?%")
+#: Files read as prose. In any other file a figure is also a number given to a name that says what it measures.
+PROSE = (".md", ".markdown", ".txt", ".rst", ".adoc", ".html", ".htm")
+_NAMED_FIGURE = re.compile(r"(?<![\w.])((?:\w*(?:accura|precision|recall|uptime|availab|latency|coverage|satisf|conversion)\w*|f1|auc))"
+                           r"[\"']?\s*[:=]\s*(-?\d+(?:\.\d+)?)(?![\w.])", re.I)
 
 
 def ai_nodes(smap) -> dict[str, dict]:
@@ -289,9 +293,15 @@ def ck_metric_provenance(ctx: Context, res: Result) -> None:
     for rel in ctx.src.files():
         if not any(fnmatch.fnmatch(rel, g) for g in scan):
             continue
+        code = not rel.lower().endswith(PROSE)
         for n, line in enumerate(ctx.src.read(rel).splitlines(), 1):
-            if not re.search(METRIC_WORDS, line, re.I) or any(a.search(line) for a in allow):
+            if any(a.search(line) for a in allow):
                 continue
-            for figure in _FIGURE.findall(line):
-                if re.sub(r"\s", "", figure) not in registered.get(rel, set()):
-                    res.fail(f"the figure {figure.strip()} has no recorded source; register it in {CLAIMS} or remove it", f"{rel}:{n}")
+            if re.search(METRIC_WORDS, line, re.I):
+                for figure in _FIGURE.findall(line):
+                    if re.sub(r"\s", "", figure) not in registered.get(rel, set()):
+                        res.fail(f"the figure {figure.strip()} has no recorded source; register it in {CLAIMS} or remove it", f"{rel}:{n}")
+            if code:  # a figure in code or data: a number given to a name that says what it measures
+                for name, number in _NAMED_FIGURE.findall(line):
+                    if number not in registered.get(rel, set()):
+                        res.fail(f"the figure {name} = {number} has no recorded source; register it in {CLAIMS} or remove it", f"{rel}:{n}")

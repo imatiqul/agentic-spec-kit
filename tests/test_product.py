@@ -112,6 +112,14 @@ def test_the_same_input_always_gives_the_same_score():
     assert text.cosine(fa, fb, text.idf([fa, fb])) == text.cosine(fa, fb, text.idf([fa, fb]))
 
 
+def test_words_that_count_the_same_are_listed_in_the_same_order_in_every_run():
+    from collections import Counter
+    terms = ["waiver", "expiry", "pipeline", "number", "removal", "owner", "audit", "tenant", "token", "gateway", "record", "review"]
+    score, shared = text.cosine(Counter(terms), Counter(reversed(terms)), {})
+    assert shared == sorted(terms)[:5], "a tie is settled by the word itself, not by the order a set happens to give in this run"
+    assert score == pytest.approx(1.0)
+
+
 def test_an_agreed_term_makes_two_wordings_one():
     plain = text.jaccard("delete a customer", "delete a member")
     assert text.jaccard("delete a customer", "delete a member", {"customer": "member"}) > plain
@@ -588,3 +596,28 @@ def test_why_reads_the_work_item_from_the_commit(sample):
     git("commit", "-qm", "Implement greet\n\nWork-Item: 001-demo/T001\nAgent: backend-implementer")
     out = lineage.why(ctx(sample), "src/demo/greet.py:2")
     assert "**Work item:** 001-demo/T001" in out and "agent backend-implementer" in out and "Task T001 carries:" in out
+
+
+def test_why_goes_back_to_the_principle_and_forward_to_what_the_change_reaches(sample):
+    """TRC-19: from a line to the task's criteria, the requirement, the principle, the component, and what the spec reaches."""
+    def git(*args):
+        subprocess.run(["git", "-C", str(sample), "-c", "user.name=Dev", "-c", "user.email=d@example.com", "-c", "commit.gpgsign=false", *args],
+                       check=True, capture_output=True)
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-qm", "Implement greet\n\nWork-Item: 001-demo/T001\nAgent: backend-implementer")
+    out = lineage.why(ctx(sample), "libs/demo-lib/index.js:1")
+    assert "- **Task T001 carries:** AC-001, AC-900" in out, "read from the task list: the work item does not hold them"
+    assert "- **FR-001:** System MUST greet the user by name." in out
+    assert "- **Principle P-1:** Every requirement is traced to a test" in out
+    assert "- **Component:** `demo-lib` (shared-library, owner platform, tier medium)" in out
+    assert "- **The spec touches:** `contract-demo-openapi`, `demo-app`, `demo-db`, `demo-lib`" in out
+    assert "- **Reaches applications and other components (1):** `demo-client`" in out
+    assert out.count("## Spec ") == 1, "the commit names the task, so only that task's spec is shown"
+
+
+def test_a_spec_claims_the_files_of_the_components_it_touches(sample):
+    assert lineage.specs_for(ctx(sample), "libs/demo-lib/index.js") == [SPEC], "no path of the spec names it; the map says the spec touches demo-lib"
+    assert lineage.specs_for(ctx(sample), "docs/unrelated.md") == []
+    assert lineage.carried_by(ctx(sample), SPEC, "T001") == ["AC-001", "AC-900"]
+    assert lineage.carried_by(ctx(sample), SPEC, "T999") == []

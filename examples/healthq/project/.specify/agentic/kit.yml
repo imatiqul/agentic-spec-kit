@@ -15,3 +15,13 @@ gates:
 metrics:
   - {id: lead-time-per-gate, source: audit-log}
   - {id: rework-rate, source: audit-log}
+metric_claims:
+  scan: [README.md, "src/*/Endpoints/*.cs"]   # where figures that reach users are written. Finding H4: accuracy figures written into an endpoint
+team:
+  runtimes: [sequential]
+  mode: sequential            # one agent plays each role in turn; the verifier and the security reviewer each start from a new session
+  budget: {steps: 200, minutes: 240}
+  routing:                    # which model each class of agent may run on. A proposal for the owner: it names the one model the Phase 7 walkthrough ran on
+    fast: {model: claude-fable-5-2, version: "5.2"}
+    standard: {model: claude-fable-5-2, version: "5.2"}
+    strong: {model: claude-fable-5-2, version: "5.2"}

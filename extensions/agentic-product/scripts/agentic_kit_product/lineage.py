@@ -4,8 +4,9 @@ from __future__ import annotations
 import re
 import subprocess
 
+from agentic_kit import core
 from agentic_kit.core import KIT_DIR, Context, match_any
-from agentic_kit.lanes import approved_records
+from agentic_kit.lanes import approved_records, principles
 
 from . import common
 from .dedupe import origin
@@ -36,7 +37,34 @@ def last_change(ctx: Context, path: str, line: int | None) -> dict:
 
 
 def specs_for(ctx: Context, path: str) -> list[str]:
-    return [s for s in ctx.specs() if match_any(path, [str(g) for g in (common.front(ctx, s).get("paths") or [])])]
+    """The specs that claim a path: by the paths they name, by their task lists, by the components they say they touch."""
+    out = []
+    for spec in ctx.specs():
+        globs = [str(g) for g in (common.front(ctx, spec).get("paths") or [])]
+        for hook in core.ARTIFACT_HOOKS:
+            globs += hook(ctx, spec)
+        if match_any(path, globs):
+            out.append(spec)
+    return out
+
+
+_CARRIES = re.compile(r"Carries:\s*((?:AC-[0-9]{3,}[,\s]*)+)")
+
+
+def carried_by(ctx: Context, spec: str, item_id: str) -> list[str]:
+    """The acceptance criteria a task carries: from its work item, or from its line in the task list."""
+    work = f"{KIT_DIR}/work/{spec}/{item_id}.yml"
+    if ctx.src.exists(work):
+        recorded = [str(c) for c in ((ctx.src.yaml(work) or {}).get("carries") or [])]
+        if recorded:
+            return recorded
+    rel = f"specs/{spec}/tasks.md"
+    if ctx.src.exists(rel):
+        for line in ctx.src.read(rel).splitlines():
+            if re.match(rf"\s*[-*]\s*\[[ xX]\]\s*{re.escape(item_id)}\b", line):
+                found = _CARRIES.search(line)
+                return re.findall(r"AC-[0-9]{3,}", found.group(1)) if found else []
+    return []
 
 
 def why(ctx: Context, target: str) -> str:
@@ -53,9 +81,11 @@ def why(ctx: Context, target: str) -> str:
             lines.append(f"- **Work item:** {change['work_item']}")
     else:
         lines.append("- **Last changed:** not known (no git history for this path)")
-    specs = specs_for(ctx, path)
-    if item_spec and item_spec in ctx.specs() and item_spec not in specs:
-        specs.insert(0, item_spec)
+    if item_spec and item_spec in ctx.specs():
+        specs = [item_spec]  # the commit says which spec's task changed it
+    else:
+        specs = specs_for(ctx, path)
+    titles = principles(ctx.src.read(".specify/memory/constitution.md")) if ctx.src.exists(".specify/memory/constitution.md") else {}
     if not specs:
         lines += ["", "No spec claims this path. It is either older than the kit or changed outside a spec (see CK-DRIFT-SPEC)."]
         return "\n".join(lines) + "\n"
@@ -64,13 +94,17 @@ def why(ctx: Context, target: str) -> str:
         lines += ["", f"## Spec {spec}: {common.spec_title(ctx, spec)}"]
         frs, acs = common.requirements(ctx, spec), common.criteria(ctx, spec)
         carried: list[str] = []
-        work = f"{KIT_DIR}/work/{spec}/{item_id}.yml" if item_id and spec == item_spec else ""
-        if work and ctx.src.exists(work):
-            carried = [str(c) for c in ((ctx.src.yaml(work) or {}).get("carries") or [])]
+        if item_id and spec == item_spec:
+            carried = carried_by(ctx, spec, item_id)
             lines.append(f"- **Task {item_id} carries:** {', '.join(carried) or 'no acceptance criterion'}")
         wanted = sorted({f for a in carried for f in (acs.get(a) or ([], ""))[0]}) or sorted(frs)
         for fid in wanted:
             lines.append(f"- **{fid}:** {frs.get(fid, '(not in the spec)')}")
+        for pid in [str(p) for p in common.front(ctx, spec).get("principles") or []]:
+            title = (titles.get(pid) or "").splitlines()[0] if titles.get(pid) else "(not in the constitution)"
+            lines.append(f"- **Principle {pid}:** {title}")
+        for hook in core.WHY_HOOKS:
+            lines += hook(ctx, path, spec)
         for d in spec_deltas(ctx, spec):
             for r in d.added + d.modified:
                 if not wanted or set(r.verifies) & set(wanted):

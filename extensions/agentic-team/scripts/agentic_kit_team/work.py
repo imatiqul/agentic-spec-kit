@@ -157,15 +157,21 @@ def parse_tasks(text: str, default_owner: str) -> list[dict]:
         if done:
             continue
         owner = re.search(r"@([a-z0-9-]+)|owner:\s*([a-z0-9-]+)", rest)
-        paths = []
-        for a, b in _PATH.findall(rest):
-            p = (a or b).rstrip(".,;:)")
-            if p and not p.startswith(("http", "//")):
-                paths.append(p + "*" if p.endswith("/") else p)
+        paths = _paths_in(rest)
         title = re.sub(r"\[[A-Za-z0-9]+\]|@[a-z0-9-]+|owner:\s*[a-z0-9-]+", "", rest).strip(" -:")
         out.append({"id": tid, "title": title[:160], "owner_agent": (owner.group(1) or owner.group(2)) if owner else default_owner,
-                    "paths": list(dict.fromkeys(paths)), "depends_on": deps})
+                    "paths": paths, "depends_on": deps})
     return out
+
+
+def _paths_in(text: str) -> list[str]:
+    """The repository paths a task line names, in order, each once. A folder stands for everything in it."""
+    paths = []
+    for a, b in _PATH.findall(text):
+        p = (a or b).rstrip(".,;:)")
+        if p and not p.startswith(("http", "//")):
+            paths.append(p + "*" if p.endswith("/") else p)
+    return list(dict.fromkeys(paths))
 
 
 def create_from_tasks(ctx: Context, spec: str, by: str = "orchestrator") -> list[dict]:
@@ -185,6 +191,18 @@ def create_from_tasks(ctx: Context, spec: str, by: str = "orchestrator") -> list
         audit_append(ctx.src.root, spec, actor(ctx, by), "work.ready", spec=spec, item=t["id"], inputs=[rel])
         made.append(item)
     return made
+
+
+def artifact_paths(ctx: Context, spec: str) -> list[str]:
+    """QLT-1: the paths a spec's tasks name, finished or not, are the artifact its verifier checks."""
+    paths = [p for item in items(ctx, spec) for p in item.get("paths") or []]
+    rel = f"specs/{spec}/tasks.md"
+    if ctx.src.exists(rel):
+        for line in ctx.src.read(rel).splitlines():
+            task = _TASK.match(line)
+            if task:
+                paths += _paths_in(task.group(3))
+    return list(dict.fromkeys(paths))
 
 
 # ── path locks (AGT-4) ──────────────────────────────────────────────────────────
@@ -301,7 +319,12 @@ def claim(ctx: Context, spec: str, item_id: str, agent: str, worktree: bool = Fa
         raise KitError(f"{spec}/{item_id} cannot start while {other['spec']}/{other['id']} is {other['state']}: {why}")
     item["owner_agent"] = agent
     if item.get("state") == "rework":
-        return item  # the author already holds it; nothing to change
+        # The author already holds it. In a shared working copy, others have written since the first claim: other
+        # items were handed off, reviewers wrote their findings. What is there now is not this round's work.
+        if item.get("base") and not item.get("worktree") and is_git(ctx.src.root):
+            item["dirty_at_claim"] = {f: _file_hash(ctx.src.root / f) for f in _dirty(ctx.src.root, item["base"])}
+            write_item(ctx, item)
+        return item
     from . import context as pack
     item["context"] = pack.write(ctx, spec, item_id)  # AGT-19: what the agent is told is built by the kit and recorded with the claim
     root = ctx.src.root

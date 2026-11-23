@@ -666,3 +666,18 @@ def test_the_shipped_pipelines_follow_the_kits_own_rules(sample):
     assert set(triggers) == {"workflow_run", "schedule", "workflow_dispatch"}, "nothing that holds a secret runs on a pull request"
     core_flow = (ROOT / "extensions" / "agentic" / "ci" / "agentic-checks.yml").read_text(encoding="utf-8")
     assert "secrets." not in core_flow, "the workflow that runs on a pull request holds no secret"
+
+
+def test_the_kits_own_pipeline_follows_the_kits_own_rules(sample):
+    text = (ROOT / ".github" / "workflows" / "tests.yml").read_text(encoding="utf-8")
+    selftest._write(sample, ".github/workflows/tests.yml", text)
+    for cid in ("CK-PIPELINE-SECRETS", "CK-PIN"):
+        r = run(sample, cid)
+        assert r.ok, msgs(r)
+    flow = yaml.safe_load(text)
+    assert set(flow.get("on", flow.get(True))) == {"pull_request", "push"}
+    assert flow["permissions"] == {"contents": "read"}, "the job can read the repository and nothing else"
+    assert "secrets." not in text and "pull_request_target" not in text
+    commands = [step["run"] for step in flow["jobs"]["tests"]["steps"] if "run" in step]
+    assert not [c for c in commands if "${{" in c], "nothing from the event is pasted into a command"
+    assert any("pytest tests" in c for c in commands) and any("selftest" in c for c in commands) and any("golden run" in c for c in commands)

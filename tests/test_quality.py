@@ -34,6 +34,10 @@ def run(root, cid, **options):
     return core.run_check(cid, selftest.context(root, **options))
 
 
+def msgs(result):
+    return " | ".join(f.message for f in result.findings)
+
+
 def edit(root, rel, old, new):
     p = root / rel
     text = p.read_text(encoding="utf-8")
@@ -91,6 +95,31 @@ def test_plan_asks_for_an_evaluation_when_the_spec_touches_a_prompt(sample):
 def test_a_threat_tested_by_a_criterion_that_does_not_exist_fails(sample):
     edit(sample, f"{BASE}/threat-model.yml", "test: AC-900", "test: AC-404")
     assert run(sample, "CK-THREAT-MODEL").findings
+
+
+def test_a_figure_in_code_needs_a_recorded_source_as_one_in_prose_does(sample):
+    """QLT-19: a number given to a field named for what it measures is a figure shown to users, wherever it is written."""
+    kit = sample / core.KIT_DIR / "kit.yml"
+    cfg = yaml.safe_load(kit.read_text())
+    cfg["metric_claims"] = {"scan": ["README.md", "src/api/*.cs"], "allow": [r"decimalPrecision"]}
+    kit.write_text(yaml.safe_dump(cfg, sort_keys=False))
+    code = sample / "src" / "api" / "Kpi.cs"
+    code.parent.mkdir(parents=True)
+    code.write_text('app.MapGet("/kpi", () => new {\n    aiAccuracyRate = 94.2,\n    openCareGaps = 12,\n'
+                    '    decimalPrecision = 2,\n});\nnew { model = "v2", accuracy = 0.958, recall = 0.962, f1 = 0.958, samplesEvaluated = 1890 };\n')
+    found = msgs(run(sample, "CK-METRIC-PROVENANCE"))
+    for figure in ("aiAccuracyRate = 94.2", "accuracy = 0.958", "recall = 0.962", "f1 = 0.958"):
+        assert f"the figure {figure} has no recorded source" in found
+    assert "openCareGaps" not in found and "samplesEvaluated" not in found, "a count is not a measure of quality"
+    assert "decimalPrecision" not in found, "a line the project allows is left alone"
+
+    claims = sample / core.KIT_DIR / "metric-claims.yml"
+    claims.write_text(claims.read_text() + '  - id: M-2\n    value: "0.958"\n    where: [src/api/Kpi.cs]\n'
+                      '    source: {kind: evaluation, path: evals/baseline.json, key: metrics.accuracy}\n')
+    again = msgs(run(sample, "CK-METRIC-PROVENANCE"))
+    assert "accuracy = 0.958" not in again and "f1 = 0.958" not in again, "a registered figure is no longer unexplained where it is shown"
+    assert "claim M-2 shows 0.958, but the recorded value at metrics.accuracy is 0.9412" in again, "and it must equal what was measured"
+    assert "aiAccuracyRate = 94.2" in again
 
 
 def test_a_failed_scan_is_not_evidence(sample):

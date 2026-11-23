@@ -20,6 +20,9 @@ core.ROLE_HOOKS.append(checks_map.role_hook)
 core.MANIFEST_HOOKS.append(checks_map.manifest_hook)
 core.LANE_HOOKS.append(checks_map.lane_hook)
 core.BRIEF_HOOKS.append(checks_map.brief_hook)
+core.ARTIFACT_HOOKS.append(checks_map.artifact_hook)
+core.READING_HOOKS.append(checks_map.reading_hook)
+core.WHY_HOOKS.append(checks_map.why_hook)
 
 
 def map_view(ctx) -> str:
