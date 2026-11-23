@@ -4,7 +4,7 @@
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository `imatiqul/azure-ai-cloud-healthcare`, `main` at `8d04df3`
 - **Requirement IDs exercised:** GOV-6, GOV-9, GOV-17, GOV-20, TRC-16, TRC-19, QLT-2, QLT-4, QLT-12, QLT-15, AGT-10
 - **Assumptions:** an acceptance line is judged against the words in `docs/prompts/90-acceptance.md`. Where a line was shown with a scripted stand-in or a recorded response and not with the real thing, it says so and is counted apart
-- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. The owner merged the healthcare branches into `main` with no build, no test run and no gate review, and no pipeline has run the kit on a project. Section 9 has the full list
+- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. The owner merged the healthcare branches into `main` with no gate review; he built it and ran its unit tests afterwards, and that result is his report, not something seen here. No pipeline has run the kit on a project. Section 9 has the full list
 
 The owner's instruction was to finish everything, look at it again, and wait; he pushes. This report is the end of that. Nothing in it is an approval.
 
@@ -18,13 +18,22 @@ The owner's instruction was to finish everything, look at it again, and wait; he
 
 Sections 1, 6, 8 and 9 are changed to match; the acceptance counts are not.
 
+**Later that evening: the merged `main` was built and tested, and seven packages were updated.**
+
+- **`dotnet build` on the merged `main` stopped at restore**, with 147 errors. None came from the merge, which changed no project or package file. NuGet's audit reported ten packages with advisories published since the repository's suppression list was last looked at, and the build treats warnings as errors. Nothing had told anyone: no pipeline runs there.
+- **With the audit switched off for the run (`-p:NuGetAudit=false`), the owner built the solution and ran the unit test project on `main` at `d78ffe7`, and reported that both passed.** That is the first build of the C4 change with the solution's own packages, analyzers and settings. The output was not captured, so no count is recorded here, and the other half of task T005, the eleven old tests at the base commit, was not run.
+- **Seven of the ten packages were moved to versions with no advisory** (healthcare pull request #76, merged by the owner; `main` is `2a8f516`). The versions were chosen from GitHub's advisory database and could not be restored where the change was written. On the owner's machine the unit test project then restored with the audit on and no message, and resolved the intended versions; that was read from its `project.assets.json`. He reported that the build and the tests passed.
+- **Three remain, all Aspire 9.3.0**, one of them critical. The only patched version is 13.6.5, a major upgrade of the application host. Until it is made, a restore of the whole solution fails the audit on the two application-host projects.
+
+Sections 1, 8 and 9 are changed again to match.
+
 ## 1. Where everything is
 
 | What | Where | State |
 |---|---|---|
 | The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner at `6e217c2`. This update to the report is a later local commit |
 | Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, branch `sdd/reference-plans` (`89a4fc9`) | Merged into `main` by the owner (pull request #74). Still waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
-| The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Not built. Still waits on seven amendments, a test run, and reviews |
+| The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Built and unit-tested by him afterwards, by his report; no output was captured. Still waits on seven amendments, a recorded test run, and reviews |
 | Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Merged into `main` by the owner (pull request #75). Nothing in it is approved or enforced: the baseline is still a proposal outside the folder the kit reads |
 | Titles and descriptions for the three pull requests | `examples/healthq/phase-7/pull-requests.md` | Text for the owner to paste |
 
@@ -230,7 +239,7 @@ Numbering continues from the Phase 7 report, which ends at 82.
 
 In the order that unblocks most.
 
-1. **Build and test the healthcare `main`.** It now holds the C4 change, which no build has ever compiled. On a machine that can restore the packages: `dotnet build`, then `dotnet test tests/HealthQCopilot.Tests.Unit`. If it does not build, fix it on a branch, or put the 14 code and test files back as they were (`git checkout 8d04df3 -- src tests` on a branch, then a pull request). Reverting the merge of pull request #73 would also undo the governance update, which arrived with it.
+1. **Capture the test run, and decide Aspire.** The owner has built `main` and run its unit tests; the result is his report. A run with a results file (`dotnet test tests/HealthQCopilot.Tests.Unit --logger "trx;LogFileName=unit.trx"`), and the eleven old audit tests at `8d04df3`, would let task T005 be recorded with counts. Aspire 9.3.0 has a critical advisory that only 13.6.5 fixes: upgrade the application host, or record a dated waiver.
 2. **Find out why nothing runs in the healthcare repository's pipeline.** `pr-validation.yml` should have run on each of the three pull requests and did not start. The repository's Actions settings are the first place to look.
 3. **Spec 004.** Seven amendments in `specs/004-audit-identity/amendment-proposed.md`; two clear failing checks. Then task T005 on a machine that can restore the solution's packages: the eleven existing audit tests at `8d04df3`, then `dotnet test tests/HealthQCopilot.Tests.Unit` on the branch, both recorded. Then T006, and reviews for G3 to G6.
 4. **Nine draft specs** (017 to 025) at G1 and G2, and **three pairs** the kit lists as similar.
@@ -243,7 +252,7 @@ In the order that unblocks most.
 ## 9. Not verified
 
 - Anything on live GitHub but one thing: a review, branch protection, a token's permissions, a pipeline that runs the kit on a project. The one thing is the kit repository's own test pipeline, which has run once and passed.
-- The healthcare solution: restore, build, its own tests, analyzers, coverage, a bill of materials, any deployment.
+- The healthcare solution's build and unit tests were run by the owner and reported, not observed: no output, count or results file was seen. Its integration, architecture and evaluation tests, coverage, a bill of materials and any deployment have not run at all.
 - Any tracker, chat or mail service; Windows PowerShell; a migration on a database; an evaluation of the triage classifier.
 - A model put through the planted-instruction tests, or working in parallel mode with the path guard.
 - That the HIPAA pack's mapping of controls is right. It is an engineering aid and nobody qualified has reviewed it.

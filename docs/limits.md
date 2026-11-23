@@ -80,6 +80,6 @@ As of 2026-11-22 none of the following has happened, so everything that depends 
 - a coding-agent runtime (Claude Code, GitHub Copilot) loading the rendered agent files, the path guard on that runtime's events, or the allowlist against real tool servers. One model has worked one change through the sequential mode, with a context pack for each task and a separate session for each of the two reviewing agents (`docs/phase-reports/phase-7-c4-walkthrough.md`); that is the only use by a model so far;
 - any tracker, chat or mail adapter against its live service;
 - any of the three pipeline files the kit ships, in its CI system. This repository's own `.github/workflows/tests.yml` has run: first on the owner's push of 2026-11-22, where it passed on Python 3.10 and 3.13. It runs the kit's tests. It is not the kit running on a project;
-- the tests, the build or any pipeline of the reference system: its package registry could not be reached from where the reference change was written, and no workflow has run in that repository since May 2026;
+- any pipeline of the reference system: no workflow of that repository has run since May 2026. Its build and unit tests were run once, by the owner on his machine on 2026-11-22, after the reference change had been merged; he reported that they passed, and no output was captured. From where the change was written the package registry could not be reached;
 - the install or any command on Windows PowerShell;
 - a migration applied to a database.
