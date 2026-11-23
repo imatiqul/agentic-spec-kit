@@ -3,7 +3,7 @@ id: T005
 spec: 004-audit-identity
 title: Run the eleven existing tests of the audit middleware at the base commit, then the unit test project at the change's
   commit, and record both in `specs/004-audit
-state: in-review
+state: done
 owner_agent: test-agent
 paths:
 - specs/004-audit-identity/evidence/characterization.yml
@@ -13,7 +13,7 @@ depends_on:
 - T002
 - T003
 - T004
-rework_rounds: 0
+rework_rounds: 1
 history:
 - state: ready
   by: orchestrator
@@ -24,19 +24,50 @@ history:
 - state: in-review
   by: test-agent
   at: '2026-11-23T02:15:11Z'
+- state: rework
+  by: ''
+  at: '2026-11-23T02:57:40Z'
+- state: in-review
+  by: test-agent
+  at: '2026-11-23T03:00:06Z'
+- state: done
+  by: ''
+  at: '2026-11-23T03:01:39Z'
 context:
   path: .specify/agentic/context/004-audit-identity/T005.md
   hash: sha256:80c3a33c9f0edd55a8cafe53511ca7da7440f3d73ac258a6fcae2d0789b20a82
   sources: 4
 base: 2a8f5166f1d0a9fb2f599b7e48b7fed7d3f0e1b0
-dirty_at_claim: {}
+dirty_at_claim:
+  specs/004-audit-identity/evidence/characterization.yml: 2d2162e7c9a3e115d9aede58f445d6d1e2203e66e62b82c36edd015133a67dd3
+  specs/004-audit-identity/evidence/unit-tests.md: a9d131eeabffd12ec01d971b521cbd17419d95c146357f8f208c20b94d620868
 handoff:
-  done: 'The owner ran both test runs on his machine; this records them from the two results files. Unit test project at 2a8f516:
-    520 of 520 passed, among them the 80 tests of this spec. The eleven existing audit tests at the base commit 8d04df3: 11
-    of 11 passed. The agent ran nothing. Not covered: the other test projects, coverage, a pipeline.'
+  done: 'Rework 1. The two statements the reviewer returned are corrected: the file now names the commits the two reviews
+    name (1ae91cd and eb596e3 here) and says no .cs file differs between eb596e3 and 2a8f516; and it no longer gives advisory
+    counts that no file in the repository shows. The assumptions line now says a results file does not record its command
+    line. Nothing else changed; the counts are as before.'
   evidence:
   - specs/004-audit-identity/evidence/unit-tests.md
   open_questions: []
   files:
-  - specs/004-audit-identity/evidence/characterization.yml
   - specs/004-audit-identity/evidence/unit-tests.md
+reviewer_agent: ''
+findings:
+- round: 1
+  by: ''
+  text: 'Two statements in evidence/unit-tests.md say more than the files show. Everything else I could check against unit.trx,
+    base.trx and the repository is right: 520 of 520 and 11 of 11 passed; the three classes hold 30, 15 and 35 tests, all
+    passed; the eleven names; both SHA-256 values; the start times 20:08:40 and 20:09:17 at UTC-6; the full id of 8d04df3;
+    no .cs file differs between 1e8d054 and 2a8f516; the test project references Infrastructure and all nine services; the
+    80 names equal the list in T004-rework-1.md (one row has its argument shortened by xUnit in the display name) and the
+    11 equal the list in T004-order-tests.md; neither the name of the machine nor of the user is in the two files. (1) Line
+    52 calls 1e8d054 (12ff77d) the commit the change was reviewed at. Both review reports name 03c9f5b and 15bf0f9, which
+    are 1ae91cd and eb596e3 in this history; 1e8d054 is the tip of the merged branch and no report names it. The conclusion
+    that the code and tests that ran are the ones that were reviewed needs a step the file does not make: that no .cs file
+    differs between eb596e3 and 1e8d054. I checked it and none does. Name the commits the reviews name and state that step.
+    (2) Line 23 says that ten packages had published advisories at 8d04df3, that nothing restores there without the switch,
+    and that pull request 76 dealt with seven of them. Neither results file shows any of this, and no repository file I may
+    read gives those numbers; the project files show that pull request 76 changed the references of nine packages (four versions
+    raised, five added as pins). Give the source of the numbers, or say only what the files show. Not checkable from the files,
+    and worth saying so where they stand: the checkout history on the owner machine (line 6) and the workflow history (line
+    54).'

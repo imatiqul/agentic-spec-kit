@@ -28,6 +28,7 @@ Workflows: `agentic-sdd-team` (the Orchestrator dispatches each stage's agents) 
 | An agent changes only the files of the work item it holds | The path guard blocks the write where the runtime has pre-tool-use events; `work handoff` refuses; `CK-PATH-DIFF` checks afterwards |
 | No two agents edit the same file, migration folder, contract or shared component | `work claim` refuses; `CK-PATH-LOCK` |
 | The author never reviews its own work | `work review` refuses; `CK-AUTHOR-NEQ-VERIFIER` |
+| A review names who made it: a reviewing agent of the team, or a person in the roles file | `work review` refuses; `CK-AUTHOR-NEQ-VERIFIER` reports a record that names nobody |
 | At most two rework rounds | The third return blocks the item and writes an escalation with both positions for the accountable person; `CK-REWORK-LIMIT` |
 | Every run has a budget | `orchestrate step` stops the run with a report when steps, minutes or money run out; `CK-BUDGET` |
 | An agent works from a context pack the kit built | `work claim` builds it from the spec, the plan, the task and the living specs it touches; `CK-CONTEXT` fails a pack that was edited or has gone stale |

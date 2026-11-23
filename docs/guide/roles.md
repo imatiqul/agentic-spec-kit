@@ -31,6 +31,8 @@ These are the defaults (`DEFAULT_APPROVERS` in the core extension). At Standard 
 | G6 | The independent verification | QA |
 | G7 | The release | DevOps / SRE, Product Owner |
 
+G4 comes before work on the tasks starts. G5 and G6 come before the change is merged: the checks on the default branch fail while a spec's work is there without them.
+
 ### Roles the kit adds from what a change touches (Standard and Regulated)
 
 | When the change | These roles join | At |

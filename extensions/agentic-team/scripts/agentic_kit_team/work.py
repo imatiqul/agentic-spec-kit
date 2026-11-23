@@ -126,6 +126,9 @@ def transition(ctx: Context, item: dict, to: str, by: str, **fields) -> dict:
     current = item.get("state")
     if to not in LEGAL.get(current, set()):
         raise KitError(f"{item['spec']}/{item['id']} cannot go from {current} to {to}")
+    if not str(by or "").strip():
+        # Without this the history and the audit log would say "a person with no name" did it.
+        raise KitError(f"{item['spec']}/{item['id']} cannot go to {to}: the record must name who moved it")
     item["state"] = to
     item.setdefault("history", []).append({"state": to, "by": by, "at": now(ctx)})
     write_item(ctx, item)
@@ -391,6 +394,9 @@ def escalation_path(spec: str, item_id: str) -> str:
 def review(ctx: Context, spec: str, item_id: str, by: str, accept: bool, finding: str = "") -> str:
     """'done', 'rework' or 'escalated'."""
     item = read_item(ctx, spec, item_id)
+    by = str(by or "").strip()
+    if not by:
+        raise KitError("a review must name who made it: give --by <reviewing agent>")
     if item.get("state") != "in-review":
         raise KitError(f"{spec}/{item_id} is {item.get('state')}; only an item in review can be reviewed")
     if by == item.get("owner_agent"):
@@ -398,6 +404,9 @@ def review(ctx: Context, spec: str, item_id: str, by: str, accept: bool, finding
     specs = ag.load(ctx)
     if by in specs and not specs[by].get("reviews"):
         raise KitError(f"{by} is not a reviewing agent")
+    if by not in specs and by not in {str(p.get("id")) for p in ctx.roles().get("people") or []}:
+        # A name the project does not know would be recorded as a person. A mistyped agent name is the likely case.
+        raise KitError(f"{by} is neither an agent of the team nor a person in the roles file")
     item["reviewer_agent"] = by
     if accept:
         transition(ctx, item, "done", by)

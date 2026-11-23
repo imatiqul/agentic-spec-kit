@@ -52,3 +52,30 @@ inputs:
   - src/HealthQCopilot.RevenueCycle/**
   - src/HealthQCopilot.Scheduling/**
   - src/HealthQCopilot.Voice/**
+  # round 3, added by the verifier on 2026-11-22: what it read in the repository beyond the list above,
+  # to review task T005 and to repeat the verification on the real test results (task T006)
+  - specs/004-audit-identity/evidence/unit-tests.md                  # T005's record of the two real runs
+  - specs/004-audit-identity/evidence/trace-lines.md
+  - specs/004-audit-identity/amendment-proposed.md
+  - specs/004-audit-identity/briefs/G5.md
+  - specs/004-audit-identity/briefs/G6.md
+  - specs/004-audit-identity/release/notes.md
+  - specs/004-audit-identity/release/operational-readiness.md
+  - specs/004-audit-identity/reviews/G5-security.md                  # two lines only, 12 and 298: the commits its two rounds name
+  - tests/HealthQCopilot.Tests.Unit/HealthQCopilot.Tests.Unit.csproj  # in full, and its test-library lines at 8d04df3
+  - Directory.Build.props                                             # the lines on the target framework, warnings, code style and the advisory audit
+  # the package-reference lines and comments that pull request #76 changed, read as a diff (d78ffe7..2a8f516): in the
+  # seven project files below, in the unit test project's file above, and in the ten project files of the folders listed above
+  - src/HealthQCopilot.AppHost/HealthQCopilot.AppHost.csproj
+  - src/HealthQCopilot.BFF/HealthQCopilot.BFF.csproj
+  - src/HealthQCopilot.ServiceDefaults/HealthQCopilot.ServiceDefaults.csproj
+  - tests/HealthQCopilot.Tests.AppHost/HealthQCopilot.Tests.AppHost.csproj
+  - tests/HealthQCopilot.Tests.Architecture/HealthQCopilot.Tests.Architecture.csproj
+  - tests/HealthQCopilot.Tests.Eval/HealthQCopilot.Tests.Eval.csproj
+  - tests/HealthQCopilot.Tests.Integration/HealthQCopilot.Tests.Integration.csproj
+# Read in round 3 without opening a file's content, and so not entries above:
+#   - the number of [Fact] and [Theory] attributes in tests/HealthQCopilot.Tests.Unit/**/*.cs at 2a8f516 (445, in 65 files)
+#   - file names that differ between commits, folder names under src/ and tests/, and the subjects of the four merges on main
+#   - what the kit printed: its checks, and `work list` and `work show` for T005 and T006 (the hand-off statement of T005 among it)
+# Read in round 3 outside this repository: the two results files of the owner's test runs (unit.trx, base.trx), and
+# examples/healthq/phase-7/commit-map.md in the kit's repository. Not read: commit messages, the work records, the run records.

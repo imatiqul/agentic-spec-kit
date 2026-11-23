@@ -4,7 +4,7 @@
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository `imatiqul/azure-ai-cloud-healthcare`, `main` at `8d04df3`
 - **Requirement IDs exercised:** GOV-6, GOV-9, GOV-17, GOV-20, TRC-16, TRC-19, QLT-2, QLT-4, QLT-12, QLT-15, AGT-10
 - **Assumptions:** an acceptance line is judged against the words in `docs/prompts/90-acceptance.md`. Where a line was shown with a scripted stand-in or a recorded response and not with the real thing, it says so and is counted apart
-- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. The owner merged the healthcare branches into `main` with no gate review; he built it and ran its unit tests afterwards, and that result is his report, not something seen here. No pipeline has run the kit on a project. Section 9 has the full list
+- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. The owner merged the healthcare branches into `main` with no gate review; he built it and ran its unit tests afterwards; the agent read his results files and did not see the runs. No pipeline has run the kit on a project. Section 9 has the full list
 
 The owner's instruction was to finish everything, look at it again, and wait; he pushes. This report is the end of that. Nothing in it is an approval.
 
@@ -36,15 +36,28 @@ The stand-in runs of Phase 7 had reported the same 80 and the same 11. T005 is r
 
 The kit's checks on `main` now also say that 18 project files changed outside any work item and that a shared component changed with no recorded run of its consumers. Both are right: the package update of pull request #76 was made outside the kit's process, at the owner's request.
 
+**Late that night: the verification was repeated on the real results, one record turned out to name nobody, and the kit got the rule the merge had shown to be missing.**
+
+- **An independent verifier went through the record of the test run, and then through the change again.** It returned the record once: two sentences said more than the results files show. It accepted the corrected record and repeated its verification on the real results (round 3 of `specs/004-audit-identity/verification/G6-report.md`). On those results it finds AC-001, AC-003 and AC-006 shown; AC-002 and AC-004 shown at the middleware and not through a service; AC-005 shown for the check and not for "the build must fail". Of its fourteen earlier findings six are closed, five stay open and three are open in part. Six are new. The first of them says what the kit had not said: the change is on `main` and no gate of the spec has a decision, and the merge came 43 minutes before the first real test run. T005 is done. T006, the verification, is handed off and waits for a reviewing agent other than the verifier, and for the owner at G6.
+- **The verifier's own list of what it read breaks the kit's rule for verifier inputs.** To see what had been compiled it read nine project and build-setting files, and listed them. The check on its inputs now fails on that list. Whether a verifier may read build settings is the owner's to decide.
+- **The record of that review named nobody.** The review command had been run without `--by`, and the kit wrote "a person with no name" as the one who returned T005 and then accepted it: in the work item, and in two lines of the audit log. No check noticed. Neither did the agent that read the verifier's report and carried the records to the owner's machine; it was found some hours later, when the records were brought into this repository. The reviewer was the verifier agent, and no person reviewed anything. The kit now refuses a review that names nobody, or somebody the project does not know, and the check that an author does not review their own work fails on a record like this one. The log can only be added to, so a fourth run in it says who the reviewer was. The work item still has the empty name, and that check fails on it until a person corrects the file. The change all this is the record of exists because an audit record named nobody.
+- **The gate check now reports work that is ahead of its gates.** Once work on a spec's tasks shows in the tree (a ticked task, a work item that is done or was handed off, a commit that names one), it asks for G4 on any branch, and on the default branch also for G5 and G6. On the reference's merged `main` it reports G4, G5 and G6 for spec 004, where it had reported G1 to G3 only. It reports after the merge and does not hold a merge back. That, and how the check knows which branch is the default one, are in `docs/limits.md`.
+- **The Aspire upgrade is drafted** as a branch for the owner to build: the application host from 9.3.0 to 13.6.5, the first version without the two advisories. It could not be restored or built where it was written. It found one more thing in the reference: the host starts each of the eight front-end apps with `npm run start`, and none of them has a `start` script.
+- **The README now explains the kit with diagrams**, for someone who is new to it, and `docs/guide/workflow.md` has more. Each diagram was checked against the code and the commands. That found two more things, both now in `docs/limits.md`: the gate views show G4 as open again when a task is ticked off, and the check for code that changes with no spec is skipped in every pipeline the kit ships.
+
+Sections 1, 5, 6, 7, 8 and 9 are changed to match. No acceptance line moved.
+
 ## 1. Where everything is
 
 | What | Where | State |
 |---|---|---|
 | The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner at `6e217c2`. This update to the report is a later local commit |
 | Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, branch `sdd/reference-plans` (`89a4fc9`) | Merged into `main` by the owner (pull request #74). Still waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
-| The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Built and unit-tested by him afterwards: 520 of 520 passed, read from his results file. Still waits on seven amendments, a review of that record, the verification repeated on it, and gate reviews |
+| The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Built and unit-tested by him afterwards: 520 of 520 passed, read from his results file. The record of that run is reviewed and the verification is repeated on it. Still waits on seven amendments, a review of that verification by an agent other than the verifier, and gate reviews |
 | Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Merged into `main` by the owner (pull request #75). Nothing in it is approved or enforced: the baseline is still a proposal outside the folder the kit reads |
-| Titles and descriptions for the three pull requests | `examples/healthq/phase-7/pull-requests.md` | Text for the owner to paste |
+| The verification repeated on the real results, the review of the test record, and the correction to that review's record | Healthcare repository, branch `sdd/004-verification-3b` (`ba610d9`). It holds `sdd/004-verification-3` (`edab4ec`) and one commit more | On the owner's machine. Not pushed |
+| The Aspire upgrade of the application host, 9.3.0 to 13.6.5 | Healthcare repository, branch `deps/aspire-13` (`22f9440`), one commit on `main` | On the owner's machine. Not pushed, not restored, not built |
+| Titles and descriptions for the three pull requests, and for the two branches made later | `examples/healthq/phase-7/pull-requests.md` | Text for the owner to paste |
 
 The three branches were written in a workspace that cannot push. They were carried to the owner's machine as one bundle and made again there commit by commit, under his name, without checking anything out. Each ends in exactly the files that were reviewed: the script compares the tree of each branch with the one from the workspace and stops if they differ. Commit ids changed on the way, and the records name the old ones; `examples/healthq/phase-7/commit-map.md` maps them.
 
@@ -176,13 +189,13 @@ Every line of `docs/prompts/90-acceptance.md`, in its order. The earlier phase r
 - **Nothing passed a gate on an agent's word.** Told to carry on without stopping, the work went to the end and still recorded no approval. Every artefact in front of a gate says it is waiting, and the gate check fails on all of them.
 - **The reviewers earned their place.** Two agents that had not written the change, each in a new session with a fixed list of what it could read, made 29 findings in their first round. They come to fifteen things to act on: four defects in the change or its tests, four statements in the plan's documents that were wrong, written by the author, and seven in the spec the owner had approved. The kit's checks report two of the fifteen (the component the spec does not declare, and two criteria not marked as abuse cases). The other thirteen were found by reading.
 - **The checks found real things in real code:** the change touching a component its spec did not declare, two floating container tags, an evaluation that does not call production code, accuracy figures written into an endpoint, 635 suppressions.
-- **The kit is cheap to run.** 507 tests, 105 fixtures and 20 golden results pass offline: in about four minutes in the workspace, and on the owner's machine.
+- **The kit is cheap to run.** 531 tests, 105 fixtures and 20 golden results pass offline: in about four minutes in the workspace, and on the owner's machine.
 
 ### What using it on real work showed
 
-Twenty-two things, none visible from the fixtures. Eight were fixed with a test each (`docs/release-notes.md`). Six of them in Phase 7: a verifier could not be given source code, `why` stopped at the requirement, a rework hand-off was refused in a shared working copy, a security review was not part of a gate's evidence, `team init` rewrote the settings file, and the figure check could not read code. Two more while this report was being checked on the owner's machine: one test could not finish there, because the duplicate check parsed the system map about 1,300 times on a project of 25 specs (78 seconds, now 2), and its messages listed shared words in an order that changed from run to run. Fourteen were not fixed and are now in `docs/limits.md`, under "Found by using it on a real change". The ones that matter most:
+Twenty-six things, none visible from the fixtures. Ten were fixed with a test each (`docs/release-notes.md`). Six of them in Phase 7: a verifier could not be given source code, `why` stopped at the requirement, a rework hand-off was refused in a shared working copy, a security review was not part of a gate's evidence, `team init` rewrote the settings file, and the figure check could not read code. Two more while this report was being checked on the owner's machine: one test could not finish there, because the duplicate check parsed the system map about 1,300 times on a project of 25 specs (78 seconds, now 2), and its messages listed shared words in an order that changed from run to run. Two more on the night of the merge: the gate check had no rule for work that reaches the default branch without G5 and G6, and a review that named nobody was written down as a person's. Sixteen were not fixed and are in `docs/limits.md`, under "Found by using it on a real change", with four points more that say what those last two fixes leave open. The ones that matter most:
 
-- A change that reaches the default branch without G5 and G6 is not reported as such. The owner's merge of the C4 change showed it.
+- Work that reaches the default branch without G5 and G6 is reported after the merge, not held back. The owner's merge of the C4 change showed that the rule was missing; the rule that was added reports on the default branch only.
 - A review can only accept or return. Real reviewers want to accept with conditions.
 - A threat the owner chooses to live with has nowhere to go.
 - Records name commits by id, and ids do not survive a rebase, a squash, or being made again on another machine.
@@ -200,9 +213,10 @@ Twenty-two things, none visible from the fixtures. Eight were fixed with a test 
 ### What would raise confidence most, in order
 
 1. One hour on a scratch GitHub repository: branch protection, a pull request, a review that carries a gate's line, the mirror, an agent token. It settles four acceptance lines.
-2. A pipeline that runs in the healthcare repository. Every check there that waits on a build, a scan or a bill of materials waits on this, and so does task T005.
-3. Reviews that can accept with conditions, and a place for an accepted risk.
-4. Someone else installing Lite from the README with a clock running, once on Windows.
+2. A pipeline that runs in the healthcare repository. Every check there that waits on a build, a scan or a bill of materials waits on this.
+3. A decision on whether a pull request into the default branch should fail until G5 and G6 are recorded. Today the gate check says so only after the merge.
+4. Reviews that can accept with conditions, and a place for an accepted risk.
+5. Someone else installing Lite from the README with a clock running, once on Windows.
 
 These are proposals. None was started.
 
@@ -230,6 +244,13 @@ These are proposals. None was started.
 
 | The healthcare unit test project, and the eleven old audit tests at the base commit | Owner's machine, run by the owner after this report was first written. The agent read the two results files | 520 of 520 passed at `2a8f516`, among them the 80 tests of the change. 11 of 11 passed at `8d04df3` |
 
+| `python -m pytest tests`, with both clones, after the changes of the last note | Workspace, Python 3.13 | 531 passed, in about three minutes |
+| `agentic.py selftest`; `golden run`, after those changes | Workspace | 105 fixtures as expected; 10 of 10 in each mode |
+| The same three, after those changes | Owner's machine, Python 3.10, on a copy of the files on the virtual machine's own disk. The copy and the owner's folder have the same combined hash | 529 passed, 2 skipped (the two tests that need a clone); 105 fixtures as expected; 10 of 10 in each mode |
+| The gate check with the new rule on the healthcare `main` (`d429369`), against `8d04df3` | Workspace, two clones: one with that commit checked out as `main`, one where it has another name beside an older `main` | As `main`: G4, G5 and G6 reported for spec 004, with or without a base. Under the other name: G4, and a note that the branch could not be told; with `--branch main`, all three. The whole run there: 77 pass, 26 fail, 1 not run, as before the rule, because the gate check failed already |
+| The kit's checks on the branch with the repeated verification and its correction, checked out as `main` | Workspace | 75 pass, 28 fail, 1 not run. New against `d429369`: the nine verifier inputs, and the two lines that say T005 was returned and accepted by a reviewer the record does not name |
+| The versions of the Aspire upgrade | NuGet's version lists and package descriptions; GitHub's advisory database; the Aspire source at the tag `v13.6.5` | Each version exists. No advisory is listed for `Aspire.Hosting`, the dashboard package for Windows or MessagePack at the new versions; the same question for 13.6.4 returns the advisory. The two methods the host now calls are in the source with the arguments used. Nothing was restored or built |
+
 No other test project of the healthcare solution has run.
 
 ## 7. Decisions made without the owner, and how to reverse each
@@ -245,20 +266,24 @@ Numbering continues from the Phase 7 report, which ends at 82.
 | 87 | Did not add the header to the guides and generated files that lack it | Their phase and requirement IDs would have been reconstructed, not known | Say which should carry it |
 | 88 | Did not ask for GitHub API access to read pipeline runs | In this session that access comes with the right to push, which the owner kept for himself | Section 9 lists it as unverified |
 | 89 | Changed kit code after the acceptance run: parsed YAML is kept by its text, and tied words are listed in alphabetical order | A test could not finish on the owner's machine, and the cause was the kit's. Every run in section 6 was made again after the change, except the stopped one | `Source.yaml` in `agentic_kit/core.py`; `cosine` in `agentic_kit_product/text.py` |
+| 90 | Made the review of a work item refuse a missing name and a name the project does not know, and made CK-AUTHOR-NEQ-VERIFIER fail on a record whose reviewer is not named | The kit had written "a person with no name" as the reviewer of T005 and said nothing. An unknown name had been written down as a person | `review` and `transition` in `agentic_kit_team/work.py`; `ck_author_neq_verifier` in `agentic_kit_team/checks_team.py` |
+| 91 | Appended the correction to the reference's audit log as a fourth run, on a new branch that holds the earlier one, and left the work item as the kit wrote it | The log can only be added to, and a work item may be written only by a kit command or a person. The correction says who the reviewer was; it does not rewrite who the record named | Push `sdd/004-verification-3` and not `sdd/004-verification-3b`. To correct the work item by hand instead: set `reviewer_agent` and the two empty `by` values in `T005.yml` to `independent-verifier` |
+| 92 | The new gate rule asks for G5 and G6 on the default branch only, does not ask for G7, counts any finished task or work item as work on the spec, and leaves the shipped pipeline files as they were | On a pull request the work is still in progress; a release may be decided after a merge; two specs may claim one file, so changed files are not used. The agent that built the rule made these choices and wrote them down; they were kept | `ck_gate_record` and `on_default_branch` in `agentic_kit/checks_gov.py`. The choice that most needs the owner: whether a pull request into the default branch should fail until G5 and G6 are recorded |
+| 93 | In the Aspire upgrade: the host keeps taking the dashboard and the orchestrator from NuGet and silences the new warning ASPIRE010; the front-end apps keep running `npm run start` with no install step; the Redis client package in the service defaults stays at 9.3.0 | The first keeps the build free of an installed Aspire CLI, as it was. The second keeps the command the host ran before, although no app has a `start` script: changing what the host starts is another change. The third has no advisory | The branch is one commit: change it or drop it |
 
 ## 8. What waits on the owner
 
 In the order that unblocks most.
 
-1. **Decide Aspire, and say whether the reviewing agents may run again.** Aspire 9.3.0 has a critical advisory that only 13.6.5 fixes: upgrade the application host, or record a dated waiver. Task T005 is handed off with the owner's test results and waits for a reviewing agent, and T006 is the verification repeated on those results; both need an agent that did not write the change.
+1. **Build the Aspire branch, and push what is on his machine.** `deps/aspire-13` moves the application host to 13.6.5. It was not restored or built: `dotnet restore`, `dotnet build` and the application-host tests on the owner's machine are the test. Also not pushed: this repository's latest commits, and `sdd/004-verification-3b` in the healthcare repository, which holds the repeated verification and the correction to its record.
 2. **Find out why nothing runs in the healthcare repository's pipeline.** `pr-validation.yml` should have run on each of the three pull requests and did not start. The repository's Actions settings are the first place to look.
-3. **Spec 004.** Seven amendments in `specs/004-audit-identity/amendment-proposed.md`; two clear failing checks. Then task T005 on a machine that can restore the solution's packages: the eleven existing audit tests at `8d04df3`, then `dotnet test tests/HealthQCopilot.Tests.Unit` on the branch, both recorded. Then T006, and reviews for G3 to G6.
+3. **Spec 004.** Seven amendments in `specs/004-audit-identity/amendment-proposed.md`; two clear failing checks. A review of T006, the repeated verification, by a reviewing agent other than the verifier. A decision on whether a verifier may read build settings (finding V-20: the check on its inputs fails on its own list). The name of T005's reviewer in the work item, which only a person may write. Then reviews for G3 to G6.
 4. **Nine draft specs** (017 to 025) at G1 and G2, and **three pairs** the kit lists as similar.
 5. **Six draft plans** (001, 003, 004, 005, 006, 013) and the breakdown of 002, at G3 and G4. Amendments proposed in Phase 6 to specs 001, 002, 003, 005 and 007.
 6. **The adoption baseline:** approve, change or reject `.specify/agentic/proposals/adoption-baseline.md`.
 7. **Settings only an administrator can make:** branch protection, the agent's own GitHub identity, the routing policy (today it names one model for every class of agent).
 8. **Observations O1 to O20** in the Phase 6 and Phase 7 reports. None has a spec. O11, O15, O17 and O18 bear most directly on who can reach patient data and whether that is recorded.
-9. **The kit:** the fourteen items under "Found by using it on a real change" in `docs/limits.md`, and decision 87. The first to fix is the missing rule for a change merged without G5 and G6.
+9. **The kit:** the twenty points under "Found by using it on a real change" in `docs/limits.md`, and decisions 87 and 92. The first to decide is whether a pull request into the default branch should fail until G5 and G6 are recorded, so that a protected branch cannot be merged without them. Today the gate check reports it after the merge.
 
 ## 9. Not verified
 
@@ -268,3 +293,6 @@ In the order that unblocks most.
 - A model put through the planted-instruction tests, or working in parallel mode with the path guard.
 - That the HIPAA pack's mapping of controls is right. It is an engineering aid and nobody qualified has reviewed it.
 - Why the healthcare repository's workflows do not start. It was read from outside; its settings were not.
+- The Aspire upgrade. Its versions and the methods it calls were checked against NuGet, the advisory database and the Aspire source. It was not restored, built or run.
+- The new gate rule in a pipeline. What git says about the branch in each CI system's clone was tried on clones made by hand.
+- That the reviewer of T005 was the verifier agent is known from the run that made the review and from its two review steps in the same log, not from the two lines that name nobody.

@@ -483,6 +483,20 @@ def test_run_reports_and_exits_with_the_check_result(sample, tmp_path_factory, s
     assert code == 1 and data["ok"] is False and data["events"][0]["type"] == "check-failed"
 
 
+def test_run_takes_the_branch_from_the_caller_and_on_the_default_branch_asks_for_the_gates_before_a_merge(sample, seams):
+    connect.TRANSPORT, connect.ENV = Recorded(), {}
+    (sample / f"{core.KIT_DIR}/emergencies/E-001.yml").unlink()  # without its open emergency 001-demo is an ordinary spec: finished, with G6 undecided
+    code, out = cli(sample, "connect", "run", "--branch", "refs/pull/7/merge")
+    assert code == 0 and "0 failed, 0 not run" in out, "a pull request: work in progress"
+    code, out = cli(sample, "connect", "run", "--branch", "refs/heads/main")
+    assert code == 1 and "**CK-GATE-RECORD** failed" in out
+    assert "the implementation is on the default branch (main) but gate G6 has no approving decision record" in out
+    code, out = cli(sample, "connect", "run", "--branch", "", "--json")
+    notes = [n for r in json.loads(out)["results"] if r["check"] == "CK-GATE-RECORD" for n in r["notes"]]
+    assert code == 0 and len(notes) == 1 and notes[0].startswith("could not tell whether this is the default branch"), \
+        "a pipeline variable that is empty says nothing; the sample is a folder of files, so git has nothing to say either"
+
+
 def test_run_with_notify_uses_the_configured_channels(sample, tmp_path_factory, seams):
     note_url = f"{JIRA}/rest/api/3/issue/DEMO-1/comment"
     connect.TRANSPORT = Recorded([("POST", ENV["SLACK_WEBHOOK_URL"], "ok"), ("GET", note_url, {"comments": []}), ("POST", note_url, (201, {})),
@@ -666,6 +680,58 @@ def test_the_shipped_pipelines_follow_the_kits_own_rules(sample):
     assert set(triggers) == {"workflow_run", "schedule", "workflow_dispatch"}, "nothing that holds a secret runs on a pull request"
     core_flow = (ROOT / "extensions" / "agentic" / "ci" / "agentic-checks.yml").read_text(encoding="utf-8")
     assert "secrets." not in core_flow, "the workflow that runs on a pull request holds no secret"
+
+
+def test_in_a_pipelines_full_clone_git_says_which_branch_was_built_so_the_shipped_pipelines_pass_no_flag(tmp_path):
+    """On the default branch the gate check asks for more. The shipped files clone everything and check out one commit; that is enough for git to say."""
+    from agentic_kit.checks_gov import on_default_branch
+    ci = ROOT / "extensions" / "agentic-connect" / "ci"
+    shipped = {"agentic-checks.yml": (ROOT / "extensions" / "agentic" / "ci" / "agentic-checks.yml").read_text(encoding="utf-8"),
+               **{p.name: p.read_text(encoding="utf-8") for p in ci.iterdir()}}
+    assert not [name for name, body in shipped.items() if "--branch" in body], "nothing a copy of these files could forget"
+    assert "fetch-depth: 0" in shipped["agentic-checks.yml"] and "fetch-depth: 0" in shipped["github-actions.yml"]
+    assert "fetchDepth: 0" in shipped["azure-pipelines.yml"] and 'GIT_DEPTH: "0"' in shipped["gitlab-ci.yml"], "each makes a full clone"
+
+    origin, clone = tmp_path / "origin", tmp_path / "clone"
+    selftest.build_sample(origin)
+    git(origin, "init", "-q", "-b", "main")
+    git(origin, "add", "-A")
+    git(origin, "commit", "-qm", "the default branch")
+    git(origin, "switch", "-qc", "spec/001-demo")
+    (origin / "src/demo/more.py").write_text("x = 1\n")
+    git(origin, "add", "-A")
+    git(origin, "commit", "-qm", "a proposed change")
+    git(origin, "switch", "-qc", "spec/002-next")
+    (origin / "src/demo/next.py").write_text("x = 2\n")
+    git(origin, "add", "-A")
+    git(origin, "commit", "-qm", "a change proposed on top of the first")
+    git(origin, "switch", "-q", "main")
+    subprocess.run(["git", "clone", "-q", str(origin), str(clone)], check=True, capture_output=True)
+
+    def says(base, **options):
+        src = core.Source(clone)
+        return on_default_branch(core.Context(src, src.at(base) if base else src, options))
+
+    assert says("HEAD~0") == (True, ""), "a push to the default branch on GitHub: the branch is checked out, compared with a commit"
+    git(clone, "checkout", "-q", "--detach", "origin/main")
+    git(clone, "branch", "-q", "-D", "main")
+    assert says("origin/main") == (True, ""), "GitLab and Azure on the default branch: one commit, remote branches only, compared with the branch itself"
+    git(clone, "checkout", "-q", "--detach", "origin/spec/001-demo")
+    assert says("origin/main") == (False, ""), "a pull request: its commit is not on the default branch"
+    git(clone, "checkout", "-q", "--detach", "origin/spec/002-next")
+    assert says("origin/spec/001-demo") == (False, ""), "a pull request into another branch"
+    kit = clone / core.KIT_DIR / "kit.yml"
+    kit.write_text(kit.read_text(encoding="utf-8").replace("default_branch: main", "default_branch: trunk"), encoding="utf-8")
+    assert says(None) == (None, "the repository has no branch trunk; enforcement.default_branch in kit.yml names the default branch"), \
+        "a wrong name in kit.yml is said, not passed over"
+
+
+def test_a_pipeline_whose_checkout_cannot_say_may_pass_the_ref_it_built(sample):
+    """What CI systems call what they built, and how --branch reads it. The sample's default branch is main."""
+    from agentic_kit.checks_gov import on_default_branch
+    for ref, expected in (("refs/heads/main", True), ("main", True), ("refs/pull/7/merge", False), ("refs/merge-requests/7/head", False),
+                          ("refs/heads/spec/001-demo", False), ("refs/tags/main", False), ("spec/001-demo", False)):
+        assert on_default_branch(ctx(sample, branch=ref)) == (expected, ""), ref
 
 
 def test_the_kits_own_pipeline_follows_the_kits_own_rules(sample):

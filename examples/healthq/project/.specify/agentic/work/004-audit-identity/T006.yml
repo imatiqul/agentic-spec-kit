@@ -3,7 +3,7 @@ id: T006
 spec: 004-audit-identity
 title: Verify the change against the spec, the constitution and the system map, with none of the author's notes, and write
   `specs/004-audit-identity/verification/G6-re
-state: ready
+state: in-review
 owner_agent: independent-verifier
 paths:
 - specs/004-audit-identity/verification/G6-report.md
@@ -14,3 +14,30 @@ history:
 - state: ready
   by: orchestrator
   at: '2026-11-22T21:44:30Z'
+- state: in-progress
+  by: independent-verifier
+  at: '2026-11-23T03:01:42Z'
+- state: in-review
+  by: independent-verifier
+  at: '2026-11-23T03:08:55Z'
+context:
+  path: .specify/agentic/context/004-audit-identity/T006.md
+  hash: sha256:2abb93c3903488f92a27f5b37aa4cf3d8e5605aa4ddfc8f343ef84d8b1179987
+  sources: 4
+base: d4293693626ead5e459ddb347452b6bad2d67afe
+dirty_at_claim:
+  specs/004-audit-identity/evidence/unit-tests.md: 21d63a601bbb5c0c7e2cf16acbeb2d3fad22d948ecaffbb69a8f9bae43cf714f
+handoff:
+  done: 'On the real results of the unit test run the owner made (unit.trx at 2a8f516, base.trx at 8d04df3) I verified that
+    the 80 tests of this change and the eleven old tests pass, that the 14 changed files compile with warnings as errors,
+    and which tests show each of AC-001 to AC-006; the code is that of my second round, since no .cs file differs. Of V-1
+    to V-14: V-3, V-4, V-5, V-7, V-11 and V-13 are closed and V-2 is closed for the unit test project; V-1, V-6, V-9, V-10
+    and V-12 stay open, V-8 and V-14 in part; new are V-15 (the change is on main and no gate of the spec has a decision)
+    to V-20. Not verified: who ran the tests and with which commands, the message of commit eb6a02a, any pipeline run or deployment;
+    I built nothing, and AC-002 and AC-004 are shown at the middleware only, not through a service.'
+  evidence:
+  - specs/004-audit-identity/verification/G6-report.md
+  open_questions: []
+  files:
+  - specs/004-audit-identity/verification/G6-inputs.yml
+  - specs/004-audit-identity/verification/G6-report.md

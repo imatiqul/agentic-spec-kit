@@ -132,6 +132,19 @@ def test_a_low_tier_change_takes_the_fast_lane_with_one_review_for_g1_to_g4(proj
         assert r.ok, (cid, msgs(r), r.not_run)
 
 
+def test_work_on_a_fast_lane_spec_is_asked_for_g4_before_it_starts_and_for_g5_and_g6_on_the_default_branch(proj):
+    plan_and_tasks(proj)
+    tasks = proj / "specs" / SPEC / "tasks.md"
+    tasks.write_text(tasks.read_text().replace("- [ ] T001", "- [x] T001"))
+    found = "(tasks ticked off in tasks.md: T001)"
+    assert msgs(run(proj, "CK-GATE-RECORD", branch="spec/040-docs")) == [f"implementation has started but gate G4 has no approving decision record {found}"], \
+        "G1 to G3 are folded into G4, so one gate is missing and not four"
+    approve(proj, "G4")
+    assert run(proj, "CK-GATE-RECORD", branch="spec/040-docs").ok
+    assert msgs(run(proj, "CK-GATE-RECORD", branch="main")) == [
+        f"the implementation is on the default branch (main) but gate {gate} has no approving decision record {found}" for gate in ("G5", "G6")]
+
+
 def test_an_author_cannot_put_a_spec_on_the_fast_lane(proj):
     spec(proj, "041-orders", tier="high", touches="shop-orders", extra="lane: fast\n")
     assert lane(ctx(proj), "041-orders") == "standard"

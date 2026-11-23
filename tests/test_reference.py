@@ -43,9 +43,9 @@ PLANNED = ["001-fail-closed-auth", "003-identity-from-token", "004-audit-identit
 TASKED = PLANNED[:-1]
 
 
-def run(cid, root=PROJECT):
+def run(cid, root=PROJECT, **options):
     src = core.Source(root)
-    return core.run_check(cid, core.Context(src, src, {"today": "2026-11-22"}))
+    return core.run_check(cid, core.Context(src, src, {"today": "2026-11-22", **options}))
 
 
 def front(spec_dir: Path) -> dict:
@@ -170,10 +170,10 @@ def test_the_specs_that_share_a_component_are_ordered_and_nothing_waits_on_the_a
     assert out.returncode == 0, "the order in the specs is the one order_specs.py derives: " + out.stdout
 
 
-def failures(cid, root=PROJECT) -> set[tuple[str, str]]:
+def failures(cid, root=PROJECT, **options) -> set[tuple[str, str]]:
     """(spec, message) of each finding of a check."""
     out = set()
-    for f in run(cid, root).findings:
+    for f in run(cid, root, **options).findings:
         parts = str(f.path).split("/")
         out.add((parts[1] if len(parts) > 1 and parts[0] == "specs" else str(f.path), f.message))
     return out
@@ -198,8 +198,10 @@ def test_the_plans_are_drafts_that_wait_at_g3_and_the_task_lists_at_g4():
 
 def test_what_only_a_person_can_do_still_fails_and_nothing_else_does():
     # No pull-request review has approved a gate, so a plan or a task list is ahead of its gates. The kit says so.
+    # For 004 the work is ahead of its gates as well: five work items are done and the sixth was handed off, with no decision at G4.
     expect = {(n, f"plan.md exists but gate {g} has no approving decision record") for n in PLANNED for g in ("G1", "G2")} | \
-             {(n, "tasks.md exists but gate G3 has no approving decision record") for n in TASKED}
+             {(n, "tasks.md exists but gate G3 has no approving decision record") for n in TASKED} | \
+             {(C4, f"implementation has started but gate G4 has no approving decision record ({C4_WORK})")}
     assert failures("CK-GATE-RECORD") == expect
     # The tests that pin today's behaviour have been run for one spec only: the owner ran 004's on his machine. Without the
     # healthcare source under it this project cannot show the test file, which is all the check still says about 004.
@@ -215,31 +217,72 @@ def test_what_only_a_person_can_do_still_fails_and_nothing_else_does():
 
 
 C4 = "004-audit-identity"
+#: What the work records of 004 show, as the gate check words it. The task list itself has no task ticked.
+C4_WORK = "work items done: T001, T002, T003, T004, T005; work items handed off: T006"
+
+
+def test_the_c4_change_on_the_default_branch_is_reported_as_being_there_without_its_implementation_and_verification_gates():
+    """The owner merged the C4 change with no gate review, and the kit's checks on `main` said nothing new. Now they do."""
+    on_main = failures("CK-GATE-RECORD", branch="main") - failures("CK-GATE-RECORD", branch="sdd/004-audit-identity")
+    assert on_main == {(C4, f"the implementation is on the default branch (main) but gate {g} has no approving decision record ({C4_WORK})") for g in ("G5", "G6")}
+    assert not run("CK-GATE-RECORD", branch="sdd/004-audit-identity").notes, "on the change's own branch G5 and G6 are not asked for, and nothing is said about them"
+    # This project is a folder of the kit's repository. Asked here, git would answer for the kit, so it is not asked.
+    # Nobody said which branch this is, so the check says what it left out.
+    r = run("CK-GATE-RECORD")
+    assert failures("CK-GATE-RECORD") == failures("CK-GATE-RECORD", branch="sdd/004-audit-identity")
+    assert r.notes == ["could not tell whether this is the default branch (the project root is not the top of a git repository), so the gates before "
+                       "a merge were not asked for: 004-audit-identity (G5, G6); say which branch it is with --branch"]
 
 
 def test_the_c4_change_was_worked_task_by_task_and_reviewed_by_agents_that_did_not_write_it():
     """Phase 7. The run log: which agent did what, each hand-off, each rework round."""
     items = {p.stem: yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted((PROJECT / ".specify/agentic/work" / C4).glob("T*.yml"))}
-    assert {k: v["state"] for k, v in items.items()} == {"T001": "done", "T002": "done", "T003": "done", "T004": "done", "T005": "in-review", "T006": "ready"}, \
-        "the four tasks an agent could do are done; the owner's test run is recorded and waits for a reviewing agent; the verification that follows it has not started"
-    assert items["T005"]["handoff"]["evidence"] == ["specs/004-audit-identity/evidence/unit-tests.md"] and "The agent ran nothing" in items["T005"]["handoff"]["done"]
+    assert {k: v["state"] for k, v in items.items()} == {"T001": "done", "T002": "done", "T003": "done", "T004": "done", "T005": "done", "T006": "in-review"}, \
+        "the four tasks an agent could do are done; the record of the owner's test run was returned once and then accepted; " \
+        "the verification repeated on it waits for a reviewing agent other than the verifier"
+    assert items["T005"]["handoff"]["evidence"] == ["specs/004-audit-identity/evidence/unit-tests.md"] and items["T005"]["handoff"]["done"].startswith("Rework 1.")
+    assert items["T006"]["owner_agent"] == "independent-verifier" and items["T006"]["handoff"]["evidence"] == ["specs/004-audit-identity/verification/G6-report.md"]
+    assert "I built nothing" in items["T006"]["handoff"]["done"] and not items["T006"].get("reviewer_agent"), "the verifier cannot review its own verification"
     for tid in ("T001", "T002", "T003", "T004"):
         item = items[tid]
         assert item["reviewer_agent"] in ("security-reviewer", "independent-verifier") and item["reviewer_agent"] != item["owner_agent"]
         assert (PROJECT / item["context"]["path"]).is_file() and (PROJECT / item["handoff"]["evidence"][0]).is_file()
-    assert {tid: v["rework_rounds"] for tid, v in items.items() if v.get("rework_rounds")} == {"T001": 1, "T003": 1, "T004": 1}, \
-        "three items came back once with a reviewer's finding; none came back twice"
-    assert all(f["by"] in ("security-reviewer", "independent-verifier") for v in items.values() for f in v.get("findings") or [])
-    for cid in ("CK-WORKITEM", "CK-REWORK-LIMIT", "CK-PATH-DIFF", "CK-CONTEXT", "CK-VERIFY-INPUTS", "CK-AUTHOR-NEQ-VERIFIER", "CK-ROUTING", "CK-AUDIT-CHAIN"):
+    assert {tid: v["rework_rounds"] for tid, v in items.items() if v.get("rework_rounds")} == {"T001": 1, "T003": 1, "T004": 1, "T005": 1}, \
+        "four items came back once with a reviewer's finding; none came back twice"
+    assert all(f["by"] in ("security-reviewer", "independent-verifier") for tid, v in items.items() if tid != "T005" for f in v.get("findings") or [])
+    for cid in ("CK-WORKITEM", "CK-REWORK-LIMIT", "CK-PATH-DIFF", "CK-CONTEXT", "CK-ROUTING", "CK-AUDIT-CHAIN"):
         assert run(cid).ok, (cid, [f.message for f in run(cid).findings][:3])
+    # The record of T005 names nobody as its reviewer. The review command was run without --by and, at that time, did not refuse:
+    # it wrote "a person with no name". It was the independent verifier. The log can only be added to, so a fourth run says so,
+    # and the work item, which only a kit command or a person may write, still has the empty name. The check says what the record shows.
+    assert items["T005"]["reviewer_agent"] == "" and [f["by"] for f in items["T005"]["findings"]] == [""]
+    assert {f.message for f in run("CK-AUTHOR-NEQ-VERIFIER").findings} == {
+        f"{C4}/T005 was moved to {state} by a reviewer the record does not name" for state in ("rework", "done")}
+    import json
+    log = [json.loads(line) for line in (PROJECT / ".specify/agentic/audit" / f"{C4}.jsonl").read_text(encoding="utf-8").splitlines()]
+    unnamed = [e for e in log if not str((e.get("actor") or {}).get("id") or "").strip()]
+    assert [(e["seq"], e["action"], e["actor"]["type"]) for e in unnamed] == [(62, "work.rework", "human"), (66, "work.done", "human")]
+    assert [(e["actor"]["id"], e["action"]) for e in log if e["seq"] in (63, 69)] == [("independent-verifier", "agent.review")] * 2
+    # The verifier listed nine build-setting files it read in its third round. The rule for verifier inputs does not allow them,
+    # and the check fails on the verifier's own list. Whether a verifier may read build settings is the owner's to decide.
+    refused = {f.message for f in run("CK-VERIFY-INPUTS").findings}
+    assert len(refused) == 9 and "Directory.Build.props is not an allowed verifier input" in refused
+    assert all(m.endswith(".csproj is not an allowed verifier input") for m in refused - {"Directory.Build.props is not an allowed verifier input"})
     record = yaml.safe_load((PROJECT / ".specify/agentic/runs" / C4 / "r1.yml").read_text(encoding="utf-8"))
     assert record["state"] == "stopped" and record["steps"] == 11 and "T005 needs a machine" in record["stop_reason"]
     second = yaml.safe_load((PROJECT / ".specify/agentic/runs" / C4 / "r2.yml").read_text(encoding="utf-8"))
     assert second["state"] == "stopped" and second["steps"] == 1 and "waits for a reviewing agent" in second["stop_reason"]
+    third = yaml.safe_load((PROJECT / ".specify/agentic/runs" / C4 / "r3.yml").read_text(encoding="utf-8"))
+    assert third["state"] == "stopped" and third["steps"] == 5 and "returned once, corrected, accepted" in third["stop_reason"]
+    assert "waits for a reviewing agent other than the verifier, and for the owner at G6" in third["stop_reason"]
+    fourth = yaml.safe_load((PROJECT / ".specify/agentic/runs" / C4 / "r4.yml").read_text(encoding="utf-8"))
+    assert fourth["state"] == "stopped" and fourth["steps"] == 1 and "It was the independent-verifier agent" in fourth["stop_reason"]
+    assert "No gate is passed" in fourth["stop_reason"]
     # The test run itself: made by the owner, read from his results files, and no more claimed than they hold.
     ran = (PROJECT / "specs" / C4 / "evidence/unit-tests.md").read_text(encoding="utf-8")
     assert "| The unit test project | `2a8f516` | 2026-11-22 20:08:40 | 520 | 520 | 0 | 0 |" in ran and "| | 80 | 80 |" in ran
     assert "The agent that wrote this file did not run them" in ran and "No pipeline ran any of it" in ran
+    assert "`main` at `2a8f516` is not a commit the change was reviewed at" in ran, "the sentence the reviewer returned, corrected"
     pinned = yaml.safe_load((PROJECT / "specs" / C4 / "evidence/characterization.yml").read_text(encoding="utf-8"))
     assert pinned["result"] == "pass" and pinned["commit"].startswith("8d04df3"), "the eleven old tests passed on the commit before the change"
     # What the run record lacks is what only a runtime can report, and nobody made it up: what each step cost.
@@ -257,8 +300,10 @@ def test_the_c4_change_stops_where_a_person_or_a_build_is_needed():
     assert f"specs/{C4}/reviews/G5-security.md" in g5 and f"specs/{C4}/evidence/trace-lines.md" in g5, "a decision at G5 is bound to the review and the trace"
     for gate in ("G5", "G6", "G7"):
         assert (spec / "briefs" / f"{gate}.md").is_file()
-    for report, rounds in (("reviews/G5-security.md", "## Round 2"), ("verification/G6-report.md", "## Round 2")):
+    for report, rounds in (("reviews/G5-security.md", "## Round 2"), ("verification/G6-report.md", "## Round 2"), ("verification/G6-report.md", "## Round 3")):
         assert rounds in (spec / report).read_text(encoding="utf-8")
+    third = (spec / "verification/G6-report.md").read_text(encoding="utf-8").split("## Round 3")[1]
+    assert "**V-15. The change is on `main` and no gate of this spec has a decision.**" in third, "the verifier said what the kit's checks did not"
     assert not (PROJECT / ".specify/agentic/decisions").exists(), "no gate decision is recorded: none was made in a pull request"
     # The approved spec is as the owner approved it. What the reviews found wrong in it is proposed, not applied.
     text = (spec / "spec.md").read_text(encoding="utf-8")

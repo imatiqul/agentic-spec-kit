@@ -31,4 +31,5 @@ The kit's checks read approvals from pull request reviews. They can only be trus
 - **Hooks are advisory.** Spec Kit hooks are instructions to the agent. The kit's guarantees come from CI and from the `agentic-gate` step, not from hooks.
 - **Token permissions are not inspected yet.** Slice 0.1 checks which account the agent's token belongs to, not what that token is allowed to do. That check arrives with the agent team in slice 0.3.
 - **Independent verification is procedural.** The kit checks the verifier's declared inputs. It cannot prove what a model saw.
+- **A pull request is not held back for want of G5 and G6.** Work in progress is legitimate on a pull request, so the checks there ask for G4 and what precedes it. A change merged without G5 and G6 fails the default branch afterwards (CK-GATE-RECORD). The check knows the default branch by its name: `enforcement.default_branch` in `kit.yml` must name yours.
 - **Not yet run against a live GitHub repository.** The GitHub adapter is unit-tested with recorded responses only.

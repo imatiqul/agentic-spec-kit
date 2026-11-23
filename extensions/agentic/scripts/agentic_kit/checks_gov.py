@@ -5,12 +5,13 @@ from __future__ import annotations
 import datetime
 import fnmatch
 import json
+import os
 import re
 import subprocess
 
 from . import adapters
-from .core import (DECISIONS, GATES, KIT_DIR, PROFILE_GATES, PROFILES, REGISTRY, TIERS, Context, KitError, Result,
-                   check, evidence_hash, front_matter, match_any, parse_approval_lines)
+from .core import (DECISIONS, GATES, IMPLEMENTATION_HOOKS, KIT_DIR, PROFILE_GATES, PROFILES, REGISTRY, TIERS, Context, KitError,
+                   Result, check, evidence_hash, front_matter, match_any, parse_approval_lines)
 
 #: Roles that must approve each gate. Standard and Regulated need all of them; Lite needs any one.
 DEFAULT_APPROVERS = {
@@ -327,6 +328,125 @@ def _has_commit(ctx: Context, commit: str) -> bool | None:
     return p.returncode == 0
 
 
+#: GOV-4 names the gates in order: constitution, spec, clarify, plan, tasks and analysis, implementation, verification,
+#: release. Work on a spec's tasks may start once every gate before the implementation gate is approved, and may be
+#: merged once the implementation and verification gates are approved too. A release may be decided after the merge,
+#: so nothing here asks for G7.
+IMPLEMENTATION_GATE, VERIFICATION_GATE = "G5", "G6"
+_TICKED = re.compile(r"^\s*[-*]\s*\[[xX]\]\s*(T\d+)\b", re.M)
+
+
+def some(ids, limit: int = 6) -> str:
+    """Ids for a message: the first few, then how many more there are."""
+    ids = [str(i) for i in ids]
+    return ", ".join(ids[:limit]) + (f" and {len(ids) - limit} more" if len(ids) > limit else "")
+
+
+def implementation(ctx: Context) -> dict[str, list[str]]:
+    """Spec -> what shows that work on its tasks is in this tree, as short phrases. A spec with nothing to show is left out.
+
+    The core reads the task list: a ticked task is a finished task. Sibling extensions add what they record (the team
+    extension: work items that are done or were handed off, and commits that name one). Code written with none of
+    these marks is not seen.
+    """
+    found: dict[str, list[str]] = {}
+    for spec in ctx.specs():
+        rel = f"specs/{spec}/tasks.md"
+        if ctx.src.exists(rel):
+            ticked = list(dict.fromkeys(_TICKED.findall(ctx.src.read(rel))))
+            if ticked:
+                found[spec] = [f"tasks ticked off in tasks.md: {some(ticked)}"]
+    for hook in IMPLEMENTATION_HOOKS:
+        for spec, phrases in hook(ctx).items():
+            if phrases:
+                found.setdefault(spec, []).extend(phrases)
+    return found
+
+
+def default_branch(ctx: Context) -> str:
+    return str((ctx.kit().get("enforcement") or {}).get("default_branch") or "main")
+
+
+def own_repository(ctx: Context) -> bool:
+    """Is the project root the top of a git repository of its own?
+
+    A project kept in a folder of another repository is not. Asked there, git answers for that repository: its branch,
+    its commits. The reference example in this kit's repository is such a folder.
+    """
+    root = ctx.src.root
+    if not (root / ".git").exists():
+        return False
+    try:
+        p = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+        return p.returncode == 0 and bool(p.stdout.strip()) and os.path.samefile(p.stdout.strip(), root)
+    except OSError:
+        return False
+
+
+def on_default_branch(ctx: Context) -> tuple[bool | None, str]:
+    """Is the tree under check on the default branch? True, False, or None for "cannot tell"; and for None, why.
+
+    The default branch is the one kit.yml names (enforcement.default_branch). The first answer that can be had is taken:
+
+    1. The caller says which branch the files are from: `--branch <name or full ref>`. That is for the places git
+       cannot answer for. Nothing depends on remembering it: the pipeline files the kit ships do not pass it.
+    2. Git says, and only where the project root is the top of its own repository (see own_repository). A pipeline's
+       full clone is one:
+       - yes, when the default branch is checked out, or a commit with no branch (what most pipelines check out)
+         that the default branch contains;
+       - no, when what is checked out has commits the default branch does not have, and is compared with a branch,
+         with a commit of the default branch, or with nothing. That is a change proposed to a branch.
+    3. Otherwise: cannot tell. The caller of this function says so in a note; it does not pass in silence. The cases:
+       - the root is not a repository of its own, or no branch has the name kit.yml gives;
+       - another branch is checked out at a commit the default branch already holds: a branch just started, or
+         the default branch under another name;
+       - what is checked out is compared with a bare commit that the default branch does not hold. A push to the
+         default branch is checked that way, against the commit before it. So this is the default branch under
+         another name or with an out-of-date copy beside it, or it is a feature branch compared with its own past.
+    """
+    default = default_branch(ctx)
+    stated = str(ctx.options.get("branch") or "").strip()
+    if stated:
+        return stated in (default, f"refs/heads/{default}"), ""
+    if not own_repository(ctx):
+        return None, "the project root is not the top of a git repository"
+
+    def git(*args: str) -> tuple[int, str]:
+        p = subprocess.run(["git", "-C", str(ctx.src.root), *args], capture_output=True, text=True)
+        return p.returncode, p.stdout.strip()
+
+    try:
+        code, branch = git("symbolic-ref", "-q", "--short", "HEAD")
+        branch = branch if code == 0 else ""
+        if branch == default:
+            return True, ""
+        what = f"branch {branch}" if branch else "a commit with no branch"
+        refs = (f"refs/heads/{default}", f"refs/remotes/*/{default}")  # the default branch, here and as each remote has it
+        code, known = git("for-each-ref", "--format=%(refname)", *refs)
+        if code or not known:  # a wrong name in kit.yml, or a clone of one branch: either way nothing to judge by
+            return None, f"the repository has no branch {default}; enforcement.default_branch in kit.yml names the default branch"
+        code, holding = git("for-each-ref", "--format=%(refname)", "--contains", "HEAD", *refs)
+        if code:
+            return None, "git could not read HEAD"
+        if holding:
+            return (True, "") if not branch else (None, f"{what} is checked out at a commit that {default} already holds")
+        base = str(ctx.trusted.ref or "")
+        if base:
+            code, holding = git("for-each-ref", "--format=%(refname)", "--contains", base, *refs)
+            if code or not holding:
+                _, named = git("rev-parse", "--symbolic-full-name", base)  # a branch gives its full name; a commit id gives nothing
+                if not named.startswith(("refs/heads/", "refs/remotes/")):
+                    return None, f"{what} is checked out and compared with {short_ref(base)}, a commit that is not on {default} as this repository has it"
+        return False, ""
+    except OSError:
+        return None, "git could not be run"
+
+
+def short_ref(ref: str) -> str:
+    """A ref for a message: a full commit id is cut to ten characters, a name is left as it is."""
+    return ref[:10] if re.fullmatch(r"[0-9a-f]{40}", ref) else ref
+
+
 @check("CK-GATE-RECORD", ("GOV-4", "GOV-5", "TRC-18", "AGT-5"), "gate decisions are complete, ordered and bound to their evidence")
 def ck_gate_record(ctx: Context, res: Result) -> None:
     need_hash = (ctx.kit().get("gates") or {}).get("require_evidence_hash", ctx.profile != "lite")
@@ -371,6 +491,12 @@ def ck_gate_record(ctx: Context, res: Result) -> None:
                     res.fail(str(exc), rel)
         if decision in ("approve", "approve-with-conditions"):
             approved.setdefault(spec, set()).add(gate)
+    from .lanes import retrospective_specs  # imported here: lanes imports this module
+    started = implementation(ctx)
+    excused = retrospective_specs(ctx)
+    code_gate, last_gate = GATES.index(IMPLEMENTATION_GATE), GATES.index(VERIFICATION_GATE)
+    branch = None           # (is this the default branch?, and why not when it cannot be told): asked once, and only if a spec needs it
+    untold: list[str] = []  # specs whose gates before a merge were not asked for, because the branch could not be told
     for spec in ctx.specs():
         required = required_gates(ctx, spec)
         have = approved.get(spec, set())
@@ -388,6 +514,30 @@ def ck_gate_record(ctx: Context, res: Result) -> None:
             if gate not in have:
                 artifact = "plan.md" if gate in ("G1", "G2") else "tasks.md"
                 res.fail(f"{artifact} exists but gate {gate} has no approving decision record", f"specs/{spec}")
+        if spec not in started:
+            continue
+        # Work on the tasks: every gate before the implementation gate comes first, on any branch. A gate the lines
+        # above already reported is not reported twice.
+        what = "; ".join(started[spec])
+        for gate in required:
+            if GATES.index(gate) < code_gate and gate not in have and gate not in implied:
+                res.fail(f"implementation has started but gate {gate} has no approving decision record ({what})", f"specs/{spec}")
+        # A merge: the implementation and verification gates come first. That is asked on the default branch only; on a
+        # feature branch or a pull request the work is still in progress. An open emergency lets these gates follow the
+        # change (GOV-18), and CK-EMERGENCY-DEADLINE holds its retrospective spec to the date.
+        lacking = [g for g in required if code_gate <= GATES.index(g) <= last_gate and g not in have]
+        if not lacking or spec in excused:
+            continue
+        branch = branch or on_default_branch(ctx)
+        if branch[0]:
+            for gate in lacking:
+                res.fail(f"the implementation is on the default branch ({default_branch(ctx)}) but gate {gate} has no approving "
+                         f"decision record ({what})", f"specs/{spec}")
+        elif branch[0] is None:
+            untold.append(f"{spec} ({', '.join(lacking)})")
+    if untold:
+        res.notes.append(f"could not tell whether this is the default branch ({branch[1]}), so the gates before a merge were not "
+                         f"asked for: {some(untold)}; say which branch it is with --branch")
 
 
 # ── CK-APPROVER and CK-GATE-MIRROR ──────────────────────────────────────────────

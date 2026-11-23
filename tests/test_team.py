@@ -307,6 +307,105 @@ def test_a_change_cannot_widen_its_own_agents_limits(proj):
     assert any("changed specs/030-team/spec.md, outside its paths" in m for m in msgs(run(proj, "CK-PATH-DIFF", "HEAD")))
 
 
+# ── work ahead of its gates ─────────────────────────────────────────────────────
+
+def shown(root, base=None, gate="G4", **options):
+    """What CK-GATE-RECORD found of the spec's work in this tree: the words in brackets of its finding for `gate`."""
+    found = [m for m in msgs(run(root, "CK-GATE-RECORD", base, **options)) if f"but gate {gate} has no approving decision record" in m]
+    assert len(found) <= 1, found
+    return found[0].split("decision record (", 1)[1].rsplit(")", 1)[0] if found else ""
+
+
+def unticked(root):
+    """The fixture's task list has one task ticked. Without it only what the team records shows work."""
+    (root / "specs" / SPEC / "tasks.md").write_text(TASKS.replace("- [x] T004", "- [ ] T004"))
+
+
+def test_a_work_item_that_was_handed_off_or_is_done_shows_that_implementation_has_started(proj):
+    assert shown(proj) == "tasks ticked off in tasks.md: T004", "the core reads the task list"
+    unticked(proj)
+    work.create_from_tasks(ctx(proj), SPEC)
+    assert shown(proj) == "", "items that wait show nothing"
+    work.claim(ctx(proj), SPEC, "T001", IMPL)
+    assert shown(proj) == "", "an item an agent has only taken shows nothing yet"
+    work.handoff(ctx(proj), SPEC, "T001", IMPL, "changed it", [evidence(proj, "T001.txt")])
+    assert shown(proj) == "work items handed off: T001"
+    assert work.review(ctx(proj), SPEC, "T001", VERIFIER, accept=True) == "done"
+    do(proj, "T002")
+    assert shown(proj) == "work items done: T001; work items handed off: T002"
+    assert work.review(ctx(proj), SPEC, "T002", VERIFIER, accept=False, finding="not yet") == "rework"
+    assert shown(proj) == "work items done: T001; work items handed off: T002", "an item sent back was still handed off once"
+
+
+def test_work_on_the_default_branch_is_asked_for_its_implementation_and_verification_gates_and_on_a_feature_branch_is_not(proj):
+    unticked(proj)
+    work.create_from_tasks(ctx(proj), SPEC)
+    do(proj, "T001")
+    work.review(ctx(proj), SPEC, "T001", VERIFIER, accept=True)
+    for gate in ("G5", "G6"):
+        assert shown(proj, gate=gate, branch="main") == "work items done: T001", "the finding says what was found on the branch"
+        assert shown(proj, gate=gate, branch="spec/030-team") == "", "work in progress"
+    on_main = [m for m in msgs(run(proj, "CK-GATE-RECORD", branch="main")) if m.startswith("the implementation is on the default branch (main) but gate ")]
+    assert len(on_main) == 2
+
+
+def test_an_item_in_its_own_working_copy_shows_nothing_here_until_it_is_integrated(proj):
+    unticked(proj)
+    work.create_from_tasks(ctx(proj), SPEC)
+    git(proj, "add", "-A")
+    git(proj, "commit", "-q", "-m", "work items")
+    base = git(proj, "rev-parse", "HEAD")
+    item = work.claim(ctx(proj), SPEC, "T001", IMPL, worktree=True)
+    wt = work.workdir(ctx(proj), item)
+    (wt / "packages/shared-lib/src/index.js").write_text("// changed in the working copy\n")
+    (wt / f"specs/{SPEC}/evidence").mkdir(parents=True)
+    (wt / f"specs/{SPEC}/evidence/T001.txt").write_text("ran\n")
+    work.handoff(ctx(proj), SPEC, "T001", IMPL, "extended the library", [f"specs/{SPEC}/evidence/T001.txt"])
+    work.review(ctx(proj), SPEC, "T001", VERIFIER, accept=True)
+    assert shown(proj, base) == "", "the item is done, but its files are in another working copy"
+    work.integrate(ctx(proj), SPEC, "T001")
+    assert shown(proj, base) == f"work items done: T001; 1 commit(s) since {base[:10]} name its work items"
+
+
+def test_a_commit_that_names_a_work_item_shows_work_even_where_no_work_record_says_so(proj):
+    unticked(proj)
+    work.create_from_tasks(ctx(proj), SPEC)
+    git(proj, "add", "-A")
+    git(proj, "commit", "-q", "-m", "work items")
+    base = git(proj, "rev-parse", "HEAD")
+    for n in (1, 2):
+        (proj / "packages/shared-lib/src/index.js").write_text(f"// round {n}\n")
+        git(proj, "add", "-A")
+        git(proj, "commit", "-q", "-m", f"T001: round {n}\n\nWork-Item: {SPEC}/T001\nAgent: backend-implementer")
+    (proj / "README.md").write_text("# shop\n")
+    git(proj, "add", "-A")
+    git(proj, "commit", "-q", "-m", "a commit that names no work item")
+    assert shown(proj, base) == f"2 commit(s) since {base[:10]} name its work items", "the items still say ready"
+    assert shown(proj, "HEAD~1") == "" and shown(proj) == "", "nothing in the range that is checked, and no range"
+    assert shown(proj, commits=[{"commit": "abc1234", "item": f"{SPEC}/T002", "files": []}]) == "1 commit(s) in the range checked name its work items"
+
+
+def test_commits_are_not_read_from_a_repository_the_project_is_only_a_folder_of(tmp_path):
+    """Asked in such a folder, git lists the commits of the repository around it."""
+    project = tmp_path / "examples" / "project"
+    selftest.build_sample(project)
+    (project / f"{core.KIT_DIR}/work/{selftest.SPEC}/T001.yml").unlink()
+    tasks = project / f"specs/{selftest.SPEC}/tasks.md"
+    tasks.write_text(tasks.read_text().replace("- [x] T001", "- [ ] T001"))
+    git(tmp_path, "init", "-q", "-b", "main")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", "a kit project in a folder of another repository")
+    (tmp_path / "notes.md").write_text("x\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", f"the other repository's commit\n\nWork-Item: {selftest.SPEC}/T001")
+    from agentic_kit_team import checks_team
+    src = core.Source(project)
+    nested = core.Context(src, src.at("HEAD~1"), {"today": selftest.TODAY})
+    assert checks_team._named(nested) == [] and checks_team.implementation(nested) == {}
+    top = core.Source(tmp_path)
+    assert checks_team._named(core.Context(top, top.at("HEAD~1"), {})) == [f"{selftest.SPEC}/T001"], "the same commit, read where the root is the repository"
+
+
 # ── review, rework and escalation ───────────────────────────────────────────────
 
 def test_installing_the_team_keeps_the_rest_of_the_settings_file_as_it_was(tmp_path):
@@ -371,6 +470,37 @@ def test_the_author_cannot_review_and_only_a_reviewing_agent_can(proj):
         work.review(ctx(proj), SPEC, "T001", "frontend-implementer", accept=True)
     with pytest.raises(core.KitError, match="needs a finding"):
         work.review(ctx(proj), SPEC, "T001", VERIFIER, accept=False)
+
+
+def test_a_review_that_names_nobody_or_somebody_unknown_is_refused_and_nothing_is_recorded(proj):
+    """Found on the reference project: given no --by, the kit wrote "a person with no name" as the one who accepted a work item."""
+    work.create_from_tasks(ctx(proj), SPEC)
+    do(proj, "T001")
+    log = proj / ".specify/agentic/audit" / f"{SPEC}.jsonl"
+    before = log.read_text(encoding="utf-8")
+    assert cli(proj, "work", "review", "--spec", SPEC, "--item", "T001", "--accept") != 0, "no --by"
+    assert cli(proj, "work", "review", "--spec", SPEC, "--item", "T001", "--return", "no tenant filter") != 0, "no --by"
+    with pytest.raises(core.KitError, match="a review must name who made it"):
+        work.review(ctx(proj), SPEC, "T001", "  ", accept=True)
+    with pytest.raises(core.KitError, match="independant-verifier is neither an agent of the team nor a person in the roles file"):
+        work.review(ctx(proj), SPEC, "T001", "independant-verifier", accept=True)
+    item = work.read_item(ctx(proj), SPEC, "T001")
+    assert item["state"] == "in-review" and not item.get("reviewer_agent") and not item.get("findings")
+    assert log.read_text(encoding="utf-8") == before, "a refused review leaves no line in the audit log"
+    # A person the roles file names may review a work item, and is recorded as that person.
+    assert work.review(ctx(proj), SPEC, "T001", "sam", accept=True) == "done"
+    last = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
+    assert last["action"] == "work.done" and last["actor"] == {"type": "human", "id": "sam"}
+    with pytest.raises(core.KitError, match="the record must name who moved it"):
+        work.transition(ctx(proj), work.read_item(ctx(proj), SPEC, "T002"), "in-progress", "")
+    # A record written before the kit refused: the check cannot show that the author did not review it, and says so.
+    assert run(proj, "CK-AUTHOR-NEQ-VERIFIER").ok
+    path = proj / ".specify/agentic/work" / SPEC / "T001.yml"
+    old = yaml.safe_load(path.read_text(encoding="utf-8"))
+    old["reviewer_agent"] = ""
+    old["history"][-1]["by"] = ""
+    path.write_text(yaml.safe_dump(old, sort_keys=False), encoding="utf-8")
+    assert msgs(run(proj, "CK-AUTHOR-NEQ-VERIFIER")) == [f"{SPEC}/T001 was moved to done by a reviewer the record does not name"]
 
 
 def test_a_third_rework_round_does_not_happen_the_disagreement_is_escalated(proj):

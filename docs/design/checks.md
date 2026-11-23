@@ -16,7 +16,7 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 | CK-ENFORCE-SETUP | Branch protection, CODEOWNERS coverage or the agent token's permissions are wrong. Items that cannot be read are reported as not-checkable | GOV-8, ADP-3 | L (doctor), CI | CODEOWNERS missing `roles.yml` |
 | CK-TIER | A spec has no declared tier or an unknown one | GOV-9 | L, CI | Spec without `tier_declared` |
 | CK-CONSTITUTION | A principle names neither a check nor a judging gate; a named check does not exist | GOV-11 | L, CI | Principle with `enforcement: machine` and no checks |
-| CK-GATE-RECORD | A gate was passed without a decision record; a record is malformed, names an unknown commit, or its evidence hash does not match the files at that commit | GOV-4, GOV-5, AGT-5 | L, CI | Record whose hash differs from its files |
+| CK-GATE-RECORD | A gate was passed without a decision record: a plan, a task list or work on the tasks is ahead of a gate, or work is on the default branch and its implementation or verification gate has no approving record (see "What CK-GATE-RECORD asks for", below); a record is malformed, names an unknown commit, or its evidence hash does not match the files at that commit | GOV-4, GOV-5, AGT-5 | L, CI | Record whose hash differs from its files |
 | CK-APPROVER | The reviewer is not in base-branch `roles.yml`, lacks a required role, is the agent or CI identity, is not a human account, authored the artifacts without the exception being allowed, or the review is dismissed or on another commit | GOV-6, GOV-7, GOV-16; MAP-12 and CHG-12 once slice 0.2 is installed | CI | Review by the pull request author with exceptions forbidden |
 | CK-GATE-MIRROR | A decision record has no matching review in the enforcement channel, or the two disagree | GOV-6 | CI | Record citing a review that does not exist |
 | CK-WAIVER | A detected suppression has no waiver or baseline group; a waiver has expired or lacks a required field; a Critical waiver lacks its approval; a baseline group's live count exceeds its recorded count | GOV-15, GOV-16, QLT-12 | L, A, CI | A new `test.skip(` with no waiver |
@@ -70,7 +70,7 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 | CK-PATH-DIFF | An agent's commits touch paths outside its work item or its agent spec | AGT-10 | A, CI | Implementer editing a spec file |
 | CK-REWORK-LIMIT | A work item exceeds two rework rounds without an escalation record | AGT-6 | L, CI | Three rounds, no escalation |
 | CK-BUDGET | A run exceeds its step or time budget without stopping | AGT-7 | L | Run log past its limit |
-| CK-AUTHOR-NEQ-VERIFIER | The same agent identity authored and reviewed or verified an artifact | AGT-9 | L, CI | Same id in both roles |
+| CK-AUTHOR-NEQ-VERIFIER | The same agent identity authored and reviewed or verified an artifact, or a work item was returned or accepted by a reviewer its record does not name | AGT-9 | L, CI | Same id in both roles |
 | CK-CRED | The token available to agents can approve, merge, bypass protection, publish or deploy | AGT-11 | L (doctor), CI | Token with admin permission |
 | CK-GOLDEN | A golden task fails in parallel or sequential mode, or a seeded defect is not caught | AGT-8, AGT-13, ADP-12 | CI | Seeded missing tenant filter passes review |
 
@@ -79,9 +79,57 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 2. Map schema, owners, evidence (when slice 0.2 is installed).
 3. Per changed spec: tier, trace, touch, impact, packs triggered.
 4. Gate record, approver, mirror, waiver, audit chain.
-5. On the default branch only: drift checks.
+5. On the default branch only: drift checks, and the part of the gate record check that asks merged work for G5 and G6.
 
 A check that cannot run reports `not-run` with the reason. At Standard and above `not-run` fails the job; at Lite it warns.
+
+## What CK-GATE-RECORD asks for, and on which branch (added after the slices)
+
+The gates are in order (GOV-4): G1 spec, G2 clarify, G3 plan, G4 tasks and analysis, G5 implementation, G6 verification, G7 release.
+The check asks for an approving decision record once something is in the tree that should have come after the gate.
+
+| What is in the tree | Gates asked for | Where |
+|---|---|---|
+| `plan.md` | G1, G2 | Every branch |
+| `tasks.md` | G3 | Every branch |
+| Work on the tasks | Every gate before G5: G4, and G1 to G3 where no plan or task list already asks | Every branch |
+| Work on the tasks | G5 and G6 | The default branch only |
+
+Only gates the spec needs are asked for: Lite has G1, G3 and G5, and the fast lane folds G1 to G3 into G4. Each missing gate is one
+finding, which names the spec and the gate and says what was found. G7 is not asked for: a release may be decided after the merge.
+
+**What shows work on the tasks.** In the core, a task ticked off in `tasks.md`. With the team extension also a work item that is done
+or was handed off, unless its work is still in an isolated working copy, and a commit since `--base-ref` that names one of the spec's
+work items in a `Work-Item:` trailer. Files that changed are not used: two specs may claim the same file.
+
+**Which branch it is.** The default branch is the one `kit.yml` names (`enforcement.default_branch`; `main` when it names none).
+The check takes the first answer it can get.
+
+1. The caller says: `check --branch <name or full ref>`, and the same on `connect run` and `connect notify`. `main` and
+   `refs/heads/main` are the default branch. `spec/004`, `refs/pull/7/merge` and anything else are not. This is for the places
+   git cannot answer for. Nothing depends on remembering it: the pipeline files the kit ships do not pass it.
+2. Git says, and only where the project root is the top of its own repository. A project kept in a folder of another repository
+   would be given that repository's branch and commits. The reference example in this repository is such a folder. The shipped
+   pipeline files make a full clone of the project's repository, so git answers there.
+   - It is the default branch when that branch is checked out, or a commit with no branch that the default branch contains,
+     which is what most pipelines check out.
+   - It is not when what is checked out has commits the default branch does not have, and is compared with a branch
+     (`--base-ref origin/main`), with a commit of the default branch, or with nothing. That is a change proposed to a branch.
+3. Otherwise the check cannot tell. It adds a note that names the specs and gates it did not ask for and says why. It does not
+   fail, and it does not pass in silence. The cases:
+   - the root is not a repository of its own, or no branch has the name `kit.yml` gives;
+   - another branch is checked out at a commit the default branch already holds: a branch just started, or the default branch
+     under another name;
+   - what is checked out is compared with a bare commit that the default branch does not hold. A push to the default branch is
+     checked that way, against the commit before it. So this is the default branch under another name or beside an
+     out-of-date copy, or it is a feature branch compared with its own past.
+
+On what it knows to be a feature branch or a pull request, the check says nothing about G5 and G6. Work in progress is legitimate there.
+
+**An emergency.** While an emergency record is open, the spec it names as its retrospective is not asked for G5 and G6 on the default
+branch (GOV-18). CK-EMERGENCY-DEADLINE holds that spec to its date.
+
+What this rule does not see is in `docs/limits.md`, under "Found by using it on a real change, and not fixed".
 
 ## Carried by the adoption baseline (added in Phase 3b, part 2)
 

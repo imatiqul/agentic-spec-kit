@@ -11,7 +11,7 @@ $ARGUMENTS
 ## Steps
 
 1. Run `python .specify/extensions/agentic/scripts/agentic.py check`. In CI the same command runs with `--base-ref origin/<default branch>`.
-2. Show every FAIL and NOT RUN line. Exit code 1 means a check failed; 2 means a check could not run.
+2. Show every FAIL and NOT RUN line, and every note that says a check could not tell something or did not ask for something. Exit code 1 means a check failed; 2 means a check could not run.
 3. Fix the cause, not the check. Never add a suppression to make a check pass; that needs a waiver.
 
 ## Rules for the agent

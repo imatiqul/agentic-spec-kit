@@ -4,7 +4,7 @@ from __future__ import annotations
 import subprocess
 
 from agentic_kit import adapters
-from agentic_kit.checks_gov import decisions, people_by_role
+from agentic_kit.checks_gov import decisions, own_repository, people_by_role, short_ref, some
 from agentic_kit.core import KIT_DIR, Context, KitError, Result, check
 
 from . import agents as ag
@@ -143,6 +143,52 @@ def _commits(ctx: Context) -> list[dict]:
     return out
 
 
+def _named(ctx: Context) -> list[str]:
+    """The work item each commit since the base names in a `Work-Item:` trailer. One git call for the whole range.
+
+    Git is asked only where the project root is a repository of its own: in a folder of another repository the commits
+    would be that repository's.
+    """
+    if ctx.options.get("commits") is not None:
+        return [str(c.get("item", "")) for c in ctx.options["commits"]]
+    if not ctx.trusted.ref or not own_repository(ctx):
+        return []
+    p = subprocess.run(["git", "-C", str(ctx.src.root), "log", "--no-merges", "--format=%x00%(trailers:key=Work-Item,valueonly)",
+                        f"{ctx.trusted.ref}..HEAD"], capture_output=True, text=True)
+    if p.returncode:
+        return []
+    return [chunk.strip().splitlines()[0].strip() for chunk in p.stdout.split("\0") if chunk.strip()]  # the first trailer, as _commits reads it
+
+
+def implementation(ctx: Context) -> dict[str, list[str]]:
+    """For CK-GATE-RECORD: spec -> what shows that work on its tasks is in this tree.
+
+    A work item that is done or was handed off, and a commit since the base that names one of the spec's work items.
+    An item whose work is still in an isolated working copy is left out: its files are not here until it is integrated.
+    """
+    done: dict[str, list] = {}
+    handed: dict[str, list] = {}
+    for item in work.items(ctx):
+        if item.get("worktree"):
+            continue
+        spec = item["_file"].split("/")[-2]
+        if item.get("state") == "done":
+            done.setdefault(spec, []).append(item.get("id"))
+        elif item.get("handoff"):
+            handed.setdefault(spec, []).append(item.get("id"))
+    commits: dict[str, int] = {}
+    for key in _named(ctx):
+        spec = key.rsplit("/", 1)[0]
+        commits[spec] = commits.get(spec, 0) + 1
+    since = f"since {short_ref(str(ctx.trusted.ref))}" if ctx.trusted.ref else "in the range checked"
+    out: dict[str, list[str]] = {}
+    for spec in sorted(set(done) | set(handed) | set(commits)):
+        out[spec] = ([f"work items done: {some(done[spec])}"] if spec in done else []) + \
+                    ([f"work items handed off: {some(handed[spec])}"] if spec in handed else []) + \
+                    ([f"{commits[spec]} commit(s) {since} name its work items"] if spec in commits else [])
+    return out
+
+
 @check("CK-PATH-DIFF", ("AGT-10",), "what agents changed stays inside their work items and their own write paths")
 def ck_path_diff(ctx: Context, res: Result) -> None:
     specs = ag.load(ctx)
@@ -241,6 +287,9 @@ def ck_author_neq_verifier(ctx: Context, res: Result) -> None:
         for h in item.get("history") or []:
             if h.get("state") in ("done", "rework") and h.get("by") == owner:
                 res.fail(f"{label} was moved to {h['state']} by its own author, {owner}", rel)
+            if h.get("state") in ("done", "rework") and not str(h.get("by") or "").strip():
+                # Nothing shows that this was not the author. `work review` refuses to write such a line; older records have it.
+                res.fail(f"{label} was moved to {h['state']} by a reviewer the record does not name", rel)
         reviewer = specs.get(str(item.get("reviewer_agent")))
         author = specs.get(str(owner))
         if reviewer and author and reviewer.get("model_class") == author.get("model_class"):

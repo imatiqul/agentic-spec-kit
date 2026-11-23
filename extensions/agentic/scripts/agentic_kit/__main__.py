@@ -28,6 +28,9 @@ for _gate in list(DEFAULT_EVIDENCE):  # every gate also binds its reviewer brief
     # ... and what a reviewing agent wrote for that gate (reviews/G5-security.md), so a decision is made on the findings too
     DEFAULT_EVIDENCE[_gate].append(f"reviews/{_gate}-*")
 DOCTOR_CHECKS = ["CK-PROFILE", "CK-ROLES", "CK-UPSTREAM-PIN", "CK-ENFORCE-SETUP"]
+BRANCH_HELP = ("the branch these files are from, as a name or a full ref (main, refs/heads/main, refs/pull/7/merge). On the default "
+               "branch the gate check also asks for the gates before a merge. Without this, git is asked, and the check says so in a "
+               "note when git cannot tell. Give it where git cannot: an exported tree, a shallow clone, a folder of another repository")
 
 
 def _context(args) -> Context:
@@ -38,6 +41,8 @@ def _context(args) -> Context:
         options["today"] = args.today
     if getattr(args, "changed_files", None):
         options["changed_files"] = [x.strip() for x in Path(args.changed_files).read_text().splitlines() if x.strip()]
+    if getattr(args, "branch", None):
+        options["branch"] = args.branch
     return Context(src, trusted, options)
 
 
@@ -464,6 +469,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sp = sub.add_parser("check", help="run checks for the active profile"); common(sp)
     sp.add_argument("ids", nargs="*"); sp.add_argument("--today"); sp.add_argument("--changed-files")
+    sp.add_argument("--branch", help=BRANCH_HELP)
     sp.set_defaults(fn=cmd_check)
     sp = sub.add_parser("doctor", help="report enforcement setup and what is not enforced"); common(sp); sp.set_defaults(fn=cmd_doctor)
     sp = sub.add_parser("gate", help="show a gate's evidence, hash and the line to paste"); common(sp)

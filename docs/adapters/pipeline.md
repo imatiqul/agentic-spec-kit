@@ -10,12 +10,16 @@
 | Command | When | Exit code |
 |---|---|---|
 | `agentic.py selftest` | Every run. Proves each check fails on its broken fixture | 0 or 1 |
-| `agentic.py connect run --base-ref <ref> [--commit <sha>] [--summary <file>] [--json]` | On a proposed change and on the default branch | 0 pass, 1 a check failed, 2 a check could not run |
-| `agentic.py connect notify --base-ref <ref> --ledger <file> [--pr-url <url>]` | Only where secrets are safe (see below) | 0, or 1 if a delivery failed |
+| `agentic.py connect run --base-ref <ref> [--branch <ref>] [--commit <sha>] [--summary <file>] [--json]` | On a proposed change and on the default branch | 0 pass, 1 a check failed, 2 a check could not run |
+| `agentic.py connect notify --base-ref <ref> [--branch <ref>] --ledger <file> [--pr-url <url>]` | Only where secrets are safe (see below) | 0, or 1 if a delivery failed |
 | `agentic.py connect mirror --change pull/<n> --commit <sha> --write` | Optional, after a review | 0 |
 | `agentic.py connect fetch` | On a schedule | 0, or 2 if a source could not be read |
 
 `--base-ref` is the commit to compare with: the target branch for a proposed change, the previous commit on the default branch. Roles, settings, domain packs, agent specs, the tool allowlist and `connect.yml` are read from it.
+
+On the default branch the gate check also asks each spec whose work is there for G5 and G6; on a proposed change it does not (`docs/design/checks.md`). The pipeline does not have to say which of the two it is. It makes a full clone of the project's repository, and git says: either the default branch is checked out, or the commit that is checked out is on it. The three shipped files rely on that and pass nothing for it.
+
+`--branch` is for a pipeline whose checkout cannot say: a shallow or single-branch clone, an exported tree, a project kept in a folder of another repository. Pass the ref the pipeline built, as a full ref or a branch name: `refs/heads/main`, `refs/pull/7/merge`, `main`. On GitHub Actions that is `$GITHUB_REF` in a job started by a push or a pull request (in a `workflow_run` job it names the branch the workflow runs on, not the change), on Azure Pipelines `$(Build.SourceBranch)`, on GitLab CI `$CI_COMMIT_BRANCH` (empty in a merge request pipeline, which says nothing). What the caller says wins over what git says. Where neither can say, the gate check leaves a note that names what it did not ask for; it does not fail. The plain `check` command takes the same flag.
 
 The ledger is a small text file that remembers what was announced. Keep it between runs (a cache or an artifact). Without it, chat and mail may repeat on a re-run; work-item notes never do.
 

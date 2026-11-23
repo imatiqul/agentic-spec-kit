@@ -4,7 +4,7 @@
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository, branch `sdd/004-audit-identity` on `main` at `8d04df3`
 - **Requirement IDs exercised:** CHG-19, QLT-20
 - **Assumptions:** none
-- **Unverified:** nothing has been released. The solution was not built or tested; see `evidence/` for what was run instead
+- **Unverified:** nothing has been released. The owner has built and run the unit test project (520 of 520 passed; `evidence/unit-tests.md`). The gateway, the application host and the four other test projects have not been built or run, and nothing has run in a pipeline or an environment
 
 Draft for gate G7. Evidence prepared, decision pending.
 

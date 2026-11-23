@@ -39,4 +39,15 @@ The files are the same on both sides. `rebuild_from_bundle.py` stops unless the 
 | | `12ff77d` | `1e8d054` | The governance folder's README counts what is beside it |
 | `sdd/showcase-proposals` | `7d763f7` | `a44c57c` | Showcase proposals: an adoption baseline, the threat model and authorization matrix for C2, and the files the kit reads for unsourced figures |
 
+Branches made after the merge, the same way. The first two are merged (pull requests #76 and #77); the last, which holds the one before it, is a branch on the owner's machine that is not pushed.
+
+| Branch | In the records | On the owner's machine | Commit |
+|---|---|---|---|
+| `deps/advisory-updates` | `ec1320b` | `eb6a02a` | Dependencies: move seven packages off versions with published advisories |
+| `sdd/004-test-evidence` | `aa97ddb` | `fdcd6d8` | T005: the solution's own test runs, recorded from the owner's results files |
+| `sdd/004-verification-3` | `5f88f0b` | `58609b9` | T005, rework 1: two statements that said more than the files show |
+| | `6f2176c` | `262da93` | T006: the verification repeated on the real test results (round 3) |
+| | `9203943` | `edab4ec` | 004: the third run's records, two stale documents corrected, the briefs written again |
+| `sdd/004-verification-3b` | `a9f9d99` | `ba610d9` | 004: the record names nobody as the reviewer of T005; say who it was |
+
 What was checked on a rehearsal copy before the owner's repository was touched: the kit's checks give the same result on the recreated branch as on the original (80 pass, 23 fail, 1 not run, no line different once ids are set aside), and `agentic.py why` on a changed line finds the same work item, task, criteria and principle.

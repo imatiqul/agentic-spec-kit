@@ -175,6 +175,237 @@ def test_all_digit_commit_is_still_a_commit(sample):
     assert not any("not tied to a commit" in f.message for f in run(sample, "CK-GATE-RECORD").findings)
 
 
+# ── work ahead of its gates ─────────────────────────────────────────────────────
+
+DECISIONS = f"{KIT_DIR}/decisions/001-demo"
+ON_DEFAULT = "the implementation is on the default branch (main) but gate {} has no approving decision record ("
+STARTED = "implementation has started but gate {} has no approving decision record ("
+UNTOLD = "could not tell whether this is the default branch ({}), so the gates before a merge were not asked for: {}; say which branch it is with --branch"
+NO_REPOSITORY = "the project root is not the top of a git repository"
+
+
+def ordinary(root):
+    """The sample's spec is the retrospective of an open emergency, which lets its gates follow the change. Without the record it is an ordinary spec."""
+    (root / f"{KIT_DIR}/emergencies/E-001.yml").unlink()
+
+
+def repository(root, branch="main"):
+    """Make the sample a git repository of its own, on `branch`, with each decision tied to a commit that exists. Returns that commit."""
+    git(root, "init", "-q", "-b", branch)
+    git(root, "add", "-A")
+    git(root, "commit", "-qm", "the sample")
+    sha = head(root)
+    for gate in ("G1", "G2", "G3", "G4", "G5"):
+        edit(root, f"{DECISIONS}/{gate}.yml", "commit: c0ffee1", f"commit: {sha}")
+    git(root, "add", "-A")
+    git(root, "commit", "-qm", "decisions tied to their commit")
+    return sha
+
+
+def head(root):
+    return subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+
+
+def gate_check(root, base=None, **options):
+    """CK-GATE-RECORD, compared with `base` when one is given, as a pipeline runs it with --base-ref."""
+    src = Source(root)
+    return run_check("CK-GATE-RECORD", Context(src, src.at(base) if base else src, {"today": selftest.TODAY, **options}))
+
+
+def test_an_implementation_on_the_default_branch_without_its_implementation_and_verification_gates_is_reported(sample):
+    """The gap: a change was merged with no review, and the gate check reported the same missing records as before the merge."""
+    ordinary(sample)
+    (sample / f"{DECISIONS}/G5.yml").unlink()
+    found = run(sample, "CK-GATE-RECORD", branch="main").findings
+    assert [f.path for f in found] == ["specs/001-demo"] * 2, "each finding names the spec"
+    assert found[0].message.startswith(ON_DEFAULT.format("G5")) and found[1].message.startswith(ON_DEFAULT.format("G6")), "and the gate"
+    assert all("tasks ticked off in tasks.md: T001" in f.message for f in found), "and says what was found on the branch"
+
+
+def test_the_verification_gate_is_asked_for_on_the_default_branch_once_the_implementation_gate_is_approved(sample):
+    ordinary(sample)
+    msgs = [f.message for f in run(sample, "CK-GATE-RECORD", branch="main").findings]
+    assert len(msgs) == 1 and msgs[0].startswith(ON_DEFAULT.format("G6"))
+    assert run(sample, "CK-GATE-RECORD", branch="refs/heads/main").findings, "a pipeline may pass the full ref it builds"
+    assert not any("G7" in m for m in msgs), "a release is decided after the merge: G7 is not asked for"
+
+
+def test_work_in_progress_on_a_feature_branch_is_not_asked_for_g5_and_g6_but_is_asked_for_the_gates_before_code(sample):
+    ordinary(sample)
+    (sample / f"{DECISIONS}/G5.yml").unlink()
+    for branch in ("spec/001-demo", "refs/pull/7/merge", "refs/heads/spec/main"):
+        r = run(sample, "CK-GATE-RECORD", branch=branch)
+        assert r.ok and not r.notes, f"{branch}: nothing is said about G5 and G6 where work is still in progress"
+    (sample / f"{DECISIONS}/G4.yml").unlink()
+    msgs = [f.message for f in run(sample, "CK-GATE-RECORD", branch="spec/001-demo").findings]
+    assert len(msgs) == 1 and msgs[0].startswith(STARTED.format("G4")) and "tasks ticked off in tasks.md: T001" in msgs[0]
+
+
+def test_a_gate_that_a_plan_or_a_task_list_already_asks_for_is_not_reported_a_second_time_for_the_code(sample):
+    ordinary(sample)
+    for gate in ("G2", "G3", "G4", "G5"):
+        (sample / f"{DECISIONS}/{gate}.yml").unlink()
+    msgs = [f.message for f in run(sample, "CK-GATE-RECORD", branch="spec/001-demo").findings]
+    assert sorted(m.split(" (")[0] for m in msgs) == ["implementation has started but gate G4 has no approving decision record",
+                                                      "plan.md exists but gate G2 has no approving decision record",
+                                                      "tasks.md exists but gate G3 has no approving decision record"]
+    msgs = [f.message.split(" (")[0] for f in run(sample, "CK-GATE-RECORD", branch="main").findings]
+    assert msgs[-3:] == ["implementation has started but gate G4 has no approving decision record",
+                         "the implementation is on the default branch", "the implementation is on the default branch"], \
+        "on the default branch each missing gate up to verification is one finding, in the order of the gates"
+
+
+def test_a_spec_with_no_finished_task_is_asked_for_nothing_more_than_before(sample, monkeypatch):
+    from agentic_kit import checks_gov
+    monkeypatch.setattr(checks_gov, "IMPLEMENTATION_HOOKS", [])  # the core alone: what a sibling extension records is tested with that extension
+    ordinary(sample)
+    edit(sample, "specs/001-demo/tasks.md", "- [x] T001", "- [ ] T001")
+    for gate in ("G4", "G5"):
+        (sample / f"{DECISIONS}/{gate}.yml").unlink()
+    r = run(sample, "CK-GATE-RECORD", branch="main")
+    assert r.ok and not r.notes, "a task list with nothing ticked does not show code"
+    edit(sample, "specs/001-demo/tasks.md", "- [ ] T001", "* [X] T001")
+    assert len(run(sample, "CK-GATE-RECORD", branch="main").findings) == 3, "G4, G5 and G6, once a task is ticked"
+
+
+def test_lite_is_asked_for_its_three_gates_and_no_others_when_code_is_on_the_default_branch(sample):
+    lite(sample)
+    ordinary(sample)
+    for gate in ("G2", "G4"):
+        (sample / f"{DECISIONS}/{gate}.yml").unlink()
+    r = run(sample, "CK-GATE-RECORD", branch="main")
+    assert r.ok and not r.notes, "G1, G3 and G5 are approved; Lite has no G4 and no G6 to ask for"
+    (sample / f"{DECISIONS}/G5.yml").unlink()
+    msgs = [f.message for f in run(sample, "CK-GATE-RECORD", branch="main").findings]
+    assert len(msgs) == 1 and msgs[0].startswith(ON_DEFAULT.format("G5"))
+    assert run(sample, "CK-GATE-RECORD", branch="spec/001-demo").ok
+    assert run(sample, "CK-GATE-RECORD").notes == [UNTOLD.format(NO_REPOSITORY, "001-demo (G5)")]
+    (sample / f"{DECISIONS}/G3.yml").unlink()
+    msgs = [f.message for f in run(sample, "CK-GATE-RECORD", branch="spec/001-demo").findings]
+    assert msgs == ["tasks.md exists but gate G3 has no approving decision record"], "the gate before code in Lite is G3, which the task list already asks for"
+    (sample / "specs/001-demo/plan.md").unlink()
+    (sample / f"{DECISIONS}/G1.yml").unlink()
+    msgs = [f.message for f in run(sample, "CK-GATE-RECORD", branch="spec/001-demo").findings]
+    assert len(msgs) == 2 and msgs[1].startswith(STARTED.format("G1")), "with no plan to ask for G1, the finished task does"
+
+
+def test_when_the_kit_cannot_tell_which_branch_it_is_on_it_says_so_in_a_note_and_does_not_pass_in_silence(sample):
+    ordinary(sample)
+    r = run(sample, "CK-GATE-RECORD")
+    assert r.ok and r.notes == [UNTOLD.format(NO_REPOSITORY, "001-demo (G6)")], "the sample is a folder of files: git has nothing to say about it"
+    (sample / f"{DECISIONS}/G5.yml").unlink()
+    assert run(sample, "CK-GATE-RECORD").notes == [UNTOLD.format(NO_REPOSITORY, "001-demo (G5, G6)")]
+    (sample / f"{DECISIONS}/G4.yml").unlink()
+    assert any(f.message.startswith(STARTED.format("G4")) for f in run(sample, "CK-GATE-RECORD").findings), "what holds on every branch is still asked"
+
+
+def test_a_project_in_a_folder_of_another_repository_is_not_given_that_repositorys_branch(tmp_path):
+    """The reference example is such a folder in this kit's repository. Asked there, git would name the kit's branch."""
+    project = tmp_path / "examples" / "project"
+    selftest.build_sample(project)
+    ordinary(project)
+    git(tmp_path, "init", "-q", "-b", "main")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-qm", "a kit project in a folder of another repository")
+    assert run(project, "CK-GATE-RECORD").notes == [UNTOLD.format(NO_REPOSITORY, "001-demo (G6)")]
+    (project / ".git").mkdir()  # an empty folder of that name does not make it a repository: git still answers for the one above
+    r = run(project, "CK-GATE-RECORD")
+    assert r.notes == [UNTOLD.format(NO_REPOSITORY, "001-demo (G6)")] and not any("default branch (main) but" in f.message for f in r.findings)
+    assert any(f.message.startswith(ON_DEFAULT.format("G6")) for f in run(project, "CK-GATE-RECORD", branch="main").findings), \
+        "the caller can still say which branch it is"
+
+
+def test_git_says_which_branch_it_is_where_the_project_is_a_repository_of_its_own(tmp_path):
+    selftest.build_sample(tmp_path)
+    ordinary(tmp_path)
+    repository(tmp_path)
+
+    def asked_for_g6(base=None, **options):
+        r = gate_check(tmp_path, base, **options)
+        assert not r.notes and len(r.findings) <= 1, (r.notes, [f.message for f in r.findings])
+        return bool(r.findings) and r.findings[0].message.startswith(ON_DEFAULT.format("G6"))
+
+    assert asked_for_g6(), "the default branch is checked out"
+    git(tmp_path, "checkout", "-q", "--detach")
+    assert asked_for_g6(), "a pipeline's commit with no branch, which the default branch contains"
+    git(tmp_path, "switch", "-qc", "spec/001-demo")
+    assert gate_check(tmp_path).notes == [UNTOLD.format("branch spec/001-demo is checked out at a commit that main already holds", "001-demo (G6)")], \
+        "a branch with nothing of its own yet: just started, or the default branch under another name"
+    (tmp_path / "src/demo/more.py").write_text("x = 1\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-qm", "work in progress")
+    assert not asked_for_g6(), "a feature branch"
+    assert not asked_for_g6("main"), "and the same compared with the default branch, as a pipeline compares a pull request"
+    git(tmp_path, "checkout", "-q", "--detach")
+    assert not asked_for_g6("main"), "a pull request's commit with no branch, which the default branch does not contain"
+    assert asked_for_g6(branch="main"), "what the caller says wins over what git says"
+    git(tmp_path, "switch", "-q", "main")
+    assert not asked_for_g6(branch="spec/001-demo")
+
+
+def test_the_default_branch_under_another_name_checked_against_the_commit_before_a_merge_is_a_case_the_kit_cannot_tell(tmp_path):
+    """How the gap was found: merged work, checked against the commit before the merge, in a clone whose main was older and whose branch had another name."""
+    selftest.build_sample(tmp_path)
+    ordinary(tmp_path)
+    before = repository(tmp_path)
+    git(tmp_path, "switch", "-qc", "gh-main")
+    for name in ("one", "two"):
+        (tmp_path / f"src/demo/{name}.py").write_text("x = 1\n")
+        git(tmp_path, "add", "-A")
+        git(tmp_path, "commit", "-qm", f"merged work, {name}")
+    earlier = subprocess.run(["git", "-C", str(tmp_path), "rev-parse", "HEAD~1"], capture_output=True, text=True).stdout.strip()
+    why = "branch gh-main is checked out and compared with {}, a commit that is not on main as this repository has it"
+    r = gate_check(tmp_path, earlier)
+    assert r.ok and r.notes == [UNTOLD.format(why.format(earlier[:10]), "001-demo (G6)")], \
+        "a push to the default branch is checked against the commit before it; so is a feature branch against its own past"
+    assert gate_check(tmp_path, "HEAD~1").notes == [UNTOLD.format(why.format("HEAD~1"), "001-demo (G6)")]
+    git(tmp_path, "checkout", "-q", "--detach")
+    assert "a commit with no branch is checked out and compared with HEAD~1, a commit that is not on main" in gate_check(tmp_path, "HEAD~1").notes[0]
+    msgs = [f.message for f in gate_check(tmp_path, earlier, branch="main").findings]
+    assert len(msgs) == 1 and msgs[0].startswith(ON_DEFAULT.format("G6")), "the caller can say which branch it is"
+    # What reads as a change proposed to a branch stays work in progress. That it is main under another name, only the caller knows.
+    git(tmp_path, "branch", "spec/base", "HEAD~1")
+    for base in (before, "main", "spec/base", None):
+        r = gate_check(tmp_path, base)
+        assert r.ok and not r.notes, f"compared with {base}"
+
+
+def test_a_repository_with_no_branch_of_the_name_kit_yml_gives_is_a_case_the_kit_cannot_tell(tmp_path):
+    """kit.yml says the default branch is main. A repository whose branch is called something else may be a clone of one branch, or kit.yml may be wrong."""
+    selftest.build_sample(tmp_path)
+    ordinary(tmp_path)
+    repository(tmp_path, branch="trunk")
+    why = "the repository has no branch main; enforcement.default_branch in kit.yml names the default branch"
+    r = run(tmp_path, "CK-GATE-RECORD")
+    assert r.ok and r.notes == [UNTOLD.format(why, "001-demo (G6)")]
+    git(tmp_path, "checkout", "-q", "--detach")
+    assert run(tmp_path, "CK-GATE-RECORD").notes == [UNTOLD.format(why, "001-demo (G6)")]
+    edit(tmp_path, KIT, "default_branch: main", "default_branch: trunk")
+    msgs = [f.message for f in run(tmp_path, "CK-GATE-RECORD").findings]
+    assert len(msgs) == 1 and "is on the default branch (trunk) but gate G6" in msgs[0]
+
+
+def test_an_open_emergency_lets_the_gates_of_its_retrospective_spec_follow_the_change_onto_the_default_branch(sample):
+    """GOV-18: the fix goes in on one approval, and CK-EMERGENCY-DEADLINE holds the retrospective spec to its date."""
+    for options in ({"branch": "main"}, {}):
+        r = run(sample, "CK-GATE-RECORD", **options)
+        assert r.ok and not r.notes, "emergency E-001 is open and names 001-demo as its retrospective"
+    edit(sample, f"{KIT_DIR}/emergencies/E-001.yml", "status: open", "status: closed")
+    assert run(sample, "CK-GATE-RECORD", branch="main").findings[0].message.startswith(ON_DEFAULT.format("G6"))
+
+
+def test_the_check_command_takes_the_branch_from_the_caller(sample, capsys):
+    ordinary(sample)
+    assert main(["--root", str(sample), "check", "CK-GATE-RECORD", "--branch", "spec/001-demo"]) == 0
+    assert "note:" not in capsys.readouterr().out
+    assert main(["--root", str(sample), "check", "CK-GATE-RECORD"]) == 0
+    assert "note: could not tell whether this is the default branch" in capsys.readouterr().out
+    assert main(["--root", str(sample), "check", "CK-GATE-RECORD", "--branch", "main"]) == 1
+    assert "but gate G6 has no approving decision record" in capsys.readouterr().out
+    assert main(["--root", str(sample), "check", "CK-GATE-RECORD", "--branch", ""]) == 0, "a pipeline variable that is empty says nothing"
+    assert "note: could not tell whether this is the default branch" in capsys.readouterr().out
+
+
 # ── waivers and baseline ────────────────────────────────────────────────────────
 
 def test_expired_waiver_fails(sample):

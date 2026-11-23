@@ -434,3 +434,114 @@ Introduced:
 | T004, the order tests | Accept | Every case of V-5 is resolved, including the two I named as the least that had to be. Four narrower limits remain. I would add them to the file's comment and make the census read every `Program.cs` under `src`; neither needs another round. |
 
 "Accept" means the item's files are right as far as this machine can show. The gate still cannot pass: V-1, V-2 and V-12 are open, V-6 needs the owner's decision, and V-14 is unchanged.
+
+## Round 3
+
+- **Date and commit:** 2026-11-22; `main` of the healthcare repository at `d429369`, in a fresh clone. The change is on `main`: pull request #73, merge commit `7152408`.
+- **Commit ids:** rounds 1 and 2 name the ids of the workspace the change was written in. In this history `03c9f5b` is `1ae91cd` and `15bf0f9` is `eb596e3`; `8d04df3` is the same in both.
+- **What is new:** the solution's unit test project has been run, by the owner on his own machine, and recorded as task T005. I did not run it and cannot: the package registry cannot be reached from here. I read the two results files, `unit.trx` and `base.trx`, which are not in the repository. They hold the names of a machine and a user; neither is repeated here.
+- **The code is the code of round 2.** No `.cs` file differs between `eb596e3` and `2a8f516`, where the tests ran, or between `2a8f516` and `d429369`. What I ran against the code in rounds 1 and 2 still stands, and I did not run it again.
+- **Not verified:** who ran the tests and with which command lines, because a results file records neither; what the message of commit `eb6a02a` says, because I may not read commit messages; whether any workflow has run; whether anything has been deployed.
+
+### 1. T005, reviewed before this round
+
+I returned T005 once and accepted it after rework.
+
+Its first version called the tip of the branch the commit the change was reviewed at, and gave counts of package advisories that no file shows. Both are corrected in `evidence/unit-tests.md`.
+
+What I checked against the two results files and the repository, and found right:
+- **Counts.** `unit.trx`: 520 tests, 520 passed, none failed, none left out. `base.trx`: 11 of 11 passed. In `unit.trx` the three classes of this change hold 30, 15 and 35 tests, all passed.
+- **The run was whole.** `unit.trx` holds every one of the 445 test methods the project defines at `2a8f516`, so it was not filtered and nothing was skipped. `base.trx` holds exactly the eleven the test file defines at `8d04df3`, two of which exist only before T003.
+- **Names.** The eleven names equal the stand-in's list in `T004-order-tests.md`. The 80 equal the list in `T004-rework-1.md`; one row has its argument shortened by xUnit in the name it prints.
+- **Hashes and times.** Both SHA-256 values are as stated. The runs started at 20:08:40 and 20:09:17, UTC-6.
+- **What was built.** The test project references the shared library and all nine services (`HealthQCopilot.Tests.Unit.csproj:21-32`), and the build treats warnings as errors (`Directory.Build.props:7`). A test run therefore means the 14 changed files compiled.
+- **Names left out.** Neither the machine's nor the user's name is in the evidence, or anywhere in the spec's folder.
+
+Two things in the accepted file I could not check or would word differently:
+- `unit-tests.md:23` points to the message of commit `eb6a02a` for what the owner's build reported. That commit is the one commit of pull request #76; what its message says is not verified.
+- `unit-tests.md:52` calls what came after the second review round "records and one correction to the system map". `plan.md`, `rollout.yml` and two evidence files changed there too. I read those changes for this round: they are the corrections round 2 asked for, and they say what the code does.
+
+The kit's CK-CHARACTERIZATION no longer fails on this spec. It keeps one note: it cannot confirm the tests ran before the code changed. They did not: both runs were made after the merge, the second on the commit before the change, as `characterization.yml` says.
+
+### 2. The six criteria on the real results
+
+Every test named below is `Passed` in `unit.trx`. Names are as the file prints them.
+
+| Criterion | Tests in `unit.trx` that show it | Is that enough |
+|---|---|---|
+| AC-001 | `RequestPipelineOrderTests.TheAuditMiddlewareRunsDirectlyAfterAuthenticationAndBeforeAuthorization`, nine rows, `service: "Agents"` to `service: "Voice"`; `EveryServiceThatNamesTheAuditMiddlewareIsChecked`; `TheAuditMiddlewareIsRegisteredNowhereButInAProgramFile` | Yes, for the criterion as written. The nine files also compiled, which no earlier round could show. It is a check on source text; no service was started. |
+| AC-002 | `PhiAuditPipelineTests.ValidToken_TheRecordNamesTheTokensSubject`, `TwoCallers_EachRecordNamesItsOwnCaller`; `PhiAuditMiddlewareTests.PhiPath_RecordsTheSubjectOfTheAuthenticatedIdentity`, `PhiPath_RecordsTheSubjectWhenItArrivesAsTheMappedNameIdentifierClaim`, `PhiPath_RecordsTheSubjectExactlyAsTheTokenCarriesIt`, `PhiPath_TheEventNamesTheSameUserAsTheRecord` | For the middleware, yes. For the criterion as written, no: it says "through any of the nine services", and no test starts a service or uses the real bearer handler. A test scheme supplies the subject. The notification service serves no audited path. |
+| AC-003 | `PhiAuditPipelineTests.ValidTokenAndAHeaderNamingAUser_TheRecordNamesTheTokensSubject`, three rows, `headerValue: "user-v"`, `""` and `"user-u"`; `PhiAuditMiddlewareTests.PhiPath_IgnoresAUserNamedInARequestHeader`, `PhiPath_TheEventNamesTheSameUserAsTheRecord`, `PhiPath_TheLogLinesNameTheUserOfTheRecordAndNotAHeader` | Yes. The pipeline in these tests includes the real middleware that reads the header. |
+| AC-004 | `PhiAuditPipelineTests.NoToken_TheRequestIsRefusedAndStillRecorded`, `ACredentialTheSchemeDoesNotKnow_IsRefusedAndRecordedAsUnauthenticated` (three rows), `ATokenTheSchemeRejects_IsRefusedAndRecordedAsUnauthenticated` (two rows), `NoTokenAndAHeaderNamingAUser_TheRecordStillSaysUnauthenticated`; `PhiAuditMiddlewareTests.PhiPath_RecordsTheUnauthenticatedMarkerWhenThereIsNoIdentity`, `TheMarkersAreTheTextThePlanFixes`, `PhiPath_TheEventOfAnUnauthenticatedRequestCarriesTheMarker` | For a refusal by the framework's authorization behind the middleware, yes: one record, status 401, the marker. Not for the real bearer handler with a malformed or expired token. In the nine services only the OCR routes refuse, and a refusal at the gateway writes no record (`amendment-proposed.md`, item 3). |
+| AC-005 | `RequestPipelineOrderTests.AuditBeforeAuthenticationFailsAndNamesTheService`, `AuditAfterAuthorizationFails`, `AnythingBetweenAuthenticationAndTheAuditFails` (three rows), `AMiddlewareInFrontOfAuthenticationThatIsNotOnTheListFails` (three rows), `ARegistrationInsideABlockFails`, `ASecondRegistrationFails`, `ARegistrationInAnotherFormIsNotRead` (two rows), `APreprocessorConditionFails`, `AMissingAuthenticationOrAuthorizationFails`, `ARegistrationThatIsCommentedOutOrMissingDoesNotCount` (three rows), `AChainedRegistrationFails`, `TheMiddlewareNamedASecondTimeFails` | For the check, yes: on the old order it fails and names the service. That the nine rows fail for a real service put back in the old order was shown by the stand-in's seeded run in round 2, not by the real project. For FR-004's "the build MUST fail", no: one run on one machine is not a build that runs on every change. |
+| AC-006 | None, by design: the criterion is a comparison of migrations. | Yes, by search: of the 270 files that differ between `8d04df3` and `d429369`, none is under a `Migrations` folder, none is `AuditDbContext.cs` or `DatabaseExtensions.cs`, none is a `.sql` file. |
+
+NFR-001 is as in round 1, shown by the diff. NFR-002 is now a fact for the merge: the nine services reached `main` in one pull request. The release is not verified.
+
+The first assumption of round 1 is now confirmed for these 80 tests: the stand-ins behaved as the real libraries do. The real ones are xunit.v3 2.0.2, FluentAssertions 7.1.0, NSubstitute 5.3.0 and EF Core's in-memory provider 10.0.0, with the real `AuditDbContext`. One analyzer rule, xUnit1051, is switched off for the whole test project, and was before this change (`HealthQCopilot.Tests.Unit.csproj:8`).
+
+### 3. The fourteen findings
+
+| Finding | Now | By what |
+|---|---|---|
+| V-1 | Open | CK-TOUCH fails on `main` with the same message. `spec.md:7` is unchanged. Adding the stream to `touches` is proposed to the owner (`amendment-proposed.md`, item 1). |
+| V-2 | Closed for the unit test project. The rest is open. | Closed by T005: the 14 files compile with warnings as errors; 80 of 80 pass against the real libraries; the eleven old tests pass at the base commit; the other 440 pass, so no unit test asserts the old behaviour. Open: `evidence/staging-check.md` does not exist, so there is no end-to-end, performance or resilience evidence; no mutation score and no coverage; the integration, architecture, evaluation and app-host test projects were not run. |
+| V-3 | Closed | Resolved in round 2. The tests that resolve it pass in `unit.trx`. |
+| V-4 | Closed | The same. |
+| V-5 | Closed | Resolved in round 2; the order tests pass in `unit.trx`. The four limits of round 2 are now written in `plan.md:45` and under "Left after the second review round"; they are not yet in the file's own comment. |
+| V-6 | Open | `constitution.map.yml:32-34` still says `not built`. No test goes through a service. New wording for AC-002 is proposed (`amendment-proposed.md`, item 4). |
+| V-7 | Closed | Round 2. |
+| V-8 | Partly closed, as in round 2 | The policy-with-its-own-scheme case is stated and unchanged. |
+| V-9 | Open | The row is still lost; the log line of round 2 is what there is. |
+| V-10 | Open, by decision | Unchanged. |
+| V-11 | Closed | Round 2. `rollout.yml:18` now also says the no-token check has to be sent to the OCR service itself. |
+| V-12 | Open | CK-GATE-RECORD and CK-THREAT-MODEL fail on `main` as before. Marking the two criteria is proposed (`amendment-proposed.md`, item 2). See V-15. |
+| V-13 | Closed, but for one fact | `evidence/unit-tests.md` exists. The sentences round 2 named are corrected (`T001-rework-1.md:17`, `T004-rework-1.md:20`, `plan.md:45`). One session still wrote the code and its tests. |
+| V-14 | Partly closed | The map now has the nine services writing to `event-hubs-audit` (nine edges; each `Program.cs` calls `AddEventHubAudit`). Its readers are still on no map. `impact.md` is unchanged and lists neither audit store. The four test files are indexed to no node. |
+
+### 4. New in this round
+
+**V-15. The change is on `main` and no gate of this spec has a decision.** Work item: none; it is the owner's.
+- The merge commit `7152408` is dated 2026-11-22 19:25:52 UTC-6.
+- By the kit, none of the gates G1 to G7 has a recorded decision (`agentic.py gate`, asked for each), and CK-GATE-RECORD fails for G1 to G3. The spec's own release draft says gates G3 to G6 have no decision (`release/notes.md:33`). The plan's header says nobody has approved either version of it (`plan.md:8`). I was told the merge was made with no gate review, and nothing I can read says otherwise.
+- Three kit checks that fail on this spec fail on `main`: CK-TOUCH, CK-THREAT-MODEL and CK-GATE-RECORD.
+- The merge came 43 minutes before the first real test run (20:08:40), and before this round.
+- P-25 says nothing passes a gate on an agent's say-so and every gate decision is a review by a person. P-16 says a gate that fails stops the change. Neither held for this merge. That the tests passed afterwards does not change the order in which things happened.
+- Merging is not releasing. The rollout's two preconditions (`rollout.yml:5-7`) are spec 001 released and a workflow that runs the unit tests; I have no evidence that either is met, and whether anything was deployed is not verified.
+
+**V-16. Note. The tests ran on newer packages than the reviews saw.** Pull request #76 changed package references in 18 project files between the reviewed code and the tested commit. The code is identical. The results are for those package versions.
+
+**V-17. Note. What the run did not build or run.**
+- The gateway and the app host were not built: the unit test project does not reference them. The map says the gateway builds with the changed library.
+- The other four test projects were not run, so whether an integration test asserts the old behaviour is still unknown.
+
+**V-18. Note. Documents that went stale or still say more than there is.**
+- `release/notes.md:7` says the solution was not built or tested. For the unit test project that is no longer so.
+- `release/operational-readiness.md:15` says a lost row can be rebuilt from the error line. The time of access is not in that line (round 2, H6).
+- `briefs/G6.md` was generated before this round and is bound to the two files this round changes. It has to be generated again before anyone decides on it.
+
+**V-19. Note. CK-RUN-RECORD fails on the three runs of this spec.** Steps are recorded without their cost, one of them mine (run r3, step 63). I do not write run records.
+
+**V-20. Note. My own record of what I read makes CK-VERIFY-INPUTS fail.** The check passed before this round.
+- To review T005 I had to read files the check does not allow a verifier: the unit test project's file, `Directory.Build.props`, and the lines pull request #76 changed in seven other project files.
+- I listed them in `G6-inputs.yml`, as the orchestrator asked, and the check now names those nine.
+- They are build settings. None holds a note of this change's author, so the verification is as independent as before; the rule's letter is what fails.
+- Whether the allowed inputs should include a change's test project and build settings, or the review of T005 should go to another agent, is for whoever owns the kit's rules.
+
+### 5. Where this leaves the change
+
+- **The work items.** T001 to T004 were accepted in round 2, and the real run confirms what the stand-in showed: they compile and their tests pass. T005 is accepted.
+- **The criteria.** AC-001, AC-003 and AC-006 are shown. AC-002 and AC-004 are shown at the middleware and not through a service. AC-005 is shown for the check and not for a build.
+- **What stands in the way of a decision at G6.** V-1 and V-12 are kit checks that fail and need the owner's amendment. V-6 needs his decision. The open rest of V-2 needs an environment. V-20 is a kit check that now fails on this report's own input list. V-15 cannot be reworked; it can only be answered.
+
+### 6. What I read and ran in this round
+
+- **Read, in the repository:** the files `G6-inputs.yml` now lists under "round 3".
+- **Read, outside it:** `unit.trx`, `base.trx`, and the map of commit ids (`examples/healthq/phase-7/commit-map.md` in the kit's repository).
+- **Ran:**
+  - `sha256sum` on the two results files.
+  - A script of my own that reads the two results files and prints counts, times, class names and test names, and nothing else.
+  - Read-only `git` commands: file names that differ between commits, the four merges on `main`, counts of test attributes.
+  - The kit's checks.
+  - The kit's `work review` (twice), `work claim` and `work handoff`.
+- **Did not run:** the harness or my own programs of rounds 1 and 2, because the code has not changed; the solution's build or tests.

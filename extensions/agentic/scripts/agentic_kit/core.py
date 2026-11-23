@@ -221,6 +221,7 @@ FINDER_HOOKS: list = []    # (ctx) -> list of {rule, path, line, text}: findings
 ARTIFACT_HOOKS: list = []  # (ctx, spec) -> list of path patterns: files that are part of what the spec changes (QLT-1)
 READING_HOOKS: list = []   # (ctx, spec) -> list of path patterns a verifier may also read: what the spec depends on (QLT-1)
 WHY_HOOKS: list = []       # (ctx, path, spec) -> list of lines for the `why` trace: what the file is and what the spec reaches (TRC-19)
+IMPLEMENTATION_HOOKS: list = []  # (ctx) -> {spec: short phrases}: what shows that work on a spec's tasks is in this tree (GOV-4)
 RULE_OWNERS: dict[str, str] = {}  # suppression rule id -> check id that reports it (default CK-WAIVER)
 
 

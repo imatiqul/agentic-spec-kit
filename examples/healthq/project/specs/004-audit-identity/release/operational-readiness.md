@@ -12,7 +12,7 @@ Draft for gate G7. Release is out of scope for the reference: G7 is "evidence pr
 None. No objective for the audit trail is defined in the repository. The change adds no call to the request path (NFR-001): the identity is read from memory, and the row is written after the response, as before.
 
 ## Telemetry added
-- `PHI_ACCESS_COMPLETE` now names the user of the record. The line for a row that could not be saved now names the user, the method, the path, the status and the correlation id, so the lost row can be rebuilt from it.
+- `PHI_ACCESS_COMPLETE` now names the user of the record. The line for a row that could not be saved now names the user, the method, the path, the status and the correlation id, so most of the lost row can be read from it. The time of the access is not in the line.
 - One new line at warning level, `PHI_ACCESS_NO_SUBJECT`, when an authenticated request carries no subject.
 - No metric is added. The values `(unauthenticated)` and `(no-subject)` in the `user_id` column and in the event are new; `anonymous` is no longer written.
 

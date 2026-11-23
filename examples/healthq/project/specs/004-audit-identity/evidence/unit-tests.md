@@ -3,7 +3,7 @@
 - **Phase and date:** Phase 7, task T005; 2026-11-22
 - **Upstream and reference:** spec-kit `v1.4.3`; this repository, `main` at `2a8f516` and the base commit `8d04df3`
 - **Requirement IDs exercised:** QLT-7, QLT-9, AGT-5
-- **Assumptions:** the two results files are what the two commands below wrote. Their names, their times and the repository's checkout history agree with that; nobody watched the runs but the owner
+- **Assumptions:** the two results files are what the two commands below wrote. A results file does not record its command line. The files' names and times agree with the commands, and so did the checkout history on the owner's machine when the agent looked; nobody watched the runs but the owner
 - **Unverified:** the integration, architecture, evaluation and application-host test projects were not run. No coverage and no mutation score were measured. The results files themselves are not in the repository
 
 The owner ran the tests on his own machine. The agent that wrote this file did not run them and cannot: it has no access to the package registry. It read the two results files in the owner's folder and copied nothing from them but what is below. The files also hold the name of the machine and of the user, which are left out.
@@ -20,7 +20,7 @@ dotnet test tests/HealthQCopilot.Tests.Unit --filter "FullyQualifiedName~PhiAudi
 git switch main
 ```
 
-The second command switches NuGet's advisory audit off for that run. At `8d04df3` ten packages have published advisories and the build treats warnings as errors, so nothing restores there otherwise. Pull request #76 dealt with seven of them, which is why the first command needs no such switch for this project.
+The second command switches NuGet's advisory audit off for that run; the first does not. Why the base commit needs the switch is not something the two results files show. The message of commit `eb6a02a` (pull request #76) says what the owner's build reported on 2026-11-22; that output is not in the repository.
 
 ## Results
 
@@ -49,7 +49,7 @@ In the second run, by name: `NonPhiPath_CallsNextWithoutLogging`, `NonPhiPath_Do
 
 ## What it does not show
 
-- **`main` at `2a8f516` is not the commit the change was reviewed at** (`1e8d054`; it was `12ff77d` where the change was written). Two merges lie between: the proposals of pull request #75 and the package versions of pull request #76. No `.cs` file differs between `1e8d054` and `2a8f516`, so the code and the tests that ran are the ones that were reviewed; the packages under them are newer.
+- **`main` at `2a8f516` is not a commit the change was reviewed at.** The two reviews name `03c9f5b` for their first round and `15bf0f9` for their second (`reviews/G5-security.md`, `verification/G6-report.md`); in this repository's history those are `1ae91cd` and `eb596e3`. After `eb596e3` came the rest of that branch, which is records and one correction to the system map, and the merges of pull requests #73, #75 and #76. No `.cs` file differs between `eb596e3` and `2a8f516`, so the code and the tests that ran are those of the second review round; the packages under them are newer.
 - **Nothing ran against a database, an identity provider or a deployed service.** These are unit tests.
 - **No pipeline ran any of it.** No workflow of this repository has started since May 2026.
 - **The independent verification has not been repeated on these results.** That is task T006.

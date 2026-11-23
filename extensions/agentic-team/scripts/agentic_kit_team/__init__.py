@@ -33,6 +33,7 @@ def brief_hook(ctx, spec: str, gate: str) -> list[tuple[str, list[str]]]:
 
 core.BRIEF_HOOKS.append(brief_hook)
 core.ARTIFACT_HOOKS.append(work.artifact_paths)
+core.IMPLEMENTATION_HOOKS.append(checks_team.implementation)
 
 TEAM_CHECKS = ["CK-AGENT-SPEC", "CK-WORKITEM", "CK-PATH-LOCK", "CK-PATH-DIFF", "CK-REWORK-LIMIT", "CK-BUDGET",
                "CK-AUTHOR-NEQ-VERIFIER", "CK-CRED", "CK-GOLDEN", "CK-CONTEXT", "CK-TOOL-ALLOWLIST",

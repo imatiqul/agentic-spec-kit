@@ -75,6 +75,12 @@ def emergency_paths(ctx: Context) -> list[str]:
     return [str(p) for _, e in emergencies(ctx) if e.get("status") == "open" for p in e.get("paths") or []]
 
 
+def retrospective_specs(ctx: Context) -> set[str]:
+    """Specs an open emergency names as its retrospective: the change is merged first and their gates follow, by a date."""
+    retros = [e.get("retrospective") for _, e in emergencies(ctx) if e.get("status") == "open"]
+    return {str(r["spec"]) for r in retros if isinstance(r, dict) and r.get("spec")}
+
+
 @check("CK-EMERGENCY-DEADLINE", ("GOV-18",), "an emergency change has one valid human approval and its retrospective is done by the deadline")
 def ck_emergency_deadline(ctx: Context, res: Result) -> None:
     found = emergencies(ctx)

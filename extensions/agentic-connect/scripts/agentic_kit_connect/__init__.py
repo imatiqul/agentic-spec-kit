@@ -173,6 +173,8 @@ def _cli(sub, common_args) -> None:
     sp.add_argument("--write", action="store_true")
     sp.add_argument("--today")
     sp.add_argument("--changed-files")
+    from agentic_kit.__main__ import BRANCH_HELP
+    sp.add_argument("--branch", help="with run and notify: " + BRANCH_HELP)
     sp.set_defaults(fn=cmd_connect)
 
 

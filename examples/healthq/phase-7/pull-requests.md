@@ -1,4 +1,4 @@
-# Pull requests for the three branches of the healthcare repository
+# Pull requests for the branches of the healthcare repository
 
 - **Phase and date:** Phase 7, 2026-11-22
 - **Upstream and reference:** spec-kit `v1.4.3`; `imatiqul/azure-ai-cloud-healthcare`, `main` at `8d04df3`
@@ -69,6 +69,65 @@ Governance files only. Nothing here is approved or enforced.
 - `.specify/agentic/proposals/adoption-baseline.md`: the 635 suppressions and open map questions the kit finds, in 14 groups, each with a proposed owner and one proposed date. Approving it is a review of this pull request; the file the kit reads is added afterwards.
 - `specs/002-endpoint-authorization/threat-model.yml` and `authorization-matrix.yml`: analysis for finding C2. Three threats tested by the spec's abuse cases, six the spec has no test for, and 20 rows of who may reach what. No row has been run.
 - `kit.yml`: the kit now reads the endpoint files for figures with no recorded source. It reports 60, among them `aiAccuracyRate = 94.2` (finding H4).
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+https://claude.ai/code/session_01A2CG7WvPeDnyLubfj4wQM5
+
+## Two branches made after the merge
+
+Both are local branches on the owner's machine, each on top of `main` at `d429369`, not pushed. Neither depends on the other.
+
+```bash
+git push -u origin sdd/004-verification-3b deps/aspire-13
+gh pr create --base main --head sdd/004-verification-3b
+gh pr create --draft --base main --head deps/aspire-13
+```
+
+## 4. `sdd/004-verification-3b` into `main`
+
+**Title:** 004: the verification repeated on the real test results, and a correction to its record
+
+Records only: no code and no test changes.
+
+- T005, rework 1. An independent verifier returned the record of the test runs once: it named the wrong commit as the reviewed one, and it gave counts no file shows. Both are corrected. The verifier then accepted the item.
+- T006. The verification repeated on the real results (round 3 of `verification/G6-report.md`). AC-001, AC-003 and AC-006 are shown; AC-002 and AC-004 at the middleware only; AC-005 for the check only. Six new findings, V-15 to V-20. V-15: this change is on `main` and no gate of the spec has a decision.
+- Two stale documents corrected (`release/notes.md`, `release/operational-readiness.md`), and the briefs for G5 to G7 written again.
+- A correction, as a fourth run in the audit log: the two lines that say a person with no name returned and accepted T005 are wrong. It was the verifier agent. The work item still has the empty name; only a person may write that file.
+
+This branch holds `sdd/004-verification-3` and one commit more. Push this one.
+
+What a review should look at: whether the verifier's verdict per criterion is one you accept for G6; finding V-20 (the verifier read nine build-setting files, which the kit's rule for verifier inputs does not allow); and who reviews T006, since the verifier cannot review its own work.
+
+No gate is passed by merging this.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+https://claude.ai/code/session_01A2CG7WvPeDnyLubfj4wQM5
+
+## 5. `deps/aspire-13` into `main`
+
+**Title:** Dependencies: move the Aspire application host from 9.3.0 to 13.6.5
+
+Not restored, built or tested where it was written. Build it before it is anything but a draft.
+
+- Aspire 9.3.0 has two published advisories, GHSA-4g86-54fm-h9h8 (critical) and GHSA-f7vh-h5g3-7jrh (high). Both are first patched in 13.6.5. With them a restore of the solution fails on the two application-host projects, because the build treats warnings as errors.
+- The SDK and the hosting packages move to 13.6.5. `Aspire.Hosting.NodeJs` is `Aspire.Hosting.JavaScript` from 13.0, and `AddNpmApp` is gone: the eight front-end apps use `AddJavaScriptApp` with the script name `start` and no install step, which is the command the host ran before.
+- The MessagePack pin is removed: Aspire 13.6.5 brings 2.5.307 itself.
+- New: `AspireUseCliBundle=false` and `NoWarn` for ASPIRE010, so that nobody needs an installed Aspire CLI to build.
+
+To check:
+
+```bash
+dotnet restore HealthQCopilot.sln
+dotnet build HealthQCopilot.sln --no-restore --configuration Release
+dotnet test tests/HealthQCopilot.Tests.AppHost --configuration Release
+dotnet list src/HealthQCopilot.AppHost package --vulnerable --include-transitive
+```
+
+Known and left alone: none of the eight front-end apps has a `start` script, so the host's `npm run start` fails before and after this change. Running the host will recreate the local Postgres container, because the default image moves from 17.4 to 18.3 and there is no data volume.
+
+This change is outside any spec, like the package update of pull request #76. The kit's checks will say so.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

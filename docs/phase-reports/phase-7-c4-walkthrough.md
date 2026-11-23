@@ -8,6 +8,8 @@
 
 The owner's instruction for this phase was to carry on without stopping at each gate and then wait. So nothing below is an approval. Every artefact that stands in front of a gate says it is waiting there.
 
+This report describes the change as it stood at the end of Phase 7. What happened afterwards is in the dated notes at the top of `docs/phase-reports/phase-10-final.md`: the owner merged the branches with no gate review, built the solution and ran its unit tests (520 of 520 passed), and an independent verifier went through the record of that run and repeated its verification on the real results. Tasks T005 and T006, which this report calls open, are done and handed off. Still no gate is passed.
+
 ## 1. What exists now
 
 Three branches of the healthcare repository, each on top of the one before, built locally for the owner to push:
