@@ -3,8 +3,8 @@
 - **Phase and date:** Phase 7, 2026-11-22
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository `imatiqul/azure-ai-cloud-healthcare`, `main` at `8d04df3`
 - **Requirement IDs exercised:** TRC-19, AGT-10
-- **Assumptions:** the owner pushes the branches as they are. A rebase, a squash or an amended commit gives every commit after it a new id, and this table then describes history that was not pushed
-- **Unverified:** nothing here was pushed, so no id below exists on GitHub yet
+- **Assumptions:** none now. The owner pushed the branches as they were and merged them with merge commits on 2026-11-22 (pull requests #73 to #75), so the ids in the right-hand column are the ids in the history of `main`
+- **Unverified:** the three branch tips were checked to be in the history of `main` at `d78ffe7`; the fifteen commits between them were not looked up one by one
 
 The change was written in a workspace, under placeholder names. On the owner's machine each commit was made again with the same files, the same message and the same author date, under the name and address of his own latest commit in that repository (`1b74f48`), with two attribution lines added to the message. A commit's id depends on who made it, so each has a new one.
 

@@ -4,9 +4,9 @@
 - **Upstream and reference:** spec-kit `v1.4.3`; `imatiqul/azure-ai-cloud-healthcare`, `main` at `8d04df3`
 - **Requirement IDs exercised:** GOV-9, GOV-20
 - **Assumptions:** the owner opens each as a draft, in this order, each based on the one before
-- **Unverified:** nothing here was pushed. No workflow has run in that repository since May 2026, so no check will run on these pull requests until that is looked at
+- **Unverified:** these texts were not used. On 2026-11-22 the owner opened pull requests #73, #74 and #75 against `main`, not stacked and not as drafts, and merged them within a minute. No workflow of the repository ran on them. The texts are kept as what each branch holds and what its review was meant to look at
 
-The branches exist only on the owner's machine, as local branches of `azure-ai-cloud-healthcare` on top of `origin/main`: `sdd/reference-plans` at `89a4fc9`, `sdd/004-audit-identity` at `1e8d054`, `sdd/showcase-proposals` at `a44c57c`. Each text below is a description to paste. A gate is passed by a review of the pull request, not by merging it and not by anything written here.
+When this was written the branches existed only on the owner's machine (he has since pushed and merged them; see "Unverified" above), as local branches of `azure-ai-cloud-healthcare` on top of `origin/main`: `sdd/reference-plans` at `89a4fc9`, `sdd/004-audit-identity` at `1e8d054`, `sdd/showcase-proposals` at `a44c57c`. Each text below is a description to paste. A gate is passed by a review of the pull request, not by merging it and not by anything written here.
 
 ```bash
 git push -u origin sdd/reference-plans sdd/004-audit-identity sdd/showcase-proposals

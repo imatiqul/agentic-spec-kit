@@ -4,20 +4,28 @@
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository `imatiqul/azure-ai-cloud-healthcare`, `main` at `8d04df3`
 - **Requirement IDs exercised:** GOV-6, GOV-9, GOV-17, GOV-20, TRC-16, TRC-19, QLT-2, QLT-4, QLT-12, QLT-15, AGT-10
 - **Assumptions:** an acceptance line is judged against the words in `docs/prompts/90-acceptance.md`. Where a line was shown with a scripted stand-in or a recorded response and not with the real thing, it says so and is counted apart
-- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. The healthcare branches are not pushed, and no pipeline has run the kit on a project. Section 9 has the full list
+- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. The owner merged the healthcare branches into `main` with no build, no test run and no gate review, and no pipeline has run the kit on a project. Section 9 has the full list
 
 The owner's instruction was to finish everything, look at it again, and wait; he pushes. This report is the end of that. Nothing in it is an approval.
 
-**Updated the same day, after the owner pushed the kit's `main` (`6e217c2`).** The kit repository's pipeline ran for the first time on that push and passed on Python 3.10 and 3.13 (run 45093366953). One acceptance line moved from "in part" to "met"; the places that said the pipeline had not run are changed, and nothing else is. The three healthcare branches are still not pushed.
+**Updated the same day, after the owner pushed the kit's `main` (`6e217c2`).** The kit repository's pipeline ran for the first time on that push and passed on Python 3.10 and 3.13 (run 45093366953). One acceptance line moved from "in part" to "met"; the places that said the pipeline had not run are changed, and nothing else is. 
+
+**Updated again that evening, after the owner merged the reference work.** He pushed the three branches, opened pull requests #73, #74 and #75 against `main` (not stacked, not as drafts) and merged all three within a minute, with merge commits. `main` of the healthcare repository is now `d78ffe7`, and its files are exactly those of the reviewed `sdd/showcase-proposals` branch: the two trees are the same. What the merge does not change:
+
+- **No gate is passed.** No review carried a gate's line and no decision record exists. The acceptance line about C4's gate decisions stays not met.
+- **The C4 change is on `main` and has still not been built or tested.** No workflow of that repository ran on the pull requests or on the merge. `pr-validation.yml` is triggered by a pull request to `main` and did not start; only the hosted code review did.
+- **The kit did not notice.** Its checks on `main` (79 pass, 24 fail, 1 not run) report the same three missing gate records as before the merge. It has no rule for a change that reaches the default branch without G5 and G6. That is now in `docs/limits.md`.
+
+Sections 1, 6, 8 and 9 are changed to match; the acceptance counts are not.
 
 ## 1. Where everything is
 
 | What | Where | State |
 |---|---|---|
 | The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner at `6e217c2`. This update to the report is a later local commit |
-| Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, local branch `sdd/reference-plans` (`89a4fc9`) | Not pushed. Waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
-| The C4 change: 14 code files, 80 tests, 39 files of record | Local branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Not pushed. Not built. Waits on seven amendments, a test run, and reviews |
-| Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Local branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Not pushed. Nothing in it is approved or enforced |
+| Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, branch `sdd/reference-plans` (`89a4fc9`) | Merged into `main` by the owner (pull request #74). Still waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
+| The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Not built. Still waits on seven amendments, a test run, and reviews |
+| Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Merged into `main` by the owner (pull request #75). Nothing in it is approved or enforced: the baseline is still a proposal outside the folder the kit reads |
 | Titles and descriptions for the three pull requests | `examples/healthq/phase-7/pull-requests.md` | Text for the owner to paste |
 
 The three branches were written in a workspace that cannot push. They were carried to the owner's machine as one bundle and made again there commit by commit, under his name, without checking anything out. Each ends in exactly the files that were reviewed: the script compares the tree of each branch with the one from the workspace and stops if they differ. Commit ids changed on the way, and the records name the old ones; `examples/healthq/phase-7/commit-map.md` maps them.
@@ -131,7 +139,7 @@ Every line of `docs/prompts/90-acceptance.md`, in its order. The earlier phase r
 | Every finding has a verification status with reproducible evidence | Met | `docs/phase-reports/phase-1-verification.md`; `examples/healthq/phase-1/verify-findings.sh` and its output. Planning later corrected one of them (N9) and the map |
 | One spec per confirmed or corrected finding, with touches, owner and reviewers | Met | 25 specs for 27 findings; N5 is covered by 005 and N10 by 021. `test_there_is_one_spec_for_each_finding_drafted_so_far`, `test_every_spec_has_an_impact_report_and_a_brief_for_its_first_gate` |
 | Any line of the C4 change traces back to a principle and forward to what it affects | Met | `agentic.py why <file>:<line>`, for one line of each of the 14 files in `specs/004-audit-identity/evidence/trace-lines.md`; `test_a_line_of_the_c4_change_traces_back_to_the_principle_and_forward_to_what_it_reaches`. Forward means what the map says the spec reaches |
-| Every C4 gate decision is a human review mirrored in the record | Not met | No decision record exists for any gate. G1 and G2 were approved in conversation. G3 to G7 wait |
+| Every C4 gate decision is a human review mirrored in the record | Not met | No decision record exists for any gate. G1 and G2 were approved in conversation. G3 to G7 wait. The owner has since merged the change; a merge is not a gate decision |
 | No suppression remains without a dated, owned waiver | Not met | 635 remain. The baseline that would carry them is a proposal |
 | The C5/C6 evaluation design provably runs the production classifier | In part | The design is in the draft plans of 005 and 006, and the check proves the opposite of today's code. Nothing has been built or run to prove the design |
 
@@ -154,8 +162,9 @@ Every line of `docs/prompts/90-acceptance.md`, in its order. The earlier phase r
 
 ### What using it on real work showed
 
-Nineteen things, none visible from the fixtures. Eight were fixed with a test each (`docs/release-notes.md`). Six of them in Phase 7: a verifier could not be given source code, `why` stopped at the requirement, a rework hand-off was refused in a shared working copy, a security review was not part of a gate's evidence, `team init` rewrote the settings file, and the figure check could not read code. Two more while this report was being checked on the owner's machine: one test could not finish there, because the duplicate check parsed the system map about 1,300 times on a project of 25 specs (78 seconds, now 2), and its messages listed shared words in an order that changed from run to run. Eleven were not fixed and are now in `docs/limits.md`, under "Found by using it on a real change". The ones that matter most:
+Twenty things, none visible from the fixtures. Eight were fixed with a test each (`docs/release-notes.md`). Six of them in Phase 7: a verifier could not be given source code, `why` stopped at the requirement, a rework hand-off was refused in a shared working copy, a security review was not part of a gate's evidence, `team init` rewrote the settings file, and the figure check could not read code. Two more while this report was being checked on the owner's machine: one test could not finish there, because the duplicate check parsed the system map about 1,300 times on a project of 25 specs (78 seconds, now 2), and its messages listed shared words in an order that changed from run to run. Twelve were not fixed and are now in `docs/limits.md`, under "Found by using it on a real change". The ones that matter most:
 
+- A change that reaches the default branch without G5 and G6 is not reported as such. The owner's merge of the C4 change showed it.
 - A review can only accept or return. Real reviewers want to accept with conditions.
 - A threat the owner chooses to live with has nowhere to go.
 - Records name commits by id, and ids do not survive a rebase, a squash, or being made again on another machine.
@@ -192,7 +201,10 @@ These are proposals. None was started.
 | `agentic.py why` on a changed line of the recreated branch | Workspace, rehearsal copy | Same work item, task, criteria and principle as on the original |
 | The pins of the two actions in the pipeline files | `git ls-remote` against GitHub | Both tags point at the pinned commits |
 | The new pipeline file against the kit's own rules | `test_the_kits_own_pipeline_follows_the_kits_own_rules` | Passes; fails when an action floats on a tag |
-| The kit repository's pipeline, first run | GitHub Actions, on the owner's push of `6e217c2`; read from GitHub's public record of the run | Both jobs passed, every step: Python 3.13 in 2 minutes, Python 3.10 in 4 |
+| The kit repository's pipeline, first run | GitHub Actions, on the owner's push of `6e217c2`; read from GitHub's public record of the run | Both jobs passed, every step: Python 3.13 in 2 minutes, Python 3.10 in 4. The second run, on `d26db20`, passed too |
+| The healthcare `main` after the owner's merge | Fetched from GitHub into the workspace | `d78ffe7`. Its tree is the tree of the reviewed `sdd/showcase-proposals`. The three branch tips are in its history, so the ids in `commit-map.md` are the ids on GitHub |
+| The kit's checks on that `main`, against `8d04df3` | Workspace | 79 pass, 24 fail, 1 not run. For spec 004: the same missing records for G1 to G3 as before the merge, and nothing about G5 or G6 |
+| Workflows of the healthcare repository on the three pull requests and the merge | GitHub's public list of runs, read two minutes after the merge | None started except the hosted code review of each pull request. `pr-validation.yml` is triggered by a pull request to `main` and has no run |
 | The three branches on the owner's machine | Owner's machine | Trees equal to the workspace's. His checkout (`main`, `6e0879d`), working tree and other branches unchanged. No lock file left |
 | `python -m pytest tests`, in pieces that fit the three-minute limit for a command there | Owner's machine, Python 3.10, on a copy of the files on the virtual machine's own disk. The copy and the owner's folder have the same combined hash | 505 passed, 2 skipped |
 | The same, in the owner's folder itself | Owner's machine, through the folder shared into the virtual machine | Stopped at 372 passed, none failed. One test cannot finish there: reading through the share is slow, and the test that takes 3 seconds on the local disk takes more than 90 |
@@ -218,15 +230,15 @@ Numbering continues from the Phase 7 report, which ends at 82.
 
 In the order that unblocks most.
 
-1. **Push the three healthcare branches.** The kit's `main` is pushed; this update is one more local commit on it. Open three draft pull requests, each based on the one before; the texts are in `examples/healthq/phase-7/pull-requests.md`.
-2. **Find out why nothing runs in the healthcare repository's pipeline.** No workflow has run there since May 2026.
+1. **Build and test the healthcare `main`.** It now holds the C4 change, which no build has ever compiled. On a machine that can restore the packages: `dotnet build`, then `dotnet test tests/HealthQCopilot.Tests.Unit`. If it does not build, fix it on a branch, or put the 14 code and test files back as they were (`git checkout 8d04df3 -- src tests` on a branch, then a pull request). Reverting the merge of pull request #73 would also undo the governance update, which arrived with it.
+2. **Find out why nothing runs in the healthcare repository's pipeline.** `pr-validation.yml` should have run on each of the three pull requests and did not start. The repository's Actions settings are the first place to look.
 3. **Spec 004.** Seven amendments in `specs/004-audit-identity/amendment-proposed.md`; two clear failing checks. Then task T005 on a machine that can restore the solution's packages: the eleven existing audit tests at `8d04df3`, then `dotnet test tests/HealthQCopilot.Tests.Unit` on the branch, both recorded. Then T006, and reviews for G3 to G6.
 4. **Nine draft specs** (017 to 025) at G1 and G2, and **three pairs** the kit lists as similar.
 5. **Six draft plans** (001, 003, 004, 005, 006, 013) and the breakdown of 002, at G3 and G4. Amendments proposed in Phase 6 to specs 001, 002, 003, 005 and 007.
 6. **The adoption baseline:** approve, change or reject `.specify/agentic/proposals/adoption-baseline.md`.
 7. **Settings only an administrator can make:** branch protection, the agent's own GitHub identity, the routing policy (today it names one model for every class of agent).
 8. **Observations O1 to O20** in the Phase 6 and Phase 7 reports. None has a spec. O11, O15, O17 and O18 bear most directly on who can reach patient data and whether that is recorded.
-9. **The kit:** the eleven items under "Found by using it on a real change" in `docs/limits.md`, and decision 87.
+9. **The kit:** the twelve items under "Found by using it on a real change" in `docs/limits.md`, and decision 87. The first to fix is the missing rule for a change merged without G5 and G6.
 
 ## 9. Not verified
 
@@ -235,4 +247,4 @@ In the order that unblocks most.
 - Any tracker, chat or mail service; Windows PowerShell; a migration on a database; an evaluation of the triage classifier.
 - A model put through the planted-instruction tests, or working in parallel mode with the path guard.
 - That the HIPAA pack's mapping of controls is right. It is an engineering aid and nobody qualified has reviewed it.
-- That the ids in `commit-map.md` are the ids that get pushed. They are if the owner pushes the branches as they are.
+- Why the healthcare repository's workflows do not start. It was read from outside; its settings were not.
