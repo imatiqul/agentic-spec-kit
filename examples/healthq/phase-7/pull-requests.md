@@ -76,7 +76,7 @@ https://claude.ai/code/session_01A2CG7WvPeDnyLubfj4wQM5
 
 ## Two branches made after the merge
 
-Both are local branches on the owner's machine, each on top of `main` at `d429369`, not pushed. Neither depends on the other.
+Both were made as local branches on the owner's machine, each on top of `main` at `d429369`. Neither depends on the other. The owner pushed the second and merged it as pull request #78 on 2026-11-22, before this file was published; its text below is kept as what the branch holds. The first is not pushed.
 
 ```bash
 git push -u origin sdd/004-verification-3b deps/aspire-13
