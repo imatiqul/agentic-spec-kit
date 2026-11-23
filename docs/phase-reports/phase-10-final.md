@@ -27,13 +27,22 @@ Sections 1, 6, 8 and 9 are changed to match; the acceptance counts are not.
 
 Sections 1, 8 and 9 are changed again to match.
 
+**And then the test run was captured.** The owner ran the two commands of task T005 with a results file each, and the agent read the two files in his folder.
+
+- **The unit test project on `main` at `2a8f516`: 520 tests, 520 passed.** Among them are all 80 tests of the C4 change.
+- **The eleven old audit tests at the base commit `8d04df3`: 11 passed.**
+
+The stand-in runs of Phase 7 had reported the same 80 and the same 11. T005 is recorded through the kit and handed off (`specs/004-audit-identity/evidence/unit-tests.md`; the owner merged it into `main` as pull request #77, `d429369`). It waits for a reviewing agent; T006, the verification repeated on these results, has not started. The characterization check now passes for spec 004.
+
+The kit's checks on `main` now also say that 18 project files changed outside any work item and that a shared component changed with no recorded run of its consumers. Both are right: the package update of pull request #76 was made outside the kit's process, at the owner's request.
+
 ## 1. Where everything is
 
 | What | Where | State |
 |---|---|---|
 | The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner at `6e217c2`. This update to the report is a later local commit |
 | Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, branch `sdd/reference-plans` (`89a4fc9`) | Merged into `main` by the owner (pull request #74). Still waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
-| The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Built and unit-tested by him afterwards, by his report; no output was captured. Still waits on seven amendments, a recorded test run, and reviews |
+| The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Built and unit-tested by him afterwards: 520 of 520 passed, read from his results file. Still waits on seven amendments, a review of that record, the verification repeated on it, and gate reviews |
 | Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Merged into `main` by the owner (pull request #75). Nothing in it is approved or enforced: the baseline is still a proposal outside the folder the kit reads |
 | Titles and descriptions for the three pull requests | `examples/healthq/phase-7/pull-requests.md` | Text for the owner to paste |
 
@@ -171,7 +180,7 @@ Every line of `docs/prompts/90-acceptance.md`, in its order. The earlier phase r
 
 ### What using it on real work showed
 
-Twenty things, none visible from the fixtures. Eight were fixed with a test each (`docs/release-notes.md`). Six of them in Phase 7: a verifier could not be given source code, `why` stopped at the requirement, a rework hand-off was refused in a shared working copy, a security review was not part of a gate's evidence, `team init` rewrote the settings file, and the figure check could not read code. Two more while this report was being checked on the owner's machine: one test could not finish there, because the duplicate check parsed the system map about 1,300 times on a project of 25 specs (78 seconds, now 2), and its messages listed shared words in an order that changed from run to run. Twelve were not fixed and are now in `docs/limits.md`, under "Found by using it on a real change". The ones that matter most:
+Twenty-two things, none visible from the fixtures. Eight were fixed with a test each (`docs/release-notes.md`). Six of them in Phase 7: a verifier could not be given source code, `why` stopped at the requirement, a rework hand-off was refused in a shared working copy, a security review was not part of a gate's evidence, `team init` rewrote the settings file, and the figure check could not read code. Two more while this report was being checked on the owner's machine: one test could not finish there, because the duplicate check parsed the system map about 1,300 times on a project of 25 specs (78 seconds, now 2), and its messages listed shared words in an order that changed from run to run. Fourteen were not fixed and are now in `docs/limits.md`, under "Found by using it on a real change". The ones that matter most:
 
 - A change that reaches the default branch without G5 and G6 is not reported as such. The owner's merge of the C4 change showed it.
 - A review can only accept or return. Real reviewers want to accept with conditions.
@@ -183,7 +192,7 @@ Twenty things, none visible from the fixtures. Eight were fixed with a test each
 
 - **The central promise has never been exercised live.** A gate is passed by a pull-request review that the kit mirrors and binds to evidence. That path is tested on recorded responses only. No review has been read from GitHub, no branch protection inspected, no agent token examined. For this reason two acceptance lines are met only on recorded responses, one is not met, and one more waits for a pipeline to run the kit on a project.
 - **One model played every agent.** Author and reviewers were separated by session and by what they were given, not by model. They still disagreed usefully. Blind spots they share would not show.
-- **Evidence is taken as given.** The test results for the C4 change come from a stand-in project. The records say so in every file because the author wrote that. The kit would have accepted the same numbers without the caveat.
+- **Evidence is taken as given.** The first test results for the C4 change came from a stand-in project. The records say so in every file because the author wrote that. The kit would have accepted the same numbers without the caveat. The owner's later run of the real solution gave the same counts; the kit took those as given too.
 - **It is a lot.** 105 checks, six extensions, 16 agents. For the C4 change the Regulated profile produced 39 files of record, about 2,500 lines, for 14 files of code and tests, about 1,250 lines. Whether that ratio is right for a Critical change to an audit trail is the owner's judgement. Lite exists so that it is not everyone's ratio; nobody has timed Lite.
 - **Matching is by words.** Duplicates, the requirement lint, the instruction lint and the figure check all read text. Each misses what is said another way.
 - **One repository, one person in every role.** Separation of duties has never been exercised, only recorded as an exception.
@@ -219,7 +228,9 @@ These are proposals. None was started.
 | The same, in the owner's folder itself | Owner's machine, through the folder shared into the virtual machine | Stopped at 372 passed, none failed. One test cannot finish there: reading through the share is slow, and the test that takes 3 seconds on the local disk takes more than 90 |
 | `agentic.py selftest`; `golden run` | Owner's machine, the same copy | 105 fixtures as expected; 10 of 10 in each mode |
 
-The healthcare solution's own tests are not in this table. They have not run.
+| The healthcare unit test project, and the eleven old audit tests at the base commit | Owner's machine, run by the owner after this report was first written. The agent read the two results files | 520 of 520 passed at `2a8f516`, among them the 80 tests of the change. 11 of 11 passed at `8d04df3` |
+
+No other test project of the healthcare solution has run.
 
 ## 7. Decisions made without the owner, and how to reverse each
 
@@ -239,7 +250,7 @@ Numbering continues from the Phase 7 report, which ends at 82.
 
 In the order that unblocks most.
 
-1. **Capture the test run, and decide Aspire.** The owner has built `main` and run its unit tests; the result is his report. A run with a results file (`dotnet test tests/HealthQCopilot.Tests.Unit --logger "trx;LogFileName=unit.trx"`), and the eleven old audit tests at `8d04df3`, would let task T005 be recorded with counts. Aspire 9.3.0 has a critical advisory that only 13.6.5 fixes: upgrade the application host, or record a dated waiver.
+1. **Decide Aspire, and say whether the reviewing agents may run again.** Aspire 9.3.0 has a critical advisory that only 13.6.5 fixes: upgrade the application host, or record a dated waiver. Task T005 is handed off with the owner's test results and waits for a reviewing agent, and T006 is the verification repeated on those results; both need an agent that did not write the change.
 2. **Find out why nothing runs in the healthcare repository's pipeline.** `pr-validation.yml` should have run on each of the three pull requests and did not start. The repository's Actions settings are the first place to look.
 3. **Spec 004.** Seven amendments in `specs/004-audit-identity/amendment-proposed.md`; two clear failing checks. Then task T005 on a machine that can restore the solution's packages: the eleven existing audit tests at `8d04df3`, then `dotnet test tests/HealthQCopilot.Tests.Unit` on the branch, both recorded. Then T006, and reviews for G3 to G6.
 4. **Nine draft specs** (017 to 025) at G1 and G2, and **three pairs** the kit lists as similar.
@@ -247,12 +258,12 @@ In the order that unblocks most.
 6. **The adoption baseline:** approve, change or reject `.specify/agentic/proposals/adoption-baseline.md`.
 7. **Settings only an administrator can make:** branch protection, the agent's own GitHub identity, the routing policy (today it names one model for every class of agent).
 8. **Observations O1 to O20** in the Phase 6 and Phase 7 reports. None has a spec. O11, O15, O17 and O18 bear most directly on who can reach patient data and whether that is recorded.
-9. **The kit:** the twelve items under "Found by using it on a real change" in `docs/limits.md`, and decision 87. The first to fix is the missing rule for a change merged without G5 and G6.
+9. **The kit:** the fourteen items under "Found by using it on a real change" in `docs/limits.md`, and decision 87. The first to fix is the missing rule for a change merged without G5 and G6.
 
 ## 9. Not verified
 
 - Anything on live GitHub but one thing: a review, branch protection, a token's permissions, a pipeline that runs the kit on a project. The one thing is the kit repository's own test pipeline, which has run once and passed.
-- The healthcare solution's build and unit tests were run by the owner and reported, not observed: no output, count or results file was seen. Its integration, architecture and evaluation tests, coverage, a bill of materials and any deployment have not run at all.
+- The healthcare solution's unit tests were run by the owner. The agent saw the two results files, not the runs. Its integration, architecture and evaluation tests, coverage, a bill of materials and any deployment have not run at all.
 - Any tracker, chat or mail service; Windows PowerShell; a migration on a database; an evaluation of the triage classifier.
 - A model put through the planted-instruction tests, or working in parallel mode with the path guard.
 - That the HIPAA pack's mapping of controls is right. It is an engineering aid and nobody qualified has reviewed it.

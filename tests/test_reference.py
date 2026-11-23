@@ -201,10 +201,11 @@ def test_what_only_a_person_can_do_still_fails_and_nothing_else_does():
     expect = {(n, f"plan.md exists but gate {g} has no approving decision record") for n in PLANNED for g in ("G1", "G2")} | \
              {(n, "tasks.md exists but gate G3 has no approving decision record") for n in TASKED}
     assert failures("CK-GATE-RECORD") == expect
-    # Nobody has run the tests that pin today's behaviour: the agent cannot restore the solution's packages, and no pipeline runs.
+    # The tests that pin today's behaviour have been run for one spec only: the owner ran 004's on his machine. Without the
+    # healthcare source under it this project cannot show the test file, which is all the check still says about 004.
     got = failures("CK-CHARACTERIZATION")
     assert {n for n, _ in got} == set(PLANNED)
-    assert ("004-audit-identity", "the characterization tests did not pass (result: not-run)") in got, "they exist for 004; they have not been run"
+    assert {m for n, m in got if n == "004-audit-identity"} == {"the characterization record names no tests, or tests that do not exist"}
     # No clinician has signed a golden set or accepted a safety case, and nobody in roles.yml is one.
     assert {n for n, _ in failures("CK-AI-EVAL")} == {n for n, _ in failures("CK-AI-SAFETY-CASE")} == {"005-triage-validation", "006-eval-production-path"}
     assert all("accepted through the enforcement channel" in m for _, m in failures("CK-AI-SAFETY-CASE"))
@@ -219,8 +220,9 @@ C4 = "004-audit-identity"
 def test_the_c4_change_was_worked_task_by_task_and_reviewed_by_agents_that_did_not_write_it():
     """Phase 7. The run log: which agent did what, each hand-off, each rework round."""
     items = {p.stem: yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted((PROJECT / ".specify/agentic/work" / C4).glob("T*.yml"))}
-    assert {k: v["state"] for k, v in items.items()} == {"T001": "done", "T002": "done", "T003": "done", "T004": "done", "T005": "ready", "T006": "ready"}, \
-        "the four tasks an agent could do are done; the test run and the verification that follows it are not"
+    assert {k: v["state"] for k, v in items.items()} == {"T001": "done", "T002": "done", "T003": "done", "T004": "done", "T005": "in-review", "T006": "ready"}, \
+        "the four tasks an agent could do are done; the owner's test run is recorded and waits for a reviewing agent; the verification that follows it has not started"
+    assert items["T005"]["handoff"]["evidence"] == ["specs/004-audit-identity/evidence/unit-tests.md"] and "The agent ran nothing" in items["T005"]["handoff"]["done"]
     for tid in ("T001", "T002", "T003", "T004"):
         item = items[tid]
         assert item["reviewer_agent"] in ("security-reviewer", "independent-verifier") and item["reviewer_agent"] != item["owner_agent"]
@@ -232,6 +234,14 @@ def test_the_c4_change_was_worked_task_by_task_and_reviewed_by_agents_that_did_n
         assert run(cid).ok, (cid, [f.message for f in run(cid).findings][:3])
     record = yaml.safe_load((PROJECT / ".specify/agentic/runs" / C4 / "r1.yml").read_text(encoding="utf-8"))
     assert record["state"] == "stopped" and record["steps"] == 11 and "T005 needs a machine" in record["stop_reason"]
+    second = yaml.safe_load((PROJECT / ".specify/agentic/runs" / C4 / "r2.yml").read_text(encoding="utf-8"))
+    assert second["state"] == "stopped" and second["steps"] == 1 and "waits for a reviewing agent" in second["stop_reason"]
+    # The test run itself: made by the owner, read from his results files, and no more claimed than they hold.
+    ran = (PROJECT / "specs" / C4 / "evidence/unit-tests.md").read_text(encoding="utf-8")
+    assert "| The unit test project | `2a8f516` | 2026-11-22 20:08:40 | 520 | 520 | 0 | 0 |" in ran and "| | 80 | 80 |" in ran
+    assert "The agent that wrote this file did not run them" in ran and "No pipeline ran any of it" in ran
+    pinned = yaml.safe_load((PROJECT / "specs" / C4 / "evidence/characterization.yml").read_text(encoding="utf-8"))
+    assert pinned["result"] == "pass" and pinned["commit"].startswith("8d04df3"), "the eleven old tests passed on the commit before the change"
     # What the run record lacks is what only a runtime can report, and nobody made it up: what each step cost.
     lacking = {m.split(" does not record ")[-1] for _, m in failures("CK-RUN-RECORD") if " does not record " in m}
     assert lacking == {"the cost"}
@@ -309,8 +319,8 @@ def test_every_derived_fact_in_the_map_cites_a_file_in_the_healthcare_repository
     assert ("src/HealthQCopilot.Agents/Endpoints/DemoDataEndpoints.cs:43",
             "the figure aiAccuracyRate = 94.2 has no recorded source; register it in .specify/agentic/metric-claims.yml or remove it") in unsourced
     assert {n.split(":")[0] for n, _ in unsourced} == {"src/HealthQCopilot.Agents/Endpoints/DemoDataEndpoints.cs", "src/HealthQCopilot.Agents/Endpoints/DemoEndpoints.cs"}
-    # With the source present, the tests that pin 004's code exist. What is missing is a run of them.
-    assert {m for n, m in failures("CK-CHARACTERIZATION", work) if n == "004-audit-identity"} == {"the characterization tests did not pass (result: not-run)"}
+    # With the source present, the tests that pin 004's code exist, and the record says they passed on the base commit.
+    assert not {m for n, m in failures("CK-CHARACTERIZATION", work) if n == "004-audit-identity"}
     assert subprocess.run(["git", "-C", str(repo), "status", "--porcelain"], capture_output=True, text=True, check=True).stdout == before, "the repository is only read"
 
 
