@@ -78,7 +78,7 @@ As of 2026-11-22 none of the following has happened, so everything that depends 
 - a pull request, a review or branch protection on a live GitHub repository;
 - a coding-agent runtime (Claude Code, GitHub Copilot) loading the rendered agent files, the path guard on that runtime's events, or the allowlist against real tool servers. One model has worked one change through the sequential mode, with a context pack for each task and a separate session for each of the two reviewing agents (`docs/phase-reports/phase-7-c4-walkthrough.md`); that is the only use by a model so far;
 - any tracker, chat or mail adapter against its live service;
-- any of the three pipeline files in its CI system, and this repository's own `.github/workflows/tests.yml`, which was added on 2026-11-22 and first runs when the owner pushes it;
+- any of the three pipeline files the kit ships, in its CI system. This repository's own `.github/workflows/tests.yml` has run: first on the owner's push of 2026-11-22, where it passed on Python 3.10 and 3.13. It runs the kit's tests. It is not the kit running on a project;
 - the tests, the build or any pipeline of the reference system: its package registry could not be reached from where the reference change was written, and no workflow has run in that repository since May 2026;
 - the install or any command on Windows PowerShell;
 - a migration applied to a database.

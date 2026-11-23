@@ -1,7 +1,7 @@
 # The kit's own tests, on every pull request and on every push to the default branch.
 # The job can read this repository and nothing else: no secret, no write permission, no deployment.
-# Not yet run on GitHub when this file was written (2026-11-22); the same three commands pass locally
-# on the two Python versions below, with these package versions.
+# First run: 2026-11-22, on the push that added it; both jobs passed. The same three commands pass
+# locally on the two Python versions below, with these package versions.
 name: tests
 on:
   pull_request:

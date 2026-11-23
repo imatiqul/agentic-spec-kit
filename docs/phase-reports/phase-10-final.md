@@ -4,15 +4,17 @@
 - **Upstream and reference:** spec-kit `v1.4.3`; healthcare repository `imatiqul/azure-ai-cloud-healthcare`, `main` at `8d04df3`
 - **Requirement IDs exercised:** GOV-6, GOV-9, GOV-17, GOV-20, TRC-16, TRC-19, QLT-2, QLT-4, QLT-12, QLT-15, AGT-10
 - **Assumptions:** an acceptance line is judged against the words in `docs/prompts/90-acceptance.md`. Where a line was shown with a scripted stand-in or a recorded response and not with the real thing, it says so and is counted apart
-- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. Nothing was pushed, and no pipeline has run on either repository. Section 9 has the full list
+- **Unverified:** no gate of the reference has been passed. The healthcare solution was not built or tested. The healthcare branches are not pushed, and no pipeline has run the kit on a project. Section 9 has the full list
 
 The owner's instruction was to finish everything, look at it again, and wait; he pushes. This report is the end of that. Nothing in it is an approval.
+
+**Updated the same day, after the owner pushed the kit's `main` (`6e217c2`).** The kit repository's pipeline ran for the first time on that push and passed on Python 3.10 and 3.13 (run 45093366953). One acceptance line moved from "in part" to "met"; the places that said the pipeline had not run are changed, and nothing else is. The three healthcare branches are still not pushed.
 
 ## 1. Where everything is
 
 | What | Where | State |
 |---|---|---|
-| The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` on the owner's machine | Committed locally. Not pushed |
+| The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner at `6e217c2`. This update to the report is a later local commit |
 | Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, local branch `sdd/reference-plans` (`89a4fc9`) | Not pushed. Waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
 | The C4 change: 14 code files, 80 tests, 39 files of record | Local branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Not pushed. Not built. Waits on seven amendments, a test run, and reviews |
 | Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Local branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Not pushed. Nothing in it is approved or enforced |
@@ -45,7 +47,7 @@ It shows the shape of a pack and not a release. It lists no approvals, because n
 
 Every line of `docs/prompts/90-acceptance.md`, in its order. The earlier phase reports hold a first reading of slices 0.1, 0.3 and 0.4; this is the reading today, with today's runs (section 6). Test names are in `tests/`; a fixture is one of the 105 the self-test runs.
 
-**Count: 54 lines. 38 met. 5 met only with a stand-in. 7 met in part. 3 not met. 1 not measured.**
+**Count: 54 lines. 39 met. 5 met only with a stand-in. 6 met in part. 3 not met. 1 not measured.**
 
 ### Slice 0.1, Govern
 
@@ -59,7 +61,7 @@ Every line of `docs/prompts/90-acceptance.md`, in its order. The earlier phase r
 | An unrecorded suppression fails; an expired waiver fails | Met | `test_expired_waiver_fails`, `test_baseline_count_can_only_go_down`. On the reference the check fails on 635 |
 | A missing or orphaned trace link fails | Met | `test_orphans_are_reported`; fixture CK-TRACE |
 | An edited audit log entry is detected | Met | `test_deleted_audit_entry_is_detected`; fixture CK-AUDIT-CHAIN |
-| Every check has a passing and a failing fixture, and CI shows the failing one fail | In part | 105 fixtures behave (`selftest`). No pipeline has ever shown it. The kit repository had none; `.github/workflows/tests.yml` was added today and first runs on the owner's push (decision 83) |
+| Every check has a passing and a failing fixture, and CI shows the failing one fail | Met | 105 fixtures behave (`selftest`). The kit repository's pipeline (decision 83) ran on the owner's push of `6e217c2` and passed on Python 3.10 and 3.13; its self-test step prints each broken fixture failing (GitHub Actions run 45093366953). No project's pipeline has run the kit |
 | The documentation lists what is not enforced | Met | `docs/limits.md`, `docs/admin-setup.md` |
 
 ### Slice 0.2, System
@@ -161,7 +163,7 @@ Nineteen things, none visible from the fixtures. Eight were fixed with a test ea
 
 ### What is still weak
 
-- **The central promise has never been exercised live.** A gate is passed by a pull-request review that the kit mirrors and binds to evidence. That path is tested on recorded responses only. No review has been read from GitHub, no branch protection inspected, no agent token examined. For this reason two acceptance lines are met only on recorded responses, one is not met, and two more wait for a pipeline to run.
+- **The central promise has never been exercised live.** A gate is passed by a pull-request review that the kit mirrors and binds to evidence. That path is tested on recorded responses only. No review has been read from GitHub, no branch protection inspected, no agent token examined. For this reason two acceptance lines are met only on recorded responses, one is not met, and one more waits for a pipeline to run the kit on a project.
 - **One model played every agent.** Author and reviewers were separated by session and by what they were given, not by model. They still disagreed usefully. Blind spots they share would not show.
 - **Evidence is taken as given.** The test results for the C4 change come from a stand-in project. The records say so in every file because the author wrote that. The kit would have accepted the same numbers without the caveat.
 - **It is a lot.** 105 checks, six extensions, 16 agents. For the C4 change the Regulated profile produced 39 files of record, about 2,500 lines, for 14 files of code and tests, about 1,250 lines. Whether that ratio is right for a Critical change to an audit trail is the owner's judgement. Lite exists so that it is not everyone's ratio; nobody has timed Lite.
@@ -170,7 +172,7 @@ Nineteen things, none visible from the fixtures. Eight were fixed with a test ea
 
 ### What would raise confidence most, in order
 
-1. One hour on a scratch GitHub repository: branch protection, a pull request, a review that carries a gate's line, the mirror, an agent token. It settles five acceptance lines.
+1. One hour on a scratch GitHub repository: branch protection, a pull request, a review that carries a gate's line, the mirror, an agent token. It settles four acceptance lines.
 2. A pipeline that runs in the healthcare repository. Every check there that waits on a build, a scan or a bill of materials waits on this, and so does task T005.
 3. Reviews that can accept with conditions, and a place for an accepted risk.
 4. Someone else installing Lite from the README with a clock running, once on Windows.
@@ -190,6 +192,7 @@ These are proposals. None was started.
 | `agentic.py why` on a changed line of the recreated branch | Workspace, rehearsal copy | Same work item, task, criteria and principle as on the original |
 | The pins of the two actions in the pipeline files | `git ls-remote` against GitHub | Both tags point at the pinned commits |
 | The new pipeline file against the kit's own rules | `test_the_kits_own_pipeline_follows_the_kits_own_rules` | Passes; fails when an action floats on a tag |
+| The kit repository's pipeline, first run | GitHub Actions, on the owner's push of `6e217c2`; read from GitHub's public record of the run | Both jobs passed, every step: Python 3.13 in 2 minutes, Python 3.10 in 4 |
 | The three branches on the owner's machine | Owner's machine | Trees equal to the workspace's. His checkout (`main`, `6e0879d`), working tree and other branches unchanged. No lock file left |
 | `python -m pytest tests`, in pieces that fit the three-minute limit for a command there | Owner's machine, Python 3.10, on a copy of the files on the virtual machine's own disk. The copy and the owner's folder have the same combined hash | 505 passed, 2 skipped |
 | The same, in the owner's folder itself | Owner's machine, through the folder shared into the virtual machine | Stopped at 372 passed, none failed. One test cannot finish there: reading through the share is slow, and the test that takes 3 seconds on the local disk takes more than 90 |
@@ -203,7 +206,7 @@ Numbering continues from the Phase 7 report, which ends at 82.
 
 | # | Decision | Why | To reverse |
 |---|---|---|---|
-| 83 | Gave the kit repository a pipeline of its own: `.github/workflows/tests.yml`, read-only, no secret, on pull requests and pushes to `main` | An acceptance line asks that CI shows a failing fixture fail, and the kit that checks other people's pipelines had none. It will run on GitHub the first time the owner pushes | Delete the file |
+| 83 | Gave the kit repository a pipeline of its own: `.github/workflows/tests.yml`, read-only, no secret, on pull requests and pushes to `main` | An acceptance line asks that CI shows a failing fixture fail, and the kit that checks other people's pipelines had none. It ran on the owner's push and passed | Delete the file |
 | 84 | The healthcare commits carry the name and address of the owner's own latest commit in that repository (`1b74f48`), which is his GitHub no-reply address | That repository has no identity configured where the commits were made, and the address configured in the kit repository is a personal one | Delete the three local branches and run `rebuild_from_bundle.py` again with another `--identity-of` |
 | 85 | Ran `git fetch origin main` in the owner's healthcare repository | The branches stand on the merged state, `8d04df3`, which his clone did not have. It moved `origin/main` and nothing else | Nothing to reverse |
 | 86 | Left the records that name workspace commit ids as they were, and added a map | The reviews and the evidence are what a decision is bound to. Editing 20 ids in them would have changed what the reviewers wrote | `examples/healthq/phase-7/commit-map.md` |
@@ -215,7 +218,7 @@ Numbering continues from the Phase 7 report, which ends at 82.
 
 In the order that unblocks most.
 
-1. **Push.** `agentic-spec-kit` `main`, and the three healthcare branches. Open three draft pull requests, each based on the one before; the texts are in `examples/healthq/phase-7/pull-requests.md`.
+1. **Push the three healthcare branches.** The kit's `main` is pushed; this update is one more local commit on it. Open three draft pull requests, each based on the one before; the texts are in `examples/healthq/phase-7/pull-requests.md`.
 2. **Find out why nothing runs in the healthcare repository's pipeline.** No workflow has run there since May 2026.
 3. **Spec 004.** Seven amendments in `specs/004-audit-identity/amendment-proposed.md`; two clear failing checks. Then task T005 on a machine that can restore the solution's packages: the eleven existing audit tests at `8d04df3`, then `dotnet test tests/HealthQCopilot.Tests.Unit` on the branch, both recorded. Then T006, and reviews for G3 to G6.
 4. **Nine draft specs** (017 to 025) at G1 and G2, and **three pairs** the kit lists as similar.
@@ -227,7 +230,7 @@ In the order that unblocks most.
 
 ## 9. Not verified
 
-- Anything on live GitHub: a review, branch protection, a token's permissions, a pipeline run on either repository. Whether `tests.yml` passes on a GitHub runner is not known until it runs.
+- Anything on live GitHub but one thing: a review, branch protection, a token's permissions, a pipeline that runs the kit on a project. The one thing is the kit repository's own test pipeline, which has run once and passed.
 - The healthcare solution: restore, build, its own tests, analyzers, coverage, a bill of materials, any deployment.
 - Any tracker, chat or mail service; Windows PowerShell; a migration on a database; an evaluation of the triage classifier.
 - A model put through the planted-instruction tests, or working in parallel mode with the path guard.
