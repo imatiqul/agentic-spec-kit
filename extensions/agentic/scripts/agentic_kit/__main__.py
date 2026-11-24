@@ -460,7 +460,8 @@ def cmd_list(args) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """Every command, action and flag the kit accepts, with what the other extensions add."""
     p = argparse.ArgumentParser(prog="agentic", description=f"agentic-spec-kit {__version__}")
     p.add_argument("--root", default=".", help="repository root (default: current directory)")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -518,8 +519,11 @@ def main(argv: list[str] | None = None) -> int:
     from .core import CLI_HOOKS
     for hook in CLI_HOOKS:
         hook(sub, common)
+    return p
 
-    args = p.parse_args(argv)
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     try:
         return args.fn(args)
     except KitError as exc:

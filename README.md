@@ -440,7 +440,7 @@ Every diagram on this page and in the guide was checked against the code and the
 | `presets/`, `steps/`, `workflows/`, `bundles/` | Profile presets, the `agentic-gate` step, the lifecycle workflow, bundle manifests. |
 | `.claude/skills/` | Three skills in the open Agent Skills format, read by Claude Code and by GitHub Copilot: a tour of the sample, the install, and an independent review. |
 | `scripts/` | Install scripts for bash and PowerShell. The PowerShell one has never been run. |
-| `tests/` | Unit tests. Self-tests live in the CLI: `agentic.py selftest`. |
+| `tests/` | Unit tests, and one that compares the command lines written in the skills, the command files and the guides with the CLI. Self-tests live in the CLI: `agentic.py selftest`. |
 | `.github/workflows/tests.yml` | This repository's own pipeline: the unit tests, the self-test and the golden tasks, on pull requests and pushes to `main`. Read-only, no secret. Added 2026-11-22; its first run, on the push of `6e217c2`, passed on Python 3.10 and 3.13. |
 | `docs/install.md`, `docs/admin-setup.md` | How to install, and what an administrator must configure. |
 | `docs/guide/roles.md` | What each role approves, what they look at, and where. |
