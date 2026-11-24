@@ -14,6 +14,8 @@ Requires Python 3.10 or later and PyYAML (3.11 or later to read a Codex `.codex/
 
 Run `python .specify/extensions/agentic/scripts/agentic.py selftest` to see every check fail on its broken fixture.
 
+In a coding agent, start with `/speckit.agentic.guide`. It says where a change stands, what is needed next and from whom, and which command to run.
+
 ## Added in slice 0.4
 
 ```bash

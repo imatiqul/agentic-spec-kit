@@ -14,6 +14,9 @@ requires:
 
 provides:
   commands:
+    - name: "speckit.agentic.guide"
+      file: "commands/guide.md"
+      description: "Say where a change stands, what is needed next and from whom, and which command to run. Start here when you do not know which command you need."
     - name: "speckit.agentic.init"
       file: "commands/init.md"
       description: "Set up the kit in this project: profile, roles, constitution map and the CI workflow."

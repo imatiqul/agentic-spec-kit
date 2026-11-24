@@ -9,7 +9,7 @@
 
 1. An agent, or the pipeline, writes the reviewer's page: `specs/<spec>/briefs/<gate>.md`. It is one page: what changed since the last review, the behaviour change, similar work, impact, risks, open waivers, and what a verifier disputed.
 2. You open the pull request and read that page, then as much of the evidence as you need.
-3. You submit a review. To approve, the review contains the line the gate command prints, for example:
+3. You submit a review. To approve, the review contains the line the gate command prints, on a line of its own, for example:
    `gate G3 approve sha256:…`
    The hash binds your decision to exactly what you reviewed. To send it back, request changes with `reject` in place of `approve`.
 4. The decision is mirrored into a record in the repository, by the pipeline or by the record command. The checks then read your review itself to confirm who you are, which role you hold, and that you did not author the change.

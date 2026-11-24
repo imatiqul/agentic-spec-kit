@@ -1,11 +1,7 @@
 # agentic-spec-kit
 
-> **Status: pre-alpha, public.** All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture.
-> It has been used once on real work: one change to the reference system was written and reviewed by agents under it. The owner merged it into that repository's `main` on 2026-11-22 with no gate review, then built it and ran its unit tests: 520 of 520 passed. Nothing has been run against a live GitHub repository or a live tracker or chat service yet. The
-> reference example has an approved constitution (Phase 4, now version 2) and twenty-five specs (Phase 5): sixteen approved at gates G1 and G2, in conversation and not yet by a pull-request review, and nine drafts that wait at those gates. Six of the specs have a draft plan (Phase 6). One change, for finding C4, is written and has been reviewed twice by agents that did not write it (Phase 7); no gate is passed for it. Its unit tests were run by the owner after the merge: 520 of 520 passed, among them the 80 tests of the change, and an agent that had not written the change verified it again on those results. Do not rely on any of this for real work.
-> `docs/limits.md` lists what the kit does not do.
->
-> The owner decided on 2026-11-22 to keep this repository public. Charter decision D2 says so, as updated on his approval.
+> **Status: pre-alpha, public.** All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture. The kit has been used once on real work, and it has never been run against a live GitHub repository, a live tracker or a chat service. Do not rely on it for real work.
+> [Status in detail](#status-in-detail) has the particulars. [`docs/limits.md`](docs/limits.md) lists what the kit does not do.
 
 An Agentic Specification-Driven Development toolkit that builds on
 [github/spec-kit](https://github.com/github/spec-kit). Agents draft, build and
@@ -15,9 +11,80 @@ A change is treated as a change to a system: every spec knows which data stores,
 shared components, contracts and other applications it touches, who owns them, and
 who must approve.
 
-## New here? Start with this
+## Start here
 
-This page explains the kit with four diagrams. Read them in order.
+Find the row that says what you want. The last column is for people who work with a coding agent: say the sentence to it, or type the name with a slash in front.
+
+| You want to | Read | Or ask Claude Code or GitHub Copilot |
+|---|---|---|
+| See it work, in ten minutes | [Try it](#try-it), then [Your first day](#your-first-day) | In a clone of this repository: "Give me the agentic-spec-kit tour." (skill `agentic-spec-kit-try`) |
+| Put it on a project | [`docs/install.md`](docs/install.md) | In a clone of this repository: "Install agentic-spec-kit into my project." (skill `agentic-spec-kit-install`) |
+| Know what to do next, in a project that has it | [How one change moves](#how-one-change-moves) | `/speckit.agentic.guide` |
+| Review a change you did not write | [Who does what](#who-does-what) | "Review this change independently." (skill `agentic-spec-kit-review`, in any repository) |
+| Approve at a gate | [What happens on a pull request](#what-happens-on-a-pull-request) and [`docs/guide/roles.md`](docs/guide/roles.md) | No agent can do this for you |
+| Set up the repository so that approvals count | [`docs/admin-setup.md`](docs/admin-setup.md) | No agent can do this for you |
+| Know what the kit cannot do | [`docs/limits.md`](docs/limits.md) | |
+
+## What you do, by role
+
+A role is a job at a gate. `roles.yml` says which person holds which role, and one person may hold several. The table gives the defaults. A project can change the approvers in `kit.yml`.
+
+| If you are | With the kit you | Start with |
+|---|---|---|
+| An engineer who builds: backend, frontend or AI | Work one task at a time, inside the files the task names. Run `check` before you ask for a review, and name each test after the criterion it proves. At Standard and Regulated you also approve: at G3 when a change touches a component you own or one a step away from it, and at G5 when it touches yours | [Your first day](#your-first-day), and [the life of one task](docs/guide/workflow.md#1-the-life-of-one-task) |
+| QA | Approve G4 with the Engineering Manager, then G5 and G6. You look at whether every criterion is traced to a passing test, and at what the independent verifier found | `agentic.py report trace --spec <spec>` |
+| Solutions Architect | Approve G2 with the Product Owner, then G3. You look at whether the plan fits the system: what it touches, what it reaches, and its data and contract changes | `agentic.py impact --spec <spec>` |
+| Product Owner | Approve G1, G2 and G7. You look at whether this is the right thing to build, and you decide each duplicate candidate | `agentic.py report gates` |
+| Engineering Manager | Approve G4. You look at whether the work is cut into tasks with owners, paths and an order that can run | `agentic.py report gates` |
+| DevOps / SRE | Approve G7 with the Product Owner. You look at readiness to run the change: rollout, rollback and alerts | `agentic.py report gates` |
+| Security and Compliance | Approve G0, the constitution. You join G3 when a change touches something that holds protected data or comes within one step of it, and G5 when it touches it. You approve a waiver marked critical | `agentic.py report waivers` |
+| Data Owner or Platform | Join G3 when a change touches a data store or a shared component, or comes within one step of one, and G5 when it touches one | `agentic.py impact --spec <spec>` |
+| The repository's administrator | Protect the default branch and make `agentic-checks` a required status check. Without that the approver rules are convention | [`docs/admin-setup.md`](docs/admin-setup.md) |
+
+A Lite project has G1, G3 and G5 only, and one approval by any listed role passes a gate. [`docs/guide/roles.md`](docs/guide/roles.md) has the exact rules, and what each role looks at.
+
+## Use it with Claude Code or GitHub Copilot
+
+The kit reaches a coding agent in three ways. All three are files in a repository, so they are reviewed like any other change.
+
+**1. Three skills in this repository.** They are in [`.claude/skills/`](.claude/skills/), written to the open [Agent Skills](https://agentskills.io) format. Claude Code reads that folder. GitHub Copilot reads it too: GitHub's documentation names `.github/skills`, `.claude/skills` and `.agents/skills` as the places for a project's skills (read on 2026-11-23). So there is one copy, and it serves both.
+
+| Skill | What it does | Where it works |
+|---|---|---|
+| `agentic-spec-kit-try` | A first tour on the sample project: five commands that write nothing, each result explained | In a clone of this repository |
+| `agentic-spec-kit-install` | Installs the kit into a Spec Kit project and configures it, then walks you through what only people do | In a clone of this repository, working on your project |
+| `agentic-spec-kit-review` | An independent review of a change, from the diff and the requirement alone: findings with file and line, then accept or return. It never edits | In any repository, with or without the kit |
+
+Ask in plain words, or name the skill with a slash in front, as in `/agentic-spec-kit-try`. To have the review skill in another repository, copy its folder there:
+
+```bash
+mkdir -p .claude/skills && cp -R path/to/agentic-spec-kit/.claude/skills/agentic-spec-kit-review .claude/skills/
+```
+
+Use `.github/skills` in place of `.claude/skills` where the repository keeps its Copilot skills there.
+
+**2. The kit's commands, in a project that has it.** The install adds them, and Spec Kit puts them where the project's coding agent reads them: `.claude/skills/` for Claude Code, `.github/skills/` for GitHub Copilot. Spec Kit writes a command's name with dots in documents and with hyphens as a skill: `/speckit.agentic.guide` is the skill `speckit-agentic-guide`.
+
+| Command | What it does |
+|---|---|
+| `/speckit.agentic.guide` | Says where a change stands, what is needed next and from whom, and which command to run. Start here |
+| `/speckit.agentic.check` | Runs every check the profile requires and reports failures |
+| `/speckit.agentic.gate` | Shows a gate's evidence, its hash, and the line a reviewer pastes |
+| `/speckit.agentic.verify` | Runs an independent verification with a declared, limited set of inputs |
+| `/speckit.agentic.trace` | Builds the trace manifest and shows which criteria are proven, in debt or a gap |
+| `/speckit.agentic.waive` | Drafts a waiver for one suppression, for a person to approve |
+| `/speckit.agentic.doctor`, `.init`, `.adopt` | Setup: what is enforced here, the first configuration, and taking on an existing codebase |
+| `/speckit.agentic-team.orchestrate`, `.role` | Run one stage with the agent team, or play one of its roles in a single session |
+
+Standard and Regulated add commands for the system map, impact analysis, change plans, quality packs, shaping a spec before its first gate, sealing a release, and connections to trackers and pipelines.
+
+**3. The agent team.** `agentic.py team init --runtimes claude,copilot,sequential` renders the kit's agents for each runtime you name: subagents in `.claude/agents/` for Claude Code, custom agents in `.github/agents/` for GitHub Copilot, and one file for the sequential mode, in which one agent plays each role in turn. Lite installs six agents, Standard and Regulated sixteen. [`docs/adapters/agent-runtime.md`](docs/adapters/agent-runtime.md) says what each runtime enforces itself, and what it does not.
+
+**Not yet run.** No Claude Code or GitHub Copilot session has loaded these skills, commands or agent files. What was done instead: the three skills were checked with the reference validator of the Agent Skills specification, every command they name was run by hand, and on Spec Kit 1.4.3 the install was seen to put the commands in `.claude/skills/` for the `claude` integration and in `.github/skills/` for the `copilot` integration.
+
+## The kit in four diagrams
+
+The rest of this page explains the kit with four diagrams. Read them in order.
 
 1. [How one change moves](#how-one-change-moves): the stages of work, the gates between them, and who approves each gate.
 2. [What happens on a pull request](#what-happens-on-a-pull-request): how an approval is given, and what makes it count.
@@ -47,6 +114,7 @@ Keep two things in mind. The kit is pre-alpha, as the status block says. And som
 | Work item | One task of the task list, kept as a file with a state such as ready or in review. |
 | Lane | The route a change takes through the gates: standard, fast or emergency. |
 | Waiver | A recorded exception to a rule, with an owner and an expiry date. |
+| Skill | A folder of instructions that a coding agent loads when a task calls for it. This repository has three, and the kit's commands reach a project as skills too. |
 | Agent | An AI model that works under a written agent spec. The spec says what the agent may read, what it may write, and what it must never do. |
 
 Commands are written here as `agentic.py <command>`. In this repository that means `python extensions/agentic/scripts/agentic.py <command>`.
@@ -145,7 +213,7 @@ Step by step:
 
 1. **The checks run.** `agentic.py init` puts a pipeline file into the project: `.github/workflows/agentic-checks.yml`. It runs `selftest` and then `check` when a pull request is opened or updated, when a review is submitted, and on every push to `main`. On a pull request the checks read `roles.yml` and `kit.yml` from the base branch, the branch the pull request will merge into. So a pull request cannot give itself new approvers.
 2. **Someone asks for the decision.** `agentic.py brief --spec <spec> --gate G3 --write` writes the brief. `agentic.py gate --spec <spec> --gate G3` lists the evidence files and the roles that must approve, and prints one line, for example `gate G3 approve sha256:…`. The long value at the end is the evidence hash.
-3. **A person decides.** The reviewer reads the brief, then as much of the evidence as they need, and submits an approving review that contains that line. To send the work back, they request changes and write `reject` in place of `approve`. A third decision, `approve-with-conditions`, needs at least one condition in the record.
+3. **A person decides.** The reviewer reads the brief, then as much of the evidence as they need, and submits an approving review that contains that line, on a line of its own. To send the work back, they request changes and write `reject` in place of `approve`. A third decision, `approve-with-conditions`, needs at least one condition in the record.
 4. **The review is mirrored.** `agentic.py record` copies the review into a decision record under `.specify/agentic/decisions/`. Where the connect extension is installed, a pipeline can do the same with `agentic.py connect mirror`. The record is only a mirror. Writing one approves nothing.
 5. **The checks compare.** Three checks read the review itself and compare it with the record: `CK-APPROVER`, `CK-GATE-MIRROR` and `CK-GATE-RECORD`. They fail when the reviewer is not listed in `roles.yml`, or does not hold a role the gate needs. They fail when the review comes from the agent's own account, from the pipeline's account, or from an account that is not a person's. And they fail when the reviewer wrote the change, reviewed another commit, or stated another hash.
 6. **A later change re-opens the gate.** If a file in the evidence changes after the approval, the recorded hash no longer matches. `gate` then prints `approve recorded for DIFFERENT evidence (the files changed since)`, and `agentic.py report gates` shows the gate as `open` again. That view compares every evidence file, so it also reacts to routine progress, such as a task ticked off in `tasks.md`. The check that fails is narrower. `CK-AMENDMENT` (Standard and Regulated) compares what was approved in the spec, the plan and the task list, and leaves out progress marks and generated files. It names the gates that need a new decision, and only those: a changed requirement re-opens G1 and G2, a changed plan G3, a new task G4.
@@ -270,7 +338,7 @@ pip install pyyaml pytest
 python extensions/agentic/scripts/agentic.py selftest     # every check fails on its broken fixture
 python -m pytest tests -q
 ```
-See `docs/install.md` to install it into a Spec Kit project.
+See [`docs/install.md`](docs/install.md) to install it into a Spec Kit project, or ask your coding agent: the skill `agentic-spec-kit-install` does the same steps.
 
 ## Your first day
 
@@ -337,7 +405,7 @@ What you do yourself, day to day:
 - Fix the cause, not the check. A skipped test or a switched-off lint rule needs a waiver.
 - Put the id of the acceptance criterion in the name of the test that proves it, as in `test_AC_001_reply_contains_name`. That is how the kit links a test to a criterion.
 - When you commit work for a task yourself, end the commit message with a line `Work-Item: <spec>/<task>`, and change only that task's files in the commit. That is how a line of code is traced back to its task.
-- If you hold a role at a gate, read the brief and the evidence. Then approve or reject in a pull-request review, with the line that `gate` prints. You may not approve a change you wrote, unless the project allows that exception.
+- If you hold a role at a gate, read the brief and the evidence. Then approve or reject in a pull-request review, with the line that `gate` prints on a line of its own. You may not approve a change you wrote, unless the project allows that exception.
 - Never write a decision record for a review that was not given. Never push to the default branch.
 
 ## More diagrams
@@ -370,7 +438,8 @@ Every diagram on this page and in the guide was checked against the code and the
 | `fixtures/multi-app/` | Two services, a shared library, a shared database and an external API, for cross-application tests. |
 | `extensions/agentic-hipaa/` | HIPAA domain pack (an engineering aid, not legal advice). |
 | `presets/`, `steps/`, `workflows/`, `bundles/` | Profile presets, the `agentic-gate` step, the lifecycle workflow, bundle manifests. |
-| `scripts/` | Install scripts for bash and PowerShell. |
+| `.claude/skills/` | Three skills in the open Agent Skills format, read by Claude Code and by GitHub Copilot: a tour of the sample, the install, and an independent review. |
+| `scripts/` | Install scripts for bash and PowerShell. The PowerShell one has never been run. |
 | `tests/` | Unit tests. Self-tests live in the CLI: `agentic.py selftest`. |
 | `.github/workflows/tests.yml` | This repository's own pipeline: the unit tests, the self-test and the golden tasks, on pull requests and pushes to `main`. Read-only, no secret. Added 2026-11-22; its first run, on the push of `6e217c2`, passed on Python 3.10 and 3.13. |
 | `docs/install.md`, `docs/admin-setup.md` | How to install, and what an administrator must configure. |
@@ -380,6 +449,16 @@ Every diagram on this page and in the guide was checked against the code and the
 | `docs/release-notes.md` | What each slice contains. Nothing has been released. |
 | `examples/healthq/` | Reference example: the Phase 1 findings script and draft map, the approved constitution (`phase-4/`), `phase-7/` (the stand-in test project for the C4 change, the pull-request texts, and how the branches reached the owner's machine), `phase-10/` (a sample evidence pack), and `project/`: the reference as a project the kit checks, with its system map and specs. `overlay.py` lays it over a clone of the healthcare repo, and `export.py` writes it as it goes into that repo. No source code from that repo is copied here. |
 | `NOTICE.md` | Upstream and community attribution. |
+
+## Status in detail
+
+All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture.
+
+It has been used once on real work: one change to the reference system was written and reviewed by agents under it. The owner merged it into that repository's `main` on 2026-11-22 with no gate review, then built it and ran its unit tests: 520 of 520 passed. Nothing has been run against a live GitHub repository or a live tracker or chat service yet. The reference example has an approved constitution (Phase 4, now version 2) and twenty-five specs (Phase 5): sixteen approved at gates G1 and G2, in conversation and not yet by a pull-request review, and nine drafts that wait at those gates. Six of the specs have a draft plan (Phase 6). One change, for finding C4, is written and has been reviewed twice by agents that did not write it (Phase 7); no gate is passed for it. Its unit tests were run by the owner after the merge: 520 of 520 passed, among them the 80 tests of the change, and an agent that had not written the change verified it again on those results. Do not rely on any of this for real work. `docs/limits.md` lists what the kit does not do.
+
+The owner decided on 2026-11-22 to keep this repository public. Charter decision D2 says so, as updated on his approval.
+
+On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub Copilot and the command `/speckit.agentic.guide` were added, and this page was given a way in for every engineer: by what you want, by role, and by coding agent. No coding agent has loaded the skills or the command yet. The same day the commands of this page were run on a fresh clone of the public repository for the first time. That found that the install script could not be run as the documents wrote it, which is corrected. What it left open is in `docs/limits.md`.
 
 ## Progress
 

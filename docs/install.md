@@ -5,14 +5,16 @@ Needs: Spec Kit 1.4.3 (`specify --version`), Python 3.10 or later with PyYAML (3
 ## 1. Install into a Spec Kit project
 ```bash
 # from the root of a project already set up with `specify init`
-path/to/agentic-spec-kit/scripts/install.sh . standard          # or lite, or: regulated hipaa
+bash path/to/agentic-spec-kit/scripts/install.sh . standard     # or lite, or: regulated hipaa
 ```
 ```powershell
 path\to\agentic-spec-kit\scripts\install.ps1 -Project . -Profile standard      # add -Pack hipaa for regulated
 ```
-The script runs ordinary `specify` commands: the `agentic` extension, an optional domain pack, the `agentic-team` extension, the profile preset, the `agentic-gate` step and three workflows (`agentic-sdd`, `agentic-sdd-team`, `agentic-sdd-sequential`).
+Call the script through `bash`, as written. The PowerShell script has never been run. The script runs ordinary `specify` commands: the `agentic` extension, an optional domain pack, the `agentic-team` extension, the profile preset, the `agentic-gate` step and three workflows (`agentic-sdd`, `agentic-sdd-team`, `agentic-sdd-sequential`).
 
 For Standard and Regulated the script also installs `agentic-system` (the system map and impact analysis), `agentic-quality` (quality packs), `agentic-product` (intake, living specs, duplicates) and `agentic-connect` (trackers, pipelines, notifications). Lite installs none of the four. After installing, draft the map with `agentic.py map discover --write`, give every node an owner, tier and classification, and save it as `system-map/map.yml`. Until that file exists the map checks report "not run".
+
+With a coding agent, the skill `agentic-spec-kit-install` in this repository's `.claude/skills/` does this section and the next two with you. Claude Code and GitHub Copilot both read that folder.
 
 Bundles are in `bundles/` but cannot be installed yet. Spec Kit 1.4.3 resolves a bundle's components only through catalogs, and this kit has not published one.
 
@@ -24,6 +26,8 @@ python .specify/extensions/agentic/scripts/agentic.py init --profile standard --
 python .specify/extensions/agentic/scripts/agentic.py team init --runtimes claude,copilot,sequential   # name the runtimes you use
 ```
 `team init` copies the agent specs for your profile into `.specify/agentic/agents/` and renders the runtime files. See `docs/adapters/agent-runtime.md` for what each runtime enforces.
+
+Spec Kit puts the kit's commands where the project's coding agent reads them: `.claude/skills/` for Claude Code, `.github/skills/` for GitHub Copilot. Start with `/speckit.agentic.guide`, which says where a change stands and which command to run next.
 
 Then, by hand:
 1. List real people and their roles in `.specify/agentic/roles.yml`. Use account names from the enforcement channel. Never list an agent or CI account.
@@ -49,8 +53,9 @@ Fill in an owner and expiry for each group, have it approved in a review, and sa
 ## 5. Working a spec
 | Step | Command |
 |---|---|
+| Find out where a change stands and what comes next | `/speckit.agentic.guide`, in your coding agent |
 | See what a gate needs and the line to paste | `agentic.py gate --spec <id> --gate G3` |
-| A human submits the review in the pull request | (in GitHub, not by an agent) |
+| A human submits the review in the pull request, with that line on a line of its own | (in GitHub, not by an agent) |
 | Mirror the review into a decision record | `agentic.py record --spec <id> --gate G3 --decision approve --commit <sha> --approval <user>:<role>:pull/<n>#review-<id>` |
 | Build the trace manifest | `agentic.py trace --write` |
 | Run the whole lifecycle with gates | `specify workflow run agentic-sdd -i spec="..."` |

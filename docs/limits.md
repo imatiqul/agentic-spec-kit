@@ -81,12 +81,21 @@ Phase 7 took one change of the reference system through the kit, and the closing
 - **The gate views and the amendment check disagree about a ticked task.** `gate` and `report gates` compare every evidence file of a gate. The task list and the trace manifest are evidence of G4, so ticking a task off, or building the manifest again when test results arrive, shows G4 as open again and the gates after it as later. The amendment check leaves progress marks and generated files out on purpose and says nothing changed. Found when the diagrams in the README were checked against the commands.
 - **The check for code that changes with no spec does not run in the pipelines the kit ships.** CK-DRIFT-SPEC needs a list of the files that changed (`--changed-files`). The shipped pipeline files pass a base ref and no such list, so there the check is skipped in every run, with a note.
 
+## Found by following the documents on a fresh clone, and not fixed
+
+On 2026-11-23 the commands of the README and of `docs/install.md` were run as written on a fresh clone of the public repository, for the first time. One thing this showed is corrected (`docs/release-notes.md`): the install script could not be run as the documents wrote it. These were not:
+
+- **`agentic.py list | head` ends in a Python traceback.** The command does not handle a pipe that closes early. Nothing is wrong with the list when it is read to the end.
+- **Two notes of CK-AGENT-SPEC read wrongly.** After `team init` with the `copilot` and `sequential` runtimes, `check` prints "paths are enforced not enforced by the runtime; the diff check after the run" for GitHub Copilot, and "paths are enforced the diff check after the run" for the sequential mode. What is meant is in `docs/adapters/agent-runtime.md`: GitHub Copilot does not enforce write paths itself, the sequential mode does so only where the integration has an event before each tool call, and in both the diff check afterwards is the one that counts.
+- **Nothing checks the skills and the command files against the CLI.** A check compares every rendered agent file with its spec. Nothing compares the three skills in `.claude/skills/`, or the text of a command file, with the commands they name. A sub-command that is renamed leaves them wrong until someone reads them.
+
 ## Never run
 
 As of 2026-11-22 none of the following has happened, so everything that depends on it is unproven:
 
 - a pull request, a review or branch protection on a live GitHub repository;
 - a coding-agent runtime (Claude Code, GitHub Copilot) loading the rendered agent files, the path guard on that runtime's events, or the allowlist against real tool servers. One model has worked one change through the sequential mode, with a context pack for each task and a separate session for each of the two reviewing agents (`docs/phase-reports/phase-7-c4-walkthrough.md`); that is the only use by a model so far;
+- Claude Code or GitHub Copilot loading the three skills in `.claude/skills/`, or the commands the install adds to a project (added 2026-11-23). The skills were checked with the reference validator of the Agent Skills specification and every command they name was run by hand. On Spec Kit 1.4.3 the install was seen to write the commands to `.claude/skills/` for the `claude` integration and to `.github/skills/` for the `copilot` integration. That GitHub Copilot reads `.claude/skills/` is taken from GitHub's documentation and was not tried;
 - any tracker, chat or mail adapter against its live service;
 - any of the three pipeline files the kit ships, in its CI system. So what git says about the branch in each system's clone, which the gate check relies on there, has been tried on clones made by hand and not in a run. This repository's own `.github/workflows/tests.yml` has run: first on the owner's push of 2026-11-22, where it passed on Python 3.10 and 3.13. It runs the kit's tests. It is not the kit running on a project;
 - any pipeline of the reference system: no workflow of that repository has run since May 2026. Its unit tests were run by the owner on his machine on 2026-11-22, after the reference change had been merged: 520 of 520 passed, read from his results file. Its other test projects have not run. From where the change was written the package registry could not be reached;
