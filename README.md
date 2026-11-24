@@ -458,7 +458,7 @@ It has been used once on real work: one change to the reference system was writt
 
 The owner decided on 2026-11-22 to keep this repository public. Charter decision D2 says so, as updated on his approval.
 
-On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub Copilot and the command `/speckit.agentic.guide` were added, and this page was given a way in for every engineer: by what you want, by role, and by coding agent. That evening the owner ran the first skill, `/agentic-spec-kit-try`, in Claude Code and in GitHub Copilot. No coding agent has run the other two skills or the command yet. The same day the commands of this page were run on a fresh clone of the public repository for the first time. That found that the install script could not be run as the documents wrote it, which is corrected. What it left open is in `docs/limits.md`.
+On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub Copilot and the command `/speckit.agentic.guide` were added, and this page was given a way in for every engineer: by what you want, by role, and by coding agent. That evening the owner ran the first skill, `/agentic-spec-kit-try`, in Claude Code and in GitHub Copilot. No coding agent has run the other two skills or the command yet. The same day the commands of this page were run on a fresh clone of the public repository for the first time. That found three things that are now corrected: the install script could not be run as the documents wrote it, a command piped into `head` ended in a traceback, and two notes of one check read wrongly. What it left open is in `docs/limits.md`.
 
 ## Progress
 

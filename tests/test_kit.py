@@ -1,5 +1,7 @@
 """Unit tests for slice 0.1. Run: python -m pytest tests -q   (needs pyyaml and git)."""
+import errno
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -565,6 +567,64 @@ def test_cli_exit_codes(sample, capsys):
     assert main(["--root", str(sample), "check", "CK-TIER"]) == 2
     assert main(["--root", str(sample), "check", "CK-NOPE"]) == 2
     capsys.readouterr()
+
+
+LAUNCHER = Path(__file__).resolve().parents[1] / "extensions" / "agentic" / "scripts" / "agentic.py"
+
+
+def to_a_reader_that_has_gone(*args):
+    """Run the launcher as a program whose output nobody reads any more: what `... | head` does to it."""
+    read_end, write_end = os.pipe()
+    os.close(read_end)
+    try:
+        return subprocess.run([sys.executable, str(LAUNCHER), *args], stdout=write_end, stderr=subprocess.PIPE, text=True)
+    finally:
+        os.close(write_end)
+
+
+def test_a_program_whose_reader_has_gone_ends_with_no_traceback_and_not_with_a_pass(sample):
+    from agentic_kit.__main__ import PIPE_CLOSED
+    passing = ["--root", str(sample), "check", "CK-TIER"]
+    assert subprocess.run([sys.executable, str(LAUNCHER), *passing], capture_output=True, text=True).returncode == 0
+    for args in (["list"], passing, ["--root", str(sample), "doctor"]):
+        ended = to_a_reader_that_has_gone(*args)
+        assert ended.stderr == "", (args, ended.stderr)
+        assert ended.returncode == PIPE_CLOSED, (args, ended.returncode)
+    helped = to_a_reader_that_has_gone("--help")  # argparse drops a help text it cannot write, so 0 is possible here
+    assert helped.stderr == "" and helped.returncode in (0, PIPE_CLOSED)
+
+
+def test_a_reader_that_reads_to_the_end_gets_everything_and_the_usual_exit_code():
+    whole = subprocess.run([sys.executable, str(LAUNCHER), "list"], capture_output=True, text=True)
+    assert whole.returncode == 0 and whole.stderr == ""
+    listed = [line.split()[0] for line in whole.stdout.splitlines()]
+    assert listed == sorted(set(listed)) and set(REGISTRY) <= set(listed)  # the program also lists the checks of the other extensions
+
+
+def test_only_a_closed_pipe_ends_a_run_quietly(monkeypatch):
+    import agentic_kit.__main__ as program
+
+    class Gone:  # standard output after its reader has gone: it can no longer be flushed
+        def flush(self):
+            raise OSError(errno.EINVAL, "Invalid argument")
+
+    class Intact:
+        def flush(self):
+            pass
+
+    invalid = OSError(errno.EINVAL, "Invalid argument")
+    assert program.reader_went_away(BrokenPipeError(errno.EPIPE, "Broken pipe"), stream=Intact(), windows=False)
+    assert program.reader_went_away(invalid, stream=Gone(), windows=True), "Windows reports a closed pipe as an invalid argument"
+    assert not program.reader_went_away(invalid, stream=Intact(), windows=True), "standard output is intact, so this is another error"
+    assert not program.reader_went_away(invalid, stream=Gone(), windows=False)
+    assert not program.reader_went_away(PermissionError(errno.EACCES, "no"), stream=Gone(), windows=True)
+
+    def refused(argv=None):
+        raise PermissionError(errno.EACCES, "Permission denied")
+
+    monkeypatch.setattr(program, "main", refused)
+    with pytest.raises(PermissionError):
+        program.cli([])
 
 
 def test_gate_command_prints_the_line_to_paste(sample, capsys):

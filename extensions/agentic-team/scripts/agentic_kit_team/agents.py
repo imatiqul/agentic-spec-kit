@@ -45,7 +45,7 @@ RUNTIMES = {
                   "web": ["WebFetch", "WebSearch"], "agent": ["Agent"]},
         "models": {"fast": "haiku", "standard": "sonnet", "strong": "opus"},
         "enforces": {"tools": "natively: the subagent only receives the tools listed",
-                     "paths": "by the pre-tool-use event script for file-writing tools; shell commands and everything else fall back to the diff check",
+                     "paths": "enforced by the pre-tool-use event script for file-writing tools; shell commands and everything else fall back to the diff check",
                      "model": "natively: one model alias per class"},
     },
     "copilot": {
@@ -53,14 +53,14 @@ RUNTIMES = {
         "tools": {"read": ["read"], "search": ["search"], "edit": ["edit"], "run": ["execute"], "web": ["web"], "agent": ["agent"]},
         "models": {},
         "enforces": {"tools": "natively: the agent profile lists its tools",
-                     "paths": "not enforced by the runtime; the diff check after the run",
+                     "paths": "not enforced by the runtime; the diff check after the run is the one that counts",
                      "model": "not set: the profile inherits the default model unless kit.yml maps a class to a model"},
     },
     "sequential": {
         "title": "Sequential single-agent mode", "path": f"{AGENTS_DIR}/rendered/sequential.md",
         "tools": {}, "models": {},
         "enforces": {"tools": "not enforced: one agent plays each role in turn",
-                     "paths": "the diff check after the run (and the event script, where the integration supports events)",
+                     "paths": "enforced by the event script only where the integration supports events; the diff check after the run is the one that counts",
                      "model": "not enforced; verification starts a new session"},
     },
 }

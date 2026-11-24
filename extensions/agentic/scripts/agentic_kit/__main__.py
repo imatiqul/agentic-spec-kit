@@ -1,11 +1,14 @@
 """Command line for the kit. Every command works without an agent.
 
 Exit codes: 0 all good, 1 a check failed, 2 a check could not run or the command was misused.
+Run as a program, 141 when whatever was reading the output stopped before the end (`... | head`).
 """
 from __future__ import annotations
 
 import argparse
+import errno
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -524,5 +527,46 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
 
+PIPE_CLOSED = 141  # what a shell reports for a program stopped by a closed pipe
+
+
+def reader_went_away(exc: OSError, stream=None, windows: bool | None = None) -> bool:
+    """Whether `exc` says that whatever was reading standard output has stopped, as `head` does.
+
+    Mostly that is a broken pipe. Windows can report it as an invalid argument, which can mean other
+    things, so there it counts only when standard output itself can no longer be flushed."""
+    if isinstance(exc, BrokenPipeError):
+        return True
+    if not ((os.name == "nt" if windows is None else windows) and exc.errno == errno.EINVAL):
+        return False
+    try:
+        (sys.stdout if stream is None else stream).flush()
+    except (OSError, ValueError):
+        return True
+    return False
+
+
+def cli(argv: list[str] | None = None):
+    """`main`, for use as a program. When a write finds the reader gone, the run ends with no traceback and
+    with PIPE_CLOSED in place of the command's own code: the output was cut short, so the caller did not get
+    the result. Any other error is raised as before."""
+    try:
+        try:
+            code = main(argv)
+        except SystemExit as stop:  # argparse, after --help or a usage error
+            code = stop.code
+        if sys.stdout is not None:
+            sys.stdout.flush()  # a closed pipe shows here, and not while the interpreter exits
+    except OSError as exc:
+        if not reader_went_away(exc):
+            raise
+        try:  # the interpreter flushes once more on its way out: give that somewhere to go
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        except (OSError, ValueError, AttributeError):
+            pass
+        return PIPE_CLOSED
+    return code
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(cli())

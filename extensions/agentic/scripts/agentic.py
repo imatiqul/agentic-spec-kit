@@ -8,7 +8,7 @@ from agentic_kit.core import load_plugins  # noqa: E402
 
 load_plugins(Path(__file__).resolve().parent)  # sibling extensions register their checks and commands
 
-from agentic_kit.__main__ import main  # noqa: E402
+from agentic_kit.__main__ import cli  # noqa: E402
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(cli())

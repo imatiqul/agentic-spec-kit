@@ -54,6 +54,10 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 - The install script is called through `bash` in every document, and is marked executable in the repository. Before, the documents called it by its path, and a fresh clone refused it with "Permission denied": the file had no executable bit. Found on 2026-11-23, when the documents' commands were first run on a fresh clone of the public repository.
 - The documents say that the gate's line stands on a line of its own in the review. The check has always required that. The documents said only that the review contains the line.
 
+## Fixed on 2026-11-23, after the documents were followed on a fresh clone
+- A command whose output goes to a program that stops reading, as in `agentic.py list | head`, ends with exit code 141 and no traceback. Before, it ended in a Python traceback and exit code 1, which for `check` and `doctor` is the code of a failed check. 141 is what a shell reports for a program stopped by a closed pipe. Under `set -o pipefail` it fails the step, so a run that was cut short does not read as a pass. Tried on Linux; `docs/limits.md` says what is open on Windows.
+- The notes of CK-AGENT-SPEC say in a sentence how each runtime enforces write paths. Before, the notes for GitHub Copilot and for the sequential mode read "paths are enforced not enforced by the runtime; the diff check after the run" and "paths are enforced the diff check after the run (and the event script, where the integration supports events)". `team list` prints the same three texts.
+
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

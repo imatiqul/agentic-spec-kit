@@ -83,10 +83,9 @@ Phase 7 took one change of the reference system through the kit, and the closing
 
 ## Found by following the documents on a fresh clone, and not fixed
 
-On 2026-11-23 the commands of the README and of `docs/install.md` were run as written on a fresh clone of the public repository, for the first time. One thing this showed is corrected (`docs/release-notes.md`): the install script could not be run as the documents wrote it. These were not:
+On 2026-11-23 the commands of the README and of `docs/install.md` were run as written on a fresh clone of the public repository, for the first time. Three things this showed are corrected (`docs/release-notes.md`): the install script could not be run as the documents wrote it, a command whose reader stopped early ended in a Python traceback, and two notes of CK-AGENT-SPEC read wrongly. These were not:
 
-- **`agentic.py list | head` ends in a Python traceback.** The command does not handle a pipe that closes early. Nothing is wrong with the list when it is read to the end.
-- **Two notes of CK-AGENT-SPEC read wrongly.** After `team init` with the `copilot` and `sequential` runtimes, `check` prints "paths are enforced not enforced by the runtime; the diff check after the run" for GitHub Copilot, and "paths are enforced the diff check after the run" for the sequential mode. What is meant is in `docs/adapters/agent-runtime.md`: GitHub Copilot does not enforce write paths itself, the sequential mode does so only where the integration has an event before each tool call, and in both the diff check afterwards is the one that counts.
+- **A reader that stops early is handled as far as it was tried, which is on Linux.** A command whose output goes to a program that stops reading, as in `agentic.py list | head`, ends with exit code 141 and no traceback. Windows can report a closed pipe as another error than Linux does. The kit treats that error the same way when standard output can no longer be flushed; a test simulates this, and it has not been tried on Windows. On any system the command cannot know of a reader that stops after its last write, and `--help` written to a reader that has gone still ends with 0.
 - **Nothing checks the skills and the command files against the CLI.** A check compares every rendered agent file with its spec. Nothing compares the three skills in `.claude/skills/`, or the text of a command file, with the commands they name. A sub-command that is renamed leaves them wrong until someone reads them.
 
 ## Never run

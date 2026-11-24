@@ -716,6 +716,19 @@ def test_agent_spec_rules(proj):
     assert any("the minimum team is incomplete: independent-verifier is missing" in m for m in msgs(run(proj, "CK-AGENT-SPEC")))
 
 
+def test_the_note_on_write_paths_reads_as_a_sentence_for_every_runtime(proj):
+    k = proj / ".specify/agentic/kit.yml"
+    k.write_text(k.read_text().replace("- sequential", "- sequential\n  - claude\n  - copilot"))
+    assert cli(proj, "team", "render") == 0
+    result = run(proj, "CK-AGENT-SPEC")
+    assert result.ok
+    said = dict(note.split(": ", 1) for note in result.notes)
+    assert said["Claude Code subagents"].startswith("write paths are enforced by the pre-tool-use event script")
+    assert said["GitHub Copilot custom agents"].startswith("write paths are not enforced by the runtime;")
+    assert said["Sequential single-agent mode"].startswith("write paths are enforced by the event script only where")
+    assert len(said) == 3 and all("diff check" in text for text in said.values()), "each names what catches a write the runtime let through"
+
+
 def test_changing_a_spec_without_rendering_and_stray_generated_files_fail(proj):
     edit_spec(proj, "scribe", "Summarise a disagreement away", "Paper over a disagreement")
     assert any("differs from a fresh render" in m for m in msgs(run(proj, "CK-AGENT-SPEC")))

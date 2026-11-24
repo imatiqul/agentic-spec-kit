@@ -15,6 +15,8 @@
 | `agentic.py connect mirror --change pull/<n> --commit <sha> --write` | Optional, after a review | 0 |
 | `agentic.py connect fetch` | On a schedule | 0, or 2 if a source could not be read |
 
+A command whose output is piped into a program that stops reading before the end, such as `head`, ends with 141 and gives no result. Under `set -o pipefail` that fails the step. Read the output to the end, or send it to a file.
+
 `--base-ref` is the commit to compare with: the target branch for a proposed change, the previous commit on the default branch. Roles, settings, domain packs, agent specs, the tool allowlist and `connect.yml` are read from it.
 
 On the default branch the gate check also asks each spec whose work is there for G5 and G6; on a proposed change it does not (`docs/design/checks.md`). The pipeline does not have to say which of the two it is. It makes a full clone of the project's repository, and git says: either the default branch is checked out, or the commit that is checked out is on it. The three shipped files rely on that and pass nothing for it.

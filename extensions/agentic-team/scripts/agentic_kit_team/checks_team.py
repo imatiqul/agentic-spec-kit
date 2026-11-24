@@ -51,7 +51,7 @@ def ck_agent_spec(ctx: Context, res: Result) -> None:
             if rel not in expected and ag.MARK in ctx.src.read(rel)[:2000]:
                 res.fail("a generated agent file has no agent spec behind it", rel)
     for runtime in ag.team_config(ctx)["runtimes"]:
-        res.notes.append(f"{ag.RUNTIMES[runtime]['title']}: paths are enforced {ag.RUNTIMES[runtime]['enforces']['paths']}")
+        res.notes.append(f"{ag.RUNTIMES[runtime]['title']}: write paths are {ag.RUNTIMES[runtime]['enforces']['paths']}")
 
 
 def _history_states(item: dict) -> list[str]:

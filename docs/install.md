@@ -41,7 +41,7 @@ python .specify/extensions/agentic/scripts/agentic.py doctor     # can approvals
 python .specify/extensions/agentic/scripts/agentic.py check      # every check for the active profile
 python .specify/extensions/agentic/scripts/agentic.py selftest   # prove each check fails on a broken fixture
 ```
-Exit codes: 0 pass, 1 a check failed, 2 a check could not run. In Lite, "could not run" is a warning.
+Exit codes: 0 pass, 1 a check failed, 2 a check could not run. In Lite, "could not run" is a warning. A command whose output is piped into a program that stops reading early, such as `head`, ends with 141.
 
 ## 4. Adopting an existing codebase
 ```bash

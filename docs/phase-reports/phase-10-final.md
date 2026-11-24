@@ -65,11 +65,18 @@ Section 1 is changed to match. No acceptance line moved, and no count in section
 
 The places that said no coding agent had loaded the skills now say this, and section 1 is changed to match. No acceptance line moved.
 
+**Later still on 2026-11-23: two faults found on the fresh clone were fixed, each with a test.**
+
+- **A command whose reader stops early ends with exit code 141 and no traceback.** Before, `agentic.py list | head` ended in a Python traceback and exit code 1, and so did `check` and `doctor`, for which 1 is the code of a failed check. It was tried on Linux, with a reader that had already gone and ten times with `head`. Windows can report a closed pipe as another error; how the kit handles that is simulated in a test and has not been tried there.
+- **The three notes of CK-AGENT-SPEC read as sentences.** They were read from `check` in a new Lite project set up with the commands of `docs/install.md`.
+
+While this was being written the owner pushed `666e895`, the commit of the note before this one, and the repository's pipeline passed on it. Sections 1 and 6 are changed to match. No acceptance line moved. Four tests were added; no check or fixture was.
+
 ## 1. Where everything is
 
 | What | Where | State |
 |---|---|---|
-| The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner up to `c4a2129`, which holds the skills, the ninth command and the README of 2026-11-23; the repository's pipeline passed on it. The record of his two runs of the first skill is a later local commit, for the owner to push |
+| The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner up to `666e895`, which holds the record of his two runs of the first skill; the repository's pipeline passed on it. The two fixes of the last note are a later local commit, for the owner to push |
 | Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, branch `sdd/reference-plans` (`89a4fc9`) | Merged into `main` by the owner (pull request #74). Still waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
 | The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Built and unit-tested by him afterwards: 520 of 520 passed, read from his results file. The record of that run is reviewed and the verification is repeated on it. Still waits on seven amendments, a review of that verification by an agent other than the verifier, and gate reviews |
 | Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Merged into `main` by the owner (pull request #75). Nothing in it is approved or enforced: the baseline is still a proposal outside the folder the kit reads |
@@ -268,6 +275,10 @@ These are proposals. None was started.
 | The kit repository's pipeline on `c8534a5`, the commit with the changes of the last note | GitHub Actions, on the owner's push; read from GitHub's public record of the run | Passed (run 45116965577) |
 | Healthcare pull request #78, the Aspire upgrade | GitHub's public record, read just after the merge | Opened at 23:36:47 and merged at 23:37:02 on 2026-11-22 (UTC-6). `main` is `0ecb2a2`. No workflow of the repository started; only the hosted code review did |
 | The versions of the Aspire upgrade | NuGet's version lists and package descriptions; GitHub's advisory database; the Aspire source at the tag `v13.6.5` | Each version exists. No advisory is listed for `Aspire.Hosting`, the dashboard package for Windows or MessagePack at the new versions; the same question for 13.6.4 returns the advisory. The two methods the host now calls are in the source with the arguments used. Nothing was restored or built |
+| The kit repository's pipeline on `c4a2129`, the commit with the skills | GitHub Actions, on the owner's push; read from GitHub's public record of the run | Passed on Python 3.10 and 3.13 (run 45328487459) |
+| The same on `666e895`, the commit that records the owner's two runs of the first skill | GitHub Actions, on the owner's push; read from GitHub's public record of the run | Passed on Python 3.10 and 3.13 (run 45331917091) |
+| `python -m pytest tests`, with both clones, after the two fixes of 2026-11-23 | Workspace, Python 3.13 | 535 passed, in about three minutes |
+| `agentic.py selftest`; `golden run`, after those fixes | Workspace | 105 fixtures as expected; 10 of 10 in each mode |
 
 No other test project of the healthcare solution has run.
 
