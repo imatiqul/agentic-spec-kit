@@ -80,7 +80,7 @@ Standard and Regulated add commands for the system map, impact analysis, change 
 
 **3. The agent team.** `agentic.py team init --runtimes claude,copilot,sequential` renders the kit's agents for each runtime you name: subagents in `.claude/agents/` for Claude Code, custom agents in `.github/agents/` for GitHub Copilot, and one file for the sequential mode, in which one agent plays each role in turn. Lite installs six agents, Standard and Regulated sixteen. [`docs/adapters/agent-runtime.md`](docs/adapters/agent-runtime.md) says what each runtime enforces itself, and what it does not.
 
-**Not yet run.** No Claude Code or GitHub Copilot session has loaded these skills, commands or agent files. What was done instead: the three skills were checked with the reference validator of the Agent Skills specification, every command they name was run by hand, and on Spec Kit 1.4.3 the install was seen to put the commands in `.claude/skills/` for the `claude` integration and in `.github/skills/` for the `copilot` integration.
+**Run in a coding agent so far: one skill.** On 2026-11-23 the owner ran `/agentic-spec-kit-try` in Claude Code and in GitHub Copilot, in his clone on Windows. What is on record of those two sessions is in [`docs/limits.md`](docs/limits.md), under "Never run". Neither tool has run the other two skills, the kit's commands in a project, or the agent files. What was done for those instead: the three skills were checked with the reference validator of the Agent Skills specification, every command they name was run by hand, and on Spec Kit 1.4.3 the install was seen to put the commands in `.claude/skills/` for the `claude` integration and in `.github/skills/` for the `copilot` integration.
 
 ## The kit in four diagrams
 
@@ -458,7 +458,7 @@ It has been used once on real work: one change to the reference system was writt
 
 The owner decided on 2026-11-22 to keep this repository public. Charter decision D2 says so, as updated on his approval.
 
-On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub Copilot and the command `/speckit.agentic.guide` were added, and this page was given a way in for every engineer: by what you want, by role, and by coding agent. No coding agent has loaded the skills or the command yet. The same day the commands of this page were run on a fresh clone of the public repository for the first time. That found that the install script could not be run as the documents wrote it, which is corrected. What it left open is in `docs/limits.md`.
+On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub Copilot and the command `/speckit.agentic.guide` were added, and this page was given a way in for every engineer: by what you want, by role, and by coding agent. That evening the owner ran the first skill, `/agentic-spec-kit-try`, in Claude Code and in GitHub Copilot. No coding agent has run the other two skills or the command yet. The same day the commands of this page were run on a fresh clone of the public repository for the first time. That found that the install script could not be run as the documents wrote it, which is corrected. What it left open is in `docs/limits.md`.
 
 ## Progress
 

@@ -49,7 +49,7 @@ Sections 1, 5, 6, 7, 8 and 9 are changed to match. No acceptance line moved.
 
 **On 2026-11-23, at the owner's request: skills for two coding agents, a way into the README for every engineer, and the documents' commands run on a fresh clone for the first time.**
 
-- **Three skills for Claude Code and GitHub Copilot are in `.claude/skills/`**, in the open Agent Skills format: a tour of the sample, the install, and an independent review that works in any repository. One copy serves both tools, because GitHub's documentation names `.claude/skills` among the folders GitHub Copilot reads; that was read and not tried. The specification's reference validator accepts all three. No coding agent has loaded them.
+- **Three skills for Claude Code and GitHub Copilot are in `.claude/skills/`**, in the open Agent Skills format: a tour of the sample, the install, and an independent review that works in any repository. One copy serves both tools, because GitHub's documentation names `.claude/skills` among the folders GitHub Copilot reads; that was read and not tried. The specification's reference validator accepts all three. No coding agent had loaded them when this note was written; the next note says what the owner then ran.
 - **The core extension has a ninth command, `/speckit.agentic.guide`**: where a change stands, what is needed next and from whom, and which command to run. On Spec Kit 1.4.3 the install was seen to write it, with the other commands, to `.claude/skills/` in a project with the `claude` integration and to `.github/skills/` in one with the `copilot` integration. Every command of the kit's CLI that it names was run in a new Lite project.
 - **The README has three sections ahead of its diagrams**: a way in by what you want, by role, and by coding agent. The table by role was taken from `docs/guide/roles.md`.
 - **The documents' commands were run as written on a fresh clone of the public `main` (`7ad074a`)**, the five commands on the sample and the self-test in a Python environment that held only PyYAML, and the install into three new Spec Kit projects, one for each profile. The install could not be run as `docs/install.md` wrote it: the script had no executable bit in the repository, and the clone refused it with "Permission denied". The working copy the kit was built in has the bit, which is why nobody had seen it. The documents now call the script through `bash`, and the bit is set. The acceptance line "a new engineer installs the kit from the README alone" stays "in part": this was the author's agent on a clone, not a new engineer.
@@ -57,11 +57,19 @@ Sections 1, 5, 6, 7, 8 and 9 are changed to match. No acceptance line moved.
 
 Section 1 is changed to match. No acceptance line moved, and no count in sections 4 to 6 changed: no check, test or fixture was added.
 
+**Later on 2026-11-23: the owner pushed that commit and ran one skill in both tools.**
+
+- **The kit's `main` on GitHub is `c4a2129`.** The repository's pipeline ran on the push and passed on Python 3.10 and 3.13 (run 45328487459).
+- **He ran `/agentic-spec-kit-try` in Claude Code and in GitHub Copilot**, in his clone on Windows, and said so. The agent saw neither session, and what they printed is not on record. What the agent could read is bytecode left in that clone: the kit's CLI ran there under Python 3.12 for Windows that evening. That is the first trace of the CLI running on Windows.
+- **Still not run in a coding agent:** the other two skills, the commands the install adds to a project, and the agent files.
+
+The places that said no coding agent had loaded the skills now say this, and section 1 is changed to match. No acceptance line moved.
+
 ## 1. Where everything is
 
 | What | Where | State |
 |---|---|---|
-| The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner up to `7ad074a`; the repository's pipeline passed on `c8534a5`, which holds the kit's last change to its code. The skills, the ninth command and the README of 2026-11-23 are a later local commit, for the owner to push |
+| The kit: six extensions, 105 checks, 16 agents, three pipelines | `imatiqul/agentic-spec-kit`, `main` | Pushed by the owner up to `c4a2129`, which holds the skills, the ninth command and the README of 2026-11-23; the repository's pipeline passed on it. The record of his two runs of the first skill is a later local commit, for the owner to push |
 | Governance for the reference: constitution version 2, the map, 25 specs, six draft plans, the agent team | Healthcare repository, branch `sdd/reference-plans` (`89a4fc9`) | Merged into `main` by the owner (pull request #74). Still waits at G1 and G2 (nine specs), G3 and G4 (six plans) |
 | The C4 change: 14 code files, 80 tests, 39 files of record | Branch `sdd/004-audit-identity` (`1e8d054`), on the branch above | Merged into `main` by the owner (pull request #73). Built and unit-tested by him afterwards: 520 of 520 passed, read from his results file. The record of that run is reviewed and the verification is repeated on it. Still waits on seven amendments, a review of that verification by an agent other than the verifier, and gate reviews |
 | Proposals: adoption baseline, threat model and authorization matrix for C2, the setting that shows H4 | Branch `sdd/showcase-proposals` (`a44c57c`), on the branch above | Merged into `main` by the owner (pull request #75). Nothing in it is approved or enforced: the baseline is still a proposal outside the folder the kit reads |

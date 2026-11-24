@@ -2,7 +2,7 @@
 name: agentic-spec-kit-try
 description: Give a first tour of agentic-spec-kit on its sample project. Runs the kit's read-only commands (doctor, check, report gates, gate, impact) from a clone of the kit and explains what each result means. Use when someone is new to agentic-spec-kit and asks to try it, see it work, or understand what its checks and gates print.
 license: MIT
-compatibility: Run from the root of a clone of github.com/imatiqul/agentic-spec-kit. Needs Python 3.10 or later with PyYAML. Tried on Linux only.
+compatibility: Run from the root of a clone of github.com/imatiqul/agentic-spec-kit. Needs Python 3.10 or later with PyYAML. Tried by hand on Linux, and run by the kit's owner on Windows in Claude Code and in GitHub Copilot.
 metadata:
   author: Atiqul Islam
   repository: https://github.com/imatiqul/agentic-spec-kit
