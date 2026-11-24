@@ -73,6 +73,14 @@ The places that said no coding agent had loaded the skills now say this, and sec
 
 While this was being written the owner pushed `666e895`, the commit of the note before this one, and the repository's pipeline passed on it. Sections 1 and 6 are changed to match. No acceptance line moved. Seven tests were added; no check or fixture was.
 
+**On 2026-11-24: the two commits of the last note were tried on the owner's machine before he pushed them.**
+
+- **The three steps of this repository's pipeline pass there on Python 3.10**, on a copy of commit `b650c96` kept on the virtual machine's own disk: 536 tests passed and 2 were skipped (the two that need a clone), the self-test behaved as expected on its 105 fixtures, and the golden tasks passed, 10 of 10 in each mode. Until then the two fixes and the test of the documents had run on Python 3.13 only.
+- **`agentic.py list` piped into `head -2` left no traceback there**, in ten runs: exit code 0 nine times and 141 once. Which of the two it is depends on whether the reader has gone before the last write, as `docs/limits.md` says.
+- **On a fresh clone of the same commit in the workspace** the three steps pass too: 536 passed and 2 skipped, 105 fixtures, 10 of 10 in each mode. The clone was left clean.
+
+The count of tests in section 5 is today's, and section 6 has the three runs. No acceptance line moved, and nothing in the kit's code changed.
+
 ## 1. Where everything is
 
 | What | Where | State |
@@ -215,7 +223,7 @@ Every line of `docs/prompts/90-acceptance.md`, in its order. The earlier phase r
 - **Nothing passed a gate on an agent's word.** Told to carry on without stopping, the work went to the end and still recorded no approval. Every artefact in front of a gate says it is waiting, and the gate check fails on all of them.
 - **The reviewers earned their place.** Two agents that had not written the change, each in a new session with a fixed list of what it could read, made 29 findings in their first round. They come to fifteen things to act on: four defects in the change or its tests, four statements in the plan's documents that were wrong, written by the author, and seven in the spec the owner had approved. The kit's checks report two of the fifteen (the component the spec does not declare, and two criteria not marked as abuse cases). The other thirteen were found by reading.
 - **The checks found real things in real code:** the change touching a component its spec did not declare, two floating container tags, an evaluation that does not call production code, accuracy figures written into an endpoint, 635 suppressions.
-- **The kit is cheap to run.** 531 tests, 105 fixtures and 20 golden results pass offline: in about four minutes in the workspace, and on the owner's machine.
+- **The kit is cheap to run.** 538 tests, 105 fixtures and 20 golden results pass offline: in under five minutes in the workspace, and on the owner's machine, where the two tests that need a clone are skipped.
 
 ### What using it on real work showed
 
@@ -281,6 +289,9 @@ These are proposals. None was started.
 | `python -m pytest tests`, with both clones, after the two fixes of 2026-11-23 | Workspace, Python 3.13 | 535 passed, in about three minutes |
 | `agentic.py selftest`; `golden run`, after those fixes | Workspace | 105 fixtures as expected; 10 of 10 in each mode |
 | The same three, after the test of the documents was added | Workspace, Python 3.13 | 538 passed; 105 fixtures as expected; 10 of 10 in each mode |
+| The same three on a fresh clone of that commit, with no clones of the reference | Workspace, Python 3.13 | 536 passed, 2 skipped, in three and a half minutes; 105 fixtures as expected, in 17 seconds; 10 of 10 in each mode, in 36 seconds. The clone was left clean |
+| The same three on a copy of that commit, `b650c96` on the owner's machine | Owner's machine, Python 3.10, PyYAML 6.0.3, pytest 9.2.0, on the virtual machine's own disk. The tests ran file by file | 536 passed, 2 skipped, in under two minutes; 105 fixtures as expected; 10 of 10 in each mode |
+| `agentic.py list` piped into `head -2`, ten times, on that copy | Owner's machine, Python 3.10 | Nothing on standard error in any run. Exit code 0 nine times, 141 once |
 
 No other test project of the healthcare solution has run.
 
