@@ -15,6 +15,10 @@ $A contract diff --node <contract> --base-ref origin/main
 $A change check
 ```
 
+## A programme seen from its parent
+
+Added on 2026-11-26. For a spec whose front matter has `programme`, the page of the change (`$A changeset --spec <parent>`) gains a section that says where each child stands: for a child in this repository its title, tier, open gate and pull requests; for a child in another repository, named as `owner/name` and pinned to a commit, the tier and the gate decisions that commit holds, and whether the pin is behind. Only fixed words are copied from another repository, never a title or a name. A child's page names its parent and its place in the rollout order. It is a view: no gate waits for it, and `CK-PROGRAMME` is unchanged. `docs/design/programme-view.md` in the kit's repository has the rest.
+
 ## Change packs
 
 | When a spec touches | It needs | Checked by |

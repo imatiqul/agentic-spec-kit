@@ -687,6 +687,25 @@ def test_AC_014_after_every_tool_has_been_called_the_project_is_byte_for_byte_wh
     assert git(root, "status", "--porcelain", "--untracked-files=all") == ""
 
 
+def test_AC_025_with_the_kits_own_modules_the_three_tools_give_what_the_commands_print(sample):
+    """The tools were written against stand-ins. Here they meet the modules they were written for."""
+    for module, function in tools.OPTIONAL.values():
+        assert tools.optional(module, function) is not None, f"{module}.{function} is part of the kit"
+    with server(sample) as client:
+        client.open()
+        page = json.loads(client.call("changeset_get", spec=SPEC)[0])
+        found = json.loads(client.call("search", text="greet", limit=50)[0])
+        log = json.loads(client.call("decisions_list", spec=SPEC)[0])["decision_log"]
+    code, text = kit(sample, "changeset", "--spec", SPEC, "--json")
+    assert code == 0 and page == json.loads(text) and [part["heading"] for part in page["sections"]][:2] == ["The change", "Where it came from"]
+    code, text = kit(sample, "search", "greet", "--json")
+    assert code == 0 and found == json.loads(text), "the same limit, so the same document"
+    assert found["hits"] and found["cut"] is (found["total"] > len(found["hits"])) and found["tracked"] is True and isinstance(found["notes"], list)
+    assert found["total"] > 50 and found["cut"], "the caller is told that the limit cut hits, which a plain list of hits could not say"
+    code, text = kit(sample, "decision", "list", "--spec", SPEC, "--json")
+    assert code == 0 and log == json.loads(text) and [entry["id"] for entry in log], "the sample project has a decision log"
+
+
 def test_AC_015_started_inside_a_project_that_holds_the_kit_the_server_leaves_no_file_behind(tmp_path):
     root = installed(tmp_path / "shop", "agentic", "agentic-team", "agentic-mcp")
     before = snapshot(root)

@@ -411,6 +411,7 @@ checks: {CK-…: pass | fail | not run | skipped}
 audit_log: intact                          # or "NOT INTACT: …"
 sources: {<repository path>: sha256}
 files: {<path inside the pack>: sha256}     # in MANIFEST.json only
+delivery: {<spec>: <ledger>}              # since 2026-11-26: the commits, branches and pull requests of each spec, as found that day
 ```
 
 ### Report views (TRC-15)
@@ -419,6 +420,7 @@ files: {<path inside the pack>: sha256}     # in MANIFEST.json only
 | View | From | Registered by |
 |---|---|---|
 | `gates`, `waivers`, `trace`, `metrics` | Decision records, waivers, the trace manifest, the audit log | core |
+| `changesets` | One line for each change: its open gate, its tier and its pull requests (added 2026-11-26) | core |
 | `map` | The system map, as a diagram and a table | system |
 | `debt` | The technical-debt register: discovery findings, waivers, drift | quality |
 | `spend` | Agent steps | team |
@@ -438,3 +440,63 @@ A metric is a row `{metric, value, source}`. Extensions add rows through `METRIC
 | `team.tools.files` | More MCP configuration files to read | none |
 | `metric_claims.scan` | Files CK-METRIC-PROVENANCE reads for figures, as path patterns. In prose a figure is a percentage on a line that names a measure; in any other file it is also a number given to a name that says what it measures (`accuracy = 0.94`) | `[README.md]` |
 | `metric_claims.allow` | Regular expressions; a line that matches one is not read for figures | none |
+
+## Phase 12 additions (added 2026-11-26)
+
+Each of these is described in full in its own document under `docs/design/`. What follows is where each file is and what holds it to its form.
+
+### Decision log (DEC-1)
+`specs/<spec>/decision-log.yml`, written by `agentic.py decision` and by a hand-off's questions; a person may edit it. It is part of the evidence of G5 where a spec has one. `CK-DECISION-LOG` holds it to this form.
+```yaml
+schema: agentic-decision-log/1
+entries:
+  - id: D-001                    # D- and three digits or more
+    title: <the question>
+    state: decided               # proposed | open | decided | superseded
+    outcome: <what was decided>  # needed when decided; refused while proposed or open
+    why: <the reason>
+    owner: <person id>           # needed when decided; a person in roles.yml
+    decided_on: 2026-11-26       # needed when decided
+    proposed_by: <agent or person id>
+    affects: [FR-001, T003, "node:<map node id>", "adr:<file>"]
+    source: <a link>
+    superseded_by: D-002         # needed when superseded; another entry of this log
+```
+Audit actions: `decision-log.add`, `decision-log.decide`, `decision-log.supersede`, each with `entry`, `state` and `outputs`. The actor is `{type: kit, id: decision}`, or the agent where a hand-off made the proposal.
+
+### The conversation behind a change (CNV-1, CNV-5, CNV-6)
+`specs/<spec>/origin.yml` gains `conversation`, written by `agentic.py product conversation`. An intake record gains `threads`, written by `intake add --thread`, and `discussion`, written by `connect fetch`; a person writes `acknowledged`. `CK-CONVERSATION` holds all of it to this form.
+```yaml
+# in origin.yml
+conversation: {summary, links: [<url>], people: [<id or name>], captured_on, captured_by, confirmed_by}
+# on an intake record
+threads: [<url>]
+discussion:
+  comments: 2
+  hash: "sha256:…"               # label agentic-discussion/1: over each comment's id, author and the sha256 of its screened text
+  fetched: "2026-11-21"
+  partial: true                  # only where the item has more comments than the kit reads
+  latest: {comments, hash, fetched}                                             # set when the discussion moved after someone acted on the record
+  acknowledged: {hash, action: amend | ignore, reason, decided_by: {reviewer, role}}   # a Product Owner's
+```
+Of a comment neither the text nor the author is written anywhere.
+
+### The page of a change (CHS-7, CHS-8) — generated
+`agentic.py changeset --spec <spec> --json` prints `{spec, title, about, sections: [{heading, lines, data}]}`. `--write` keeps the page as `specs/<spec>/changeset.md`, whose first line marks it as generated. It is never gate evidence, and nothing reads it back. The ledger of a change, `delivery.ledger(ctx, spec)`, is `{spec, git, note, default_branch, found, cut, commits, branches, more_branches, adapter, pulls, unread}`; the evidence pack keeps it under `delivery`.
+
+### The file adapter's stand-in file
+`.specify/agentic/_adapter/reviews.json` is for tests and the demo, and proves nothing about what GitHub holds. Two things may now be in it.
+```json
+{"changes": {"pull/7": {"authors": [], "reviews": [], "state": "open", "head": "", "base": "", "merge_commit": "", "url": "", "commits": []}},
+ "repositories": {"<owner>/<name>": {"default": "<commit id>", "commits": {"<commit id>": {"<path>": "<text of the file>"}}}}}
+```
+`state` is `open`, `closed` or `merged`; with none, an entry that names a merge commit is merged and any other is open (DLV-3). `repositories` is what another repository holds at a commit, for a programme's child there (PRG-11).
+
+### Search (SRC-3, SRC-11)
+A hit is `{path, line, text, node, tier, group}`: the text is 200 characters at most, and `group` is `touched`, `near` or `rest`. `agentic.py search --json` prints `{hits, total, limit, cut, tracked, groups, touched, near, notes}`. The search reads `nodes[].id` and `tier`, `edges[].from` and `to`, and `index[].paths` and `node` of `system-map/map.yml`, and `touches` of a spec. It writes no file.
+
+### A programme's child in another repository (PRG-8)
+In a parent's front matter a child is `{spec, repo, ref}`. `repo` is `.` for this repository and is left out then; for another it is `<owner>/<name>` on the host of this project's enforcement adapter, and `ref` is a commit id of seven to forty characters. `CK-PROGRAMME` asks for the commit id and takes any text for `repo`; the page reads only a child that is named in this form.
+
+### The MCP server
+It adds no file and no schema, and it writes nothing. A person lists it in `.specify/agentic/tools.yml` as `{name: agentic-spec-kit, command: python, args: [".specify/extensions/agentic-mcp/scripts/agentic_mcp.py", "--root", "."], reviewed_by, reason}`, with the same `command` and `args` in the client's own file. The JSON inside a tool's result is described in `mcp-server.md` (MCP-9 to MCP-17) and is not promised as a schema.

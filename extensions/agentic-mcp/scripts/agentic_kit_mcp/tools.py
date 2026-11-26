@@ -287,7 +287,9 @@ def search(project: Project, args: dict, find: Callable) -> str:
     ctx = project.context()
     spec = project.spec(ctx, args["spec"]) if "spec" in args else None
     node = named(args["node"], "node") if "node" in args else None
-    return passed_on(find(ctx, args["text"], spec=spec, node=node, limit=int(args.get("limit", SEARCH_LIMIT))))
+    found = find(ctx, args["text"], spec=spec, node=node, limit=int(args.get("limit", SEARCH_LIMIT)))
+    whole = getattr(found, "document", None)  # the kit's own search gives a list that also knows what `search --json` prints (MCP-14)
+    return passed_on(whole() if callable(whole) else found)
 
 
 def context_pack(project: Project, args: dict) -> str:
@@ -379,8 +381,10 @@ def build(root: Path, loaded: list[str], log: Callable[[str], None] = lambda lin
                           _schema({"spec": _SPEC}, ("spec",)), changeset_get, found["changeset_get"]))
     if found["search"]:
         tools.append(tool("search", "Search the project",
-                          "Search what the kit knows of this project for a text. `spec` narrows it to one spec, `node` to one component "
-                          "of the system map. Reads only.",
+                          "Find a text in the files git tracks, as `agentic.py search` does. A hit is one line of a file, with the node of "
+                          "the system map that owns the file. `spec` puts first the hits in the nodes that spec touches, then those one edge "
+                          "away; `node` keeps the search to the files of one node. The answer says how many hits there were and whether the "
+                          "limit cut them. Reads only.",
                           _schema({"text": {"type": "string", "minLength": 1, "maxLength": 500, "description": "What to look for."}, "spec": _SPEC,
                                    "node": {"type": "string", "minLength": 1, "maxLength": 200, "description": "The id of a node of the system map."},
                                    "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": SEARCH_LIMIT,
