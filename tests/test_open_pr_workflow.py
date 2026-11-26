@@ -1,4 +1,4 @@
-"""A pull request opened by a workflow (BOT-1 to BOT-5, docs/design/pull-request-by-workflow.md).
+"""A pull request opened by a workflow (BOT-1 to BOT-6, docs/design/pull-request-by-workflow.md).
 
 Each test is named after the acceptance criterion it proves. Nothing here reaches GitHub: where the workflow's command
 runs, a small program stands in for `gh`. AC-005 needs GitHub and is not here.
@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / "extensions" / "agentic" / "scripts"
 sys.path.insert(0, str(CORE))
 
+from agentic_kit import adapters, checks_gov  # noqa: E402
 from agentic_kit.__main__ import _captured  # noqa: E402
 
 SHIPPED = ROOT / "extensions" / "agentic" / "ci" / "agentic-open-pull-request.yml"
@@ -91,3 +92,21 @@ def test_AC_004_the_command_refuses_the_default_branch_and_ends_well_when_one_is
     lines = asked.splitlines()
     assert len(lines) == 2 and "repos/o/r/pulls" in lines[1] and "head=feature/x" in lines[1] and "base=main" in lines[1]
     assert "title=A title; $(echo not run)" in lines[1], "the title is passed as one argument, and nothing in it is run"
+
+
+def test_AC_006_the_header_says_what_the_setting_allows_and_the_gate_refuses_a_workflows_approval():
+    header = "".join(line for line in SHIPPED.read_text(encoding="utf-8").splitlines(keepends=True) if line.startswith("#"))
+    assert "Allow GitHub Actions to create and approve pull requests" in header
+    assert "can approve one, not only open one" in header and "never counts such" in header
+    canned = {   # a review as GitHub's API gives it for the workflow's own account
+        "user": {"login": "pat"},
+        "repos/o/r/pulls/7/reviews": [{"id": 3, "user": {"login": "github-actions[bot]", "type": "Bot"}, "state": "APPROVED",
+                                       "commit_id": "abc123", "body": "gate G1 approve sha256:" + "1" * 64}],
+    }
+    github = adapters.GitHubAdapter("o/r", "main", runner=lambda path: canned[path])
+    (review,) = github.reviews("pull/7")
+    assert review.state == "APPROVED" and review.account_type == "Bot"
+    for holders in ({"product-owner": {"pat"}}, {"product-owner": {"pat", "github-actions[bot]"}}):   # the second lists the account
+        problems = checks_gov._approver_problems(None, github, holders, review, "pull/7", "github-actions[bot]", "product-owner")
+        assert any("not a human account" in problem for problem in problems), problems
+        assert any("CI's own identity" in problem for problem in problems), problems
