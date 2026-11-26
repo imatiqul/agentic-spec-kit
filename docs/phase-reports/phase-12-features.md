@@ -6,7 +6,7 @@
   1. On 2026-11-26 the owner brought a public post about another spec-driven tool, called Intent, whose unit of work is a "changeset". He asked which of its features the kit lacks and for a plan, and then asked for the features to be built in parallel and tested on the reference project with GitHub. This report covers the build. The test on GitHub has not started.
   2. Nothing of that tool was installed or used. What is said of it comes from the post, in my words.
   3. Questions the owner did not answer were decided as recommended. Each such decision is listed in its feature's spec as his to change, and the ones that matter most are at the end of this report.
-- **Unverified:** nothing of Phase 12 has read GitHub, a tracker or a chat service. No coding agent has used any of it. When this was written, none of it had run on Windows: the pull request that brings it is its first run there.
+- **Unverified:** nothing of Phase 12 has read GitHub, a tracker or a chat service. No coding agent has used any of it. When this was written, none of it had run on Windows: the pull request that brings it is its first run there. (Added later on 2026-11-26: that run happened; see the end of "What was run".)
 - **Who "I" is:** the session that planned the phase, wrote two of the pieces and merged the rest. Five other agents each built one feature.
 
 ## What was asked, and where the kit stood
@@ -75,13 +75,19 @@ On the merged tree, on Linux with Python 3.12.3, pytest 9.2.0 and Spec Kit 1.4.3
 
 The agents ran the three steps on their own branches as well, and parts of their tests on Python 3.10, 3.11 and 3.13.
 
+Added later on 2026-11-26, after the owner had pushed and merged this as pull request #4: the kit's own pipeline ran the merged code, on the pull request and on `main` at `43f672e` (run 45904789012).
+
+- Linux, Python 3.10 with pytest 9.2.0 and Python 3.13 with pytest 9.1.1: both jobs passed.
+- Windows Server 2025, Python 3.12.10, git 2.56.1, Spec Kit 1.4.3: of 747 unit tests 743 passed, 3 were skipped and 1 failed; the self-test passed on 107 fixtures, and the golden tasks and the demo passed.
+- The one failure was the test of AC-012 of the MCP server, and the fault was the test's: on that runner one path was longer than a work item's id may be, the server refused it for its length, and the test waited for the words of another refusal. `docs/release-notes.md` says how the test changed. That change had not run on Windows when this was added.
+
 ## What was not run
 
 - Anything against GitHub. `pulls`, the three methods that read another repository, the comments of an issue, and the workflow that opens a pull request have met only answers written by hand from GitHub's documents.
 - Anything against Jira or Azure DevOps.
 - The MCP server with a coding agent such as Claude Code, GitHub Copilot or Cursor.
 - Any of the new commands by a coding agent, and a hand-off by one that writes a decision log.
-- Any of it on Windows, when this was written.
+- Any of it on Windows, when this was written. Since then the kit's tests have run there, and no person has.
 - The search on a real large repository.
 
 ## What changes for a project that already has the kit

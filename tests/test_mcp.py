@@ -565,24 +565,43 @@ def test_AC_012_a_value_that_would_leave_the_project_is_refused_and_nothing_outs
     (outside / "specs" / "005-out").mkdir(parents=True)
     for secret in (outside / "spec.md", outside / "secret.md", outside / "specs" / "005-out" / "spec.md"):
         secret.write_text(f"# {CANARY}\n\n- **FR-001**: {CANARY}\n", encoding="utf-8", newline="\n")
+    # Two ways out that are too long for their argument on every system. `str(outside)` is as long as the system's temporary folder
+    # makes it: 110 characters on the Windows runner of 2026-11-26, where a work item's id may have 100, and far fewer on Linux.
+    long_way_out, longer_way_out = "../" * 70 + "outside", "../" * 170 + "outside/secret.md"
     leaving = ["..", "../outside", "../../outside", "/etc/passwd", str(outside), "C:\\Windows", "C:/Windows", "c:secret", "specs\\..\\..\\outside",
-               f"{SPEC}/../../../outside", ".", "-rf", "a\nb"]
-    answers = []
+               f"{SPEC}/../../../outside", ".", "-rf", "a\nb", long_way_out]
+    answers, for_length, for_leaving = [], set(), set()
     with server(command=with_stand_ins(tmp_path, root)) as client:
         client.open()
-        for value in leaving:
-            for name, arguments in (("spec_read", {"spec": value, "file": "spec"}), ("gate_status", {"spec": value}), ("decisions_list", {"spec": value}),
-                                    ("changeset_get", {"spec": value}), ("search", {"text": "greet", "spec": value}), ("search", {"text": "greet", "node": value}),
-                                    ("context_pack", {"spec": value, "item": ITEM}), ("context_pack", {"spec": SPEC, "item": value}),
-                                    ("spec_read", {"spec": SPEC, "file": value})):
-                text, failed = client.call(name, **arguments)
-                assert failed and ("is refused" in text or "must be one of spec, plan, tasks" in text), (name, arguments, text)
-                answers.append(text)
-        for target in ("../outside/secret.md", "/etc/passwd", str(outside / "secret.md"), "C:\\Windows\\win.ini", "C:/Windows/win.ini", "src\\demo\\greet.py",
-                       "src/../../outside/secret.md", "-L1,1:x", ":3", "src/demo/greet.py:first"):
-            text, failed = client.call("why", target=target)
-            assert failed and ("is refused" in text or "a path and a line number" in text), (target, text)
+        bound = {(tool["name"], argument): rule.get("maxLength") for tool in client.ask("tools/list")["result"]["tools"]
+                 for argument, rule in tool["inputSchema"]["properties"].items()}
+
+        def refused(name, argument, value, rest, *rule):
+            """The call is refused: for its length where the value is longer than the argument may be, which is asked first, and else by the rule
+            about values that leave the project (MCP-18). A refusal for length from a value that is short enough would pass for neither."""
+            text, failed = client.call(name, **rest, **{argument: value})
             answers.append(text)
+            limit = bound[(name, argument)]
+            if limit is not None and len(value) > limit:
+                for_length.add((name, argument))
+                return failed and f"`{argument}` must have at most {limit} characters" in text, text
+            for_leaving.add((name, argument))
+            return failed and any(words in text for words in rule), text
+
+        asked = (("spec_read", "spec", {"file": "spec"}), ("gate_status", "spec", {}), ("decisions_list", "spec", {}), ("changeset_get", "spec", {}),
+                 ("search", "spec", {"text": "greet"}), ("search", "node", {"text": "greet"}), ("context_pack", "spec", {"item": ITEM}),
+                 ("context_pack", "item", {"spec": SPEC}), ("spec_read", "file", {"spec": SPEC}))
+        for value in leaving:
+            for name, argument, rest in asked:
+                ok, text = refused(name, argument, value, rest, "is refused", "must be one of spec, plan, tasks")
+                assert ok, (name, argument, value, text)
+        for target in ("../outside/secret.md", "/etc/passwd", str(outside / "secret.md"), "C:\\Windows\\win.ini", "C:/Windows/win.ini", "src\\demo\\greet.py",
+                       "src/../../outside/secret.md", "-L1,1:x", ":3", "src/demo/greet.py:first", longer_way_out):
+            ok, text = refused("why", "target", target, {}, "is refused", "a path and a line number")
+            assert ok, (target, text)
+        everywhere = {(name, argument) for name, argument, _ in asked} | {("why", "target")}
+        assert for_leaving == everywhere, "each argument was asked with a value that leaves the project and is short enough to reach that rule"
+        assert for_length == everywhere - {("spec_read", "file")}, "each argument that has a bound was asked with a value longer than it; `file` is one of three words"
         assert not client.call("spec_read", spec=SPEC, file="spec")[1]
 
         (outside / "G7.yml").write_text(f"schema: agentic-decision/1\nspec: {SPEC}\ngate: G7\ndecision: approve\ncommit: {CANARY}\n", encoding="utf-8", newline="\n")
@@ -931,7 +950,7 @@ def test_AC_021_the_two_entries_of_the_readme_pass_the_allowlist_check_and_start
     with server(command=[sys.executable, *started["args"]], cwd=shop) as client:
         assert client.open()["serverInfo"]["name"] == "agentic-spec-kit"
         assert [row["spec"] for row in json.loads(client.call("specs_list")[0])["specs"]] == [demo.SPEC]
-    for sentence in ("No MCP client has been run against this server", "Nothing here has run on Windows", "a person writes both"):
+    for sentence in ("No MCP client has been run against this server", "On Windows only the kit's own tests have started it", "a person writes both"):
         assert sentence in readme, sentence
     assert tools.NOTICE in readme and "/speckit.agentic-mcp.setup" in readme
 
