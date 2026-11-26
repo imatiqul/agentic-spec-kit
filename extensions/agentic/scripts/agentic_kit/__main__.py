@@ -531,6 +531,13 @@ def cmd_init(args) -> int:
         ci.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, ci)
         written.append(ci)
+    if getattr(args, "open_pr_workflow", False):  # for the person who pushes a branch and also approves its gate (BOT-4)
+        opener = root / ".github" / "workflows" / "agentic-open-pull-request.yml"
+        source = Path(__file__).resolve().parents[2] / "ci" / "agentic-open-pull-request.yml"
+        if source.exists() and (not opener.exists() or args.force):
+            opener.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, opener)
+            written.append(opener)
     if not (kit_dir / "audit" / "kit.jsonl").exists():
         audit_append(root, "kit", {"type": "kit", "id": "init"}, "kit.init", profile=args.profile)
         written.append(kit_dir / "audit" / "kit.jsonl")
@@ -631,7 +638,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--baseline", action="store_true"); sp.set_defaults(fn=cmd_suppressions)
     sp = sub.add_parser("init", help="write kit.yml, roles.yml, the constitution map and the CI workflow")
     sp.add_argument("--profile", required=True); sp.add_argument("--repository"); sp.add_argument("--pack", action="append")
-    sp.add_argument("--force", action="store_true"); sp.set_defaults(fn=cmd_init)
+    sp.add_argument("--force", action="store_true")
+    sp.add_argument("--open-pr-workflow", action="store_true",
+                    help="also write a workflow that opens a pull request as the workflow's own account, for the person who pushes a branch and approves its gate")
+    sp.set_defaults(fn=cmd_init)
     sp = sub.add_parser("audit", help="append an entry to an audit log")
     sp.add_argument("--log", required=True); sp.add_argument("--actor-type", required=True, choices=["human", "agent", "kit"])
     sp.add_argument("--actor-id", required=True); sp.add_argument("--action", required=True)
