@@ -48,8 +48,17 @@ python -c "import yaml"    # PyYAML; prints nothing when it is there
 git --version
 ```
 
+If `specify` is missing, or prints another version, say so before you go on. The line that installs
+the pinned release is `uv tool install specify-cli==1.4.3`. On a newer release the install runs, and
+`doctor` then fails `CK-UPSTREAM-PIN`. If PyYAML is missing, `pip install pyyaml` is enough; where
+pip refuses to install into the system Python, make a virtual environment first. Ask before you
+install anything.
+
 If the project has no `.specify/` folder, stop. Tell the person to run `specify init` there first,
 with the integration for their coding agent. Do not run it for them unless they ask.
+
+If the project is not a git repository, say so: `specify init` on its own does not make it one, and
+`git init -b main` does. Do not run it for them unless they ask.
 
 The install script is a bash script. A PowerShell script, `scripts/install.ps1`, does the same
 steps, but it has never been run. Say so before the person uses it.

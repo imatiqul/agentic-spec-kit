@@ -21,6 +21,8 @@ Two things I read in the installed files, to watch in those runs. The hook that 
 
 **Updated once more, early on 2026-11-26.** The owner said to continue again, and proposal 5 was built as well: `agentic.py demo`. Its spec, `docs/design/demo.md`, was committed before its code.
 
+**And once more that night.** After a third "continue" the first half of proposal 6 was built: a test that walks the install with the real Spec Kit, and a workflow that runs the tests on a Windows runner. The workflow has not run. It starts when the owner pushes the branch.
+
 **And after that.** On the owner's "next", two parts of proposal 4 were built, the two that change no rule: `record --change pull/<n>` finds the review itself, and `gate` lists evidence that is not committed. The spec is `docs/design/record-finds-review.md`. One thing differs from proposal 4 as written below: more than one review may carry the line, because a gate outside Lite needs a review for each role. The command refuses when those reviews are on different commits. What the gate board calls a decision nobody could verify, and what Lite does then, still wait for the owner.
 
 ## The short version

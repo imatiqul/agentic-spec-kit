@@ -61,7 +61,7 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 
 ## Changed on 2026-11-25, after a newcomer's walk on a fresh clone
 - The README's "Try it" makes a virtual environment first, and installs PyYAML alone. Before, it opened with `pip install pyyaml pytest`, which Ubuntu 24.04's own Python refuses with `error: externally-managed-environment`. The kit's own tests are now a line after the self-test, for those who want them.
-- `docs/install.md` has a section "Before you start": the line that installs Spec Kit at the pinned release, `specify init`, and `git init`. Before, no document gave any of the three.
+- `docs/install.md` has a section "Before you start": the line that installs Spec Kit at the pinned release, `specify init`, and `git init`. Before, no document gave any of the three. The skill `agentic-spec-kit-install` says the same.
 - `docs/install.md`, the command `/speckit.agentic.guide` and the command `/speckit.agentic-team.orchestrate` say that the reviewer's brief is committed and pushed with the rest of the evidence before anyone reviews. Before, a brief that was written and not committed changed the line that `gate` prints, and nothing said so.
 - These are changes to documents and to two command files. No check changed, and no command of the CLI. `docs/phase-reports/phase-11-adoption-barriers.md` is the report of the walk, with every command and its output beside it. `docs/limits.md` lists what the walk found that is not fixed.
 
@@ -69,7 +69,12 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 - `agentic.py demo` writes a small Lite project into a temporary folder and shows three things there with the kit's own commands. An approval by the agent's own account fails `CK-APPROVER`. An approval by a person listed in `roles.yml` passes `CK-APPROVER`, `CK-GATE-MIRROR` and `CK-GATE-RECORD`, and the board shows the gate approved. An edit to the approved spec opens the gate again. The demo reads and writes nothing in the folder it is run from, and deletes its own unless `--keep` is given.
 - In that project a file plays GitHub: the file adapter. It proves nothing about who approved, and the demo says so at its start and at its end. It is not the first real gate on a live repository. That has still not happened.
 - After each step the demo compares what the kit printed with what the demo says the kit does, and ends with 1 when the two differ. Nine tests run it, each named after an acceptance criterion of `docs/design/demo.md`. That spec was committed before the code.
-- The README's first day ends with the demo. It was tried on Linux.
+- The README's first day ends with the demo, and so does the skill `agentic-spec-kit-try`. It was tried on Linux, by hand and by its tests. No coding agent has run it.
+
+## Added on 2026-11-26: the install walked by a test, and a Windows job that has not run
+- `tests/test_install_walk.py` does the install as a newcomer does it, with the real Spec Kit: `specify init`, the install script, `init`, `team init`, one person in `roles.yml`, `doctor`, `check`, `selftest`, and one spec taken to an open gate. It uses `install.ps1` through PowerShell on Windows and `install.sh` through bash elsewhere, and both where both shells exist. It is skipped where `specify` is not installed, which is the case in `tests.yml`. On Linux with Spec Kit 1.4.3 its five tests pass.
+- `.github/workflows/windows.yml` runs the unit tests, the self-test, the golden tasks and the demo on a Windows runner, with Spec Kit installed, so the walk runs there through both install scripts. It has not run. It starts when a branch other than `main` is pushed, or by hand, and it stays off `main` until it has passed once. `docs/design/windows-job.md` is its spec, committed before it.
+- Nothing here makes the kit work on Windows. It is how the first failures there will be seen.
 
 ## Added on 2026-11-26: `record --change`, and a warning from `gate`
 - `record --spec <spec> --gate <gate> --change pull/<n>` reads the reviews of the pull request and takes the decision, the commit, the reviewer and the role from the review that carries the gate's line for the evidence as it stands. It writes nothing, and says why, when no review carries the line, when a needed role is not covered, or when `--decision` or `--commit` says something else than the review. Before, all five values were copied by hand. The long form still works, and still writes whatever it is given.
