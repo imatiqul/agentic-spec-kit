@@ -12,12 +12,13 @@ import yaml
 
 from agentic_kit import core
 
-from . import common, dedupe, intake, lineage, lint, living, outcomes, sample
+from . import common, conversation, dedupe, intake, lineage, lint, living, outcomes, sample
 
 __version__ = "0.5.0"
 
 PRODUCT_CHECKS = ["CK-INTAKE-RECORD", "CK-INTAKE-DRIFT", "CK-REQ-QUALITY", "CK-SPEC-SIZE", "CK-GLOSSARY", "CK-DUPLICATE", "CK-DELTA-VALID",
-                  "CK-CAPABILITY-COVERAGE", "CK-LIVING-SPEC", "CK-DELTA-MERGED", "CK-SPEC-COLLISION", "CK-ARCHIVE", "CK-OUTCOME"]
+                  "CK-CAPABILITY-COVERAGE", "CK-LIVING-SPEC", "CK-DELTA-MERGED", "CK-SPEC-COLLISION", "CK-ARCHIVE", "CK-OUTCOME",
+                  "CK-CONVERSATION"]
 SPEC_EVIDENCE = ["deltas/*", dedupe.ORIGIN, outcomes.OUTCOMES]  # what the first gates bind besides spec.md
 GLOSSARY_SKELETON = """schema: agentic-glossary/1
 # One entry per idea the product talks about. `avoid` lists words people use for the same idea; specs must use `term`.
@@ -75,6 +76,8 @@ def _register() -> None:
     core.SAMPLE_HOOKS.append(sample.extend_sample)
     core.FIXTURE_HOOKS.append(sample.fixtures)
     core.BRIEF_HOOKS.append(brief_hook)
+    core.BRIEF_HOOKS.append(conversation.brief_hook)          # the summary of what was said, at the first gate (CNV-12)
+    core.CHANGESET_HOOKS.append(conversation.changeset_hook)  # and on a change's page (CNV-13)
     core.VIEW_HOOKS["capabilities"] = catalog
 
 
@@ -181,6 +184,8 @@ def cmd_product(args) -> int:
         if not args.spec:
             print("--spec is required", file=sys.stderr)
             return 2
+        if a == "conversation":
+            return conversation.command(ctx, args)
         if a == "archive":
             record = living.seal(ctx, args.spec, write=args.write)
             print(f"{'sealed' if args.write else 'would seal'} {args.spec}: {len(record['files'])} file(s)")
@@ -235,11 +240,29 @@ def cmd_intake(args) -> int:
     if args.action == "list":
         for rel, rec in intake.records(ctx):
             changed = " (source changed)" if (rec.get("latest") or {}).get("hash") not in (None, rec.get("hash")) else ""
+            changed += " (discussion moved)" if conversation.moved(rec) else ""
             print(f"{rec.get('status', '?'):10} {rec.get('id')}  {rec.get('title', '')[:70]}{changed}")
         return 0
-    if not args.title:
-        print("--title is required", file=sys.stderr)
+    threads = list(dict.fromkeys(str(u).strip() for u in args.thread or []))  # where the request was talked about (CNV-5)
+    try:
+        refused = conversation.refused(threads, intake.screens(ctx), "thread link") if threads else []
+    except core.KitError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
+    if refused:
+        print("; ".join(refused) + conversation.REFUSED, file=sys.stderr)
+        return 2
+    if not args.title:
+        rid = intake.record_id(args.platform, args.key) if threads and args.key else ""
+        if not rid:
+            print("--title is required. To put a link on a record that exists, give --thread with its --platform and --key", file=sys.stderr)
+            return 2
+        if not ctx.src.exists(intake.path_of(rid)):
+            print(f"no intake record {rid}; give --title to add one", file=sys.stderr)
+            return 2
+        added = conversation.add_threads(ctx.src.root, rid, threads)
+        print(f"{'linked' if added else 'unchanged'}: {intake.path_of(rid)} ({len(added)} thread link(s) added)")
+        return 0
     try:
         # With no key given, the id comes from a hash of the text, not from the title: an id is shown in notifications.
         key = args.key or intake.content_hash(args.title, args.body or "")[7:17]
@@ -249,7 +272,9 @@ def cmd_intake(args) -> int:
         print(str(exc), file=sys.stderr)
         return 2
     rel, action = intake.upsert(ctx.src.root, rec)
-    print(f"{action}: {rel}" + (f" (removed before writing: {rec['screened']})" if rec.get("screened") else ""))
+    added = conversation.add_threads(ctx.src.root, rec["id"], threads) if threads else []
+    print(f"{action}: {rel}" + (f" (removed before writing: {rec['screened']})" if rec.get("screened") else "")
+          + (f" ({len(added)} thread link(s) added)" if threads else ""))
     for c in dedupe.candidates(ctx, rec["title"], rec["body"], {rec["id"]}):
         print(f"  looks like: {dedupe.describe(c)}")
     return 0
@@ -262,9 +287,9 @@ def cmd_why(args) -> int:
 
 
 def _cli(sub, common_args) -> None:
-    sp = sub.add_parser("product", help="living capability specs: lint, deltas, duplicates, merge on release, seal, catalog")
+    sp = sub.add_parser("product", help="living capability specs: lint, deltas, duplicates, merge on release, seal, catalog; the conversation behind a change")
     common_args(sp)
-    sp.add_argument("action", choices=["init", "check", "lint", "delta", "duplicates", "specify", "merge", "archive", "catalog"])
+    sp.add_argument("action", choices=["init", "check", "lint", "delta", "duplicates", "specify", "merge", "archive", "catalog", "conversation"])
     sp.add_argument("--spec")
     sp.add_argument("--capability")
     sp.add_argument("--intake")
@@ -274,6 +299,11 @@ def _cli(sub, common_args) -> None:
     sp.add_argument("--approved-by")
     sp.add_argument("--write", action="store_true")
     sp.add_argument("--today")
+    sp.add_argument("--summary", help="conversation: a few lines on what was asked, by whom, what was agreed and what was left open")
+    sp.add_argument("--link", action="append", help="conversation: an address where the conversation is; may be given more than once")
+    sp.add_argument("--person", action="append", help="conversation: someone who took part, as an id or a name; may be given more than once")
+    sp.add_argument("--captured-by", help="conversation: who wrote the summary, a person's id or an agent's")
+    sp.add_argument("--confirmed-by", help="conversation: the person, listed in roles.yml, who confirms that the summary says what was said")
     sp.set_defaults(fn=cmd_product)
     si = sub.add_parser("intake", help="incoming requirements: add one by hand, or list them")
     common_args(si)
@@ -283,6 +313,7 @@ def _cli(sub, common_args) -> None:
     si.add_argument("--platform", default="manual", choices=intake.PLATFORMS)
     si.add_argument("--key")
     si.add_argument("--url")
+    si.add_argument("--thread", action="append", help="an address where the request was talked about; may be given more than once")
     si.add_argument("--today")
     si.set_defaults(fn=cmd_intake)
     sw = sub.add_parser("why", help="trace a file or a line back to the requirement, the request and the approvals behind it")

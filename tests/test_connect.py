@@ -288,18 +288,19 @@ def test_a_document_source_stays_inside_the_repository(sample):
 def test_fetch_writes_screened_records_once_and_notices_a_later_change(sample):
     def answer(desc, updated):
         return {"issues": [{"key": "DEMO-9", "fields": {"summary": "Fix billing for MRN 0045871", "description": desc, "updated": updated}}]}
-    t = Recorded([("POST", f"{JIRA}/rest/api/3/search/jql", answer("Patient 123-45-6789 was charged twice.", "u1"))])
+    said = ("GET", f"{JIRA}/rest/api/3/issue/DEMO-9/comment?startAt=0&maxResults=100", {"comments": []})  # each fetch also asks what was said on the item (CNV-6)
+    t = Recorded([("POST", f"{JIRA}/rest/api/3/search/jql", answer("Patient 123-45-6789 was charged twice.", "u1")), said])
     rows = trackers.fetch_sources(ctx(sample), [source(sample, "backlog")], t, ENV)
     assert rows == [{"source": "backlog", "key": "DEMO-9", "id": "jira-demo-9", "action": "new", "path": f"{core.KIT_DIR}/intake/jira-demo-9.yml",
-                     "screened": {"national-id": 1, "record-number": 1}}]
+                     "screened": {"national-id": 1, "record-number": 1}, "discussion": "new"}]
     rec = yaml.safe_load((sample / rows[0]["path"]).read_text(encoding="utf-8"))
     assert "0045871" not in rec["title"] and "123-45-6789" not in rec["body"] and rec["via"] == "backlog" and rec["status"] == "new"
     assert run(sample, "CK-INTAKE-RECORD").ok
-    t.add("POST", f"{JIRA}/rest/api/3/search/jql", answer("Patient 123-45-6789 was charged twice.", "u1"))
+    t.add("POST", f"{JIRA}/rest/api/3/search/jql", answer("Patient 123-45-6789 was charged twice.", "u1")).add(*said)
     assert trackers.fetch_sources(ctx(sample), [source(sample, "backlog")], t, ENV)[0]["action"] == "unchanged"
     rec["status"] = "triaged"
     intake.write_record(sample, rec)
-    t.add("POST", f"{JIRA}/rest/api/3/search/jql", answer("The charge was applied three times.", "u2"))
+    t.add("POST", f"{JIRA}/rest/api/3/search/jql", answer("The charge was applied three times.", "u2")).add(*said)
     assert trackers.fetch_sources(ctx(sample), [source(sample, "backlog")], t, ENV)[0]["action"] == "source-changed"
     assert run(sample, "CK-INTAKE-DRIFT").findings
 

@@ -1,8 +1,9 @@
 """Where requirements come from, and where notes about them go back to (ADP-18).
 
 One adapter per platform. Each does two things: `fetch` returns work items in one neutral shape, and `note` posts a
-short note on a work item, once. Adapters hold no state and write nothing to the repository; `fetch_sources` turns
-what they return into intake records.
+short note on a work item, once. Three of them do a third: `discussion` returns the comments on one item, of which
+`fetch_sources` keeps a count and a hash and nothing else (CNV-6). Adapters hold no state and write nothing to the
+repository; `fetch_sources` turns what they return into intake records.
 
 None of these adapters has been run against the live service. They are tested against recorded responses that
 follow each vendor's published API (see docs/adapters/trackers.md for the endpoints and the date they were read).
@@ -25,6 +26,10 @@ from agentic_kit.core import Context, KitError, front_matter, unix_line_ends
 from .transport import basic, expect, secret
 
 MAX_PAGES = 20
+PAGE = 100           # comments asked for at a time
+COMMENT_PAGES = 20   # and how many times: at most 2,000 comments of one item are read (CNV-8)
+#: A note the kit posted on the item itself, as `notify.render_note` writes it. It is no part of what people said (CNV-7).
+KIT_NOTE = re.compile(r"\Aagentic-spec-kit: .*\(ref agentic:[^\s()]+\)\Z", re.S)
 _BLOCK = {"p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article", "ul", "ol", "table", "blockquote"}
 
 
@@ -103,6 +108,10 @@ def _item(key, title, body="", url="", revision="", **meta) -> dict:
             **{k: v for k, v in meta.items() if v not in (None, "", [])}}
 
 
+def _comment(cid, author, body) -> dict:
+    return {"id": "" if cid is None else str(cid), "author": str(author or ""), "body": str(body or "")}
+
+
 class Adapter:
     platform = ""
 
@@ -125,6 +134,10 @@ class Adapter:
 
     def note(self, key: str, text: str, marker: str) -> str:
         raise NotImplementedError
+
+    def discussion(self, key: str) -> tuple[list[dict], bool] | None:
+        """The comments on one item, each as {id, author, body}, and whether that is all of them. None where there are none to read."""
+        return None
 
 
 class Jira(Adapter):
@@ -163,6 +176,21 @@ class Jira(Adapter):
             return "exists"
         expect(self.t.request("POST", url, headers, {"body": adf_doc(text)}), "posting the Jira comment")
         return "posted"
+
+    def discussion(self, key: str) -> tuple[list[dict], bool]:
+        base, headers = self._base()
+        url = f"{base}/rest/api/3/issue/{quote(key)}/comment"
+        out: list[dict] = []
+        for _ in range(COMMENT_PAGES):
+            data = expect(self.t.request("GET", f"{url}?startAt={len(out)}&maxResults={PAGE}", headers), "reading Jira comments").json()
+            batch = [c for c in data.get("comments") or [] if isinstance(c, dict)]
+            out += [_comment(c.get("id"), (c.get("author") or {}).get("accountId") or (c.get("author") or {}).get("displayName"),
+                             adf_text(c.get("body"))) for c in batch]
+            size, total = data.get("maxResults"), data.get("total")  # the service may give fewer at a time than was asked for
+            more = len(batch) >= (size if isinstance(size, int) and size > 0 else PAGE) or (isinstance(total, int) and len(out) < total)
+            if not batch or not more:
+                return out, True
+        return out, False
 
 
 class Ado(Adapter):
@@ -203,6 +231,25 @@ class Ado(Adapter):
         expect(self.t.request("POST", f"{url}?api-version=7.0-preview.3", headers, {"text": html.escape(text).replace("\n", "<br>")}),
                "posting the Azure DevOps comment")
         return "posted"
+
+    def discussion(self, key: str) -> tuple[list[dict], bool]:
+        base, headers = self._base()
+        url = f"{base}/_apis/wit/workItems/{quote(str(key))}/comments?$top={PAGE}&api-version=7.1-preview.4"
+        out: list[dict] = []
+        token = None
+        for _ in range(COMMENT_PAGES):
+            more = f"&continuationToken={quote(str(token), safe='')}" if token else ""
+            data = expect(self.t.request("GET", url + more, headers), "reading Azure DevOps comments").json()
+            batch = [c for c in data.get("comments") or [] if isinstance(c, dict)]
+            for c in batch:
+                who = c.get("createdBy") or {}
+                if not c.get("isDeleted"):  # the reference names the id `id`, and its samples `commentId`
+                    out.append(_comment(c.get("id") if c.get("id") is not None else c.get("commentId"),
+                                        who.get("id") or who.get("uniqueName") or who.get("displayName"), html_text(str(c.get("text") or ""))[0]))
+            token = data.get("continuationToken")
+            if not token or not batch:
+                return out, True
+        return out, False
 
 
 class ClickUp(Adapter):
@@ -323,6 +370,21 @@ class GitHub(Adapter):
         expect(self.t.request("POST", url, headers, {"body": text}), "posting the GitHub comment")
         return "posted"
 
+    def discussion(self, key: str) -> tuple[list[dict], bool] | None:
+        m = re.fullmatch(r"([\w.-]+/[\w.-]+)#(\d+)", key)
+        if not m:
+            return None  # a draft project item has no comments
+        api, headers = self._base()
+        url = f"{api}/repos/{m.group(1)}/issues/{m.group(2)}/comments"
+        out: list[dict] = []
+        for page in range(1, COMMENT_PAGES + 1):
+            batch = expect(self.t.request("GET", f"{url}?per_page={PAGE}&page={page}", headers), "reading GitHub comments").json()
+            batch = [c for c in batch if isinstance(c, dict)] if isinstance(batch, list) else []
+            out += [_comment(c.get("id"), (c.get("user") or {}).get("login"), c.get("body")) for c in batch]
+            if len(batch) < PAGE:
+                return out, True
+        return out, False
+
 
 class Documents(Adapter):
     """Requirements that arrive as files: Markdown, text, HTML, CSV or JSON. An exported Claude artifact is one of these."""
@@ -409,8 +471,11 @@ def adapter_for(source: dict, transport, env: dict | None = None, root: Path | N
 
 
 def fetch_sources(ctx: Context, sources: list[dict], transport, env: dict | None = None, only: str | None = None, write: bool = True) -> list[dict]:
-    """Fetch every configured source and turn each item into an intake record. Returns one row per item."""
-    from agentic_kit_product import intake
+    """Fetch every configured source and turn each item into an intake record. Returns one row per item.
+
+    Where the source has comments to read, the record also gets a count and a hash of them (CNV-6). The comments are
+    read before anything of the record is written, so a read that fails leaves the record as it was (CNV-8)."""
+    from agentic_kit_product import conversation, intake
     patterns = intake.screens(ctx)
     rows = []
     for source in sources:
@@ -421,10 +486,15 @@ def fetch_sources(ctx: Context, sources: list[dict], transport, env: dict | None
             meta = {k: item[k] for k in ("type", "priority", "labels") if k in item}
             rec = intake.make_record(adapter.platform, item["key"], item["title"] or item["key"], item["body"], url=item["url"], revision=item["revision"],
                                      fetched=ctx.options.get("today"), patterns=patterns, via=str(source.get("id", "")), **meta)
+            said = adapter.discussion(item["key"])
+            found = None
+            if said is not None:  # the kit's own notes are no part of what people said (CNV-7)
+                found = conversation.digest([c for c in said[0] if not KIT_NOTE.match(c["body"].strip())], patterns, rec["source"]["fetched"], said[1])
             if write:
                 rel, action = intake.upsert(ctx.src.root, rec)
             else:
                 rel, action = intake.path_of(rec["id"]), "new" if not ctx.src.exists(intake.path_of(rec["id"])) else "would compare"
             rows.append({"source": source.get("id"), "key": item["key"], "id": rec["id"], "action": action, "path": rel,
-                         "screened": rec.get("screened") or {}})
+                         "screened": rec.get("screened") or {},
+                         "discussion": conversation.store_digest(ctx.src.root, rec["id"], found, write) if found else None})
     return rows

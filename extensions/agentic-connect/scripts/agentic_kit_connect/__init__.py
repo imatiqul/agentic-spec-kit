@@ -114,9 +114,11 @@ def cmd_connect(args) -> int:
             print(json.dumps(rows, indent=2))
         else:
             for r in rows:
-                print(f"{r['action']:15} {r['id']}" + (f"  (removed before writing: {r['screened']})" if r["screened"] else ""))
+                print(f"{r['action']:15} {r['id']}" + (f"  (removed before writing: {r['screened']})" if r["screened"] else "")
+                      + ("  (discussion moved)" if r["discussion"] == "moved" else ""))
             print(f"{len(rows)} item(s) from {len({r['source'] for r in rows})} source(s); "
-                  f"{sum(r['action'] == 'new' for r in rows)} new, {sum(r['action'] == 'source-changed' for r in rows)} changed after work began")
+                  f"{sum(r['action'] == 'new' for r in rows)} new, {sum(r['action'] == 'source-changed' for r in rows)} changed after work began, "
+                  f"{sum(r['discussion'] == 'moved' for r in rows)} with a discussion that moved after work began")
         return 0
     if a == "events":
         for e in notify.detect(ctx, None, args.commit or ""):

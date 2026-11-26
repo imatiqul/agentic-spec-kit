@@ -4,7 +4,7 @@ Connections for agentic-spec-kit (slice 0.6). Needs `agentic` and `agentic-produ
 
 | Direction | What | Where |
 |---|---|---|
-| In | Requirements become intake records | Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, documents (Markdown, text, HTML, CSV, JSON) |
+| In | Requirements become intake records. For an item of Jira, Azure DevOps or GitHub the record also gets a count and a hash of the item's comments, and none of their text | Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, documents (Markdown, text, HTML, CSV, JSON) |
 | Run | Checks, events and review mirroring, with no prompt | GitHub Actions, Azure Pipelines, GitLab CI; any system that can run one command |
 | Out | People are told | Slack, Teams, email, a note on the originating work item |
 
@@ -21,7 +21,7 @@ Connections for agentic-spec-kit (slice 0.6). Needs `agentic` and `agentic-produ
 ```
 agentic.py connect init --write          # write connect.yml with every option commented out
 agentic.py connect check                 # CK-CONNECT-CONFIG, CK-NOTIFY-CONTENT, CK-PIPELINE-SECRETS
-agentic.py connect fetch [--source id]   # pipeline: fetch requirements into .specify/agentic/intake/
+agentic.py connect fetch [--source id]   # pipeline: fetch requirements into .specify/agentic/intake/, with a digest of each item's comments
 agentic.py connect run --base-ref <ref>  # pipeline: every check, a summary, the check result as exit code
 agentic.py connect notify --base-ref <ref> --ledger <file>   # pipeline: tell people what changed
 agentic.py connect mirror --change pull/<n> --commit <sha> [--write]   # pipeline: reviews to decision records

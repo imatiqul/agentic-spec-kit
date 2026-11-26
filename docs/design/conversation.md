@@ -17,7 +17,7 @@ The kit keeps the request that started a change. `.specify/agentic/intake/<id>.y
 | ID | Requirement |
 |---|---|
 | CNV-1 | `origin.yml` may hold `conversation`: `summary` (a few lines of prose written for the change: what was asked, by whom, what was agreed, what was left open), `links`, `people` (ids or names as given), `captured_on`, `captured_by` and `confirmed_by`. `product conversation --spec <spec>` prints what is recorded. With `--summary` and `--captured-by` it builds the block anew, with `--link` and `--person` as often as needed, and prints it; with `--write` it writes it, and keeps what else `origin.yml` holds. `links` are the links given and the thread links on the intake records that `origin.yml` lists. `captured_on` is the day of the run. A spec that does not exist or is sealed is not written to. |
-| CNV-2 | The summary and each name under `people` go through the screen that the text of an incoming request goes through: the built-in patterns and those of `intake.screen` in `kit.yml`. What the screen finds is replaced by `[removed: <kind>]` and counted, and the command reports the counts. It is never written. |
+| CNV-2 | The summary, each name under `people` and the name under `captured_by` go through the screen that the text of an incoming request goes through: the built-in patterns and those of `intake.screen` in `kit.yml`. What the screen finds is replaced by `[removed: <kind>]` and counted, and the command reports the counts. It is never written. |
 | CNV-3 | A link is an `http` or `https` address. One that is not, one that carries a user name or a password, and one in which the screen finds something is refused: the command says which link and what kind of value, does not repeat the address, writes nothing and ends with 2. The card-number pattern is not used on a link: an address often holds a long number that is none. |
 | CNV-4 | `confirmed_by` is empty until `--confirmed-by <person>` is given, and the person has to be listed in `roles.yml`. Given alone, it is set on the block that is there. A new summary empties it, unless the same command gives it. The command says that the kit cannot tell who typed it, and that `origin.yml` is part of the evidence of the first gate. Nothing else in the kit sets it. |
 | CNV-5 | `intake add --thread <url>` puts a link on an intake record, under `threads`. With `--title` that is the record the command adds or refreshes. Without `--title` it is the record that `--platform` and `--key` name: its text, hash and status stay as they are, and a record that does not exist ends the command with 2. CNV-3 holds for the address. A later fetch keeps `threads`. |
@@ -67,7 +67,7 @@ discussion:
     decided_by: {reviewer: alice, role: product-owner}
 ```
 
-**The hash.** Each comment gives one line: a JSON list of three strings, with no space between them and with every character outside ASCII written as a `\u` escape. They are the comment's id; its author, as the tracker names the account (GitHub: the login; Jira: the account id; Azure DevOps: the identity's id); and the sha256 of the comment's text after the screen. The text is the comment as plain text, with CRLF read as LF, and with the white space at the end of each line and the empty lines at both ends dropped. The lines are sorted and joined by line feeds, and the line `agentic-discussion/1` is put in front. The hash is the sha256 of that. So the order in which a tracker returns comments does not matter, and a comment that was edited or deleted changes the hash, as a new one does.
+**The hash.** Each comment gives one line: a JSON list of three strings, with no space between them and with every character outside ASCII written as a `\u` escape. They are the comment's id; its author, as the tracker names the account (GitHub: the login; Jira: the account id; Azure DevOps: the identity's id); and the sha256 of the comment's text after the screen, taken over its UTF-8 bytes. The text is the comment as plain text, with CRLF read as LF, and with the white space at the end of each line and the empty lines at both ends dropped. The lines are sorted and joined by line feeds, and the line `agentic-discussion/1` is put in front. The hash is the sha256 of that. So the order in which a tracker returns comments does not matter, and a comment that was edited or deleted changes the hash, as a new one does.
 
 **The requests**, one more for each item and one more for every 100 comments:
 
@@ -96,6 +96,8 @@ discussion:
 - **AC-015** (verifies CNV-14): The fixtures of the product extension hold `CK-CONVERSATION`. On the sample project the check passes. On the broken one it fails, and the finding says that the discussion moved.
 - **AC-016** (verifies CNV-6): The test of `fetch` in `tests/test_connect.py` passes with the request for comments added to its recorded responses and `discussion` added to the row it expects. Nothing else in that file changes.
 
+Four things were added to this document on 2026-11-26, after the code, and the code did not change for them: that the name under `captured_by` goes through the screen as well (CNV-2); that the hash of a comment's text is taken over its UTF-8 bytes; and under "What it will not do" the point about a record's first digest and the one about comments that another tool posts. The code already did the first two, and the other two were true of it.
+
 ## What it will not do
 
 - Copy a thread into the repository. Of a comment it keeps nothing. Of a discussion it keeps a count and a hash, and of a conversation the few lines that someone wrote for the change.
@@ -104,9 +106,11 @@ discussion:
 - Confirm a summary or acknowledge a discussion that moved. Both are a person's to do. It cannot tell who typed `--confirmed-by`: the name is a line in `origin.yml`, which the review of the first gate covers.
 - Say what changed in a discussion. A hash says that it is not what it was. A person reads the thread.
 - Digest a ClickUp task, a document or a draft project item.
+- Know what was said before a record's first digest. A record that someone had already acted on gets its digest at the next fetch, and only what is said after that is noticed.
 - Notice anything about an item that the source's query no longer returns. Such an item is not fetched again; that is so for its text today.
 - Send a notification of its own. A failing `CK-CONVERSATION` is announced as any failing check is.
 - Tell a note of the kit from a comment that a person wrote in the same form. Both are left out.
+- Tell a person's comment from one that another tool posted. Every comment but the kit's own note counts, so a tool that comments on an item moves its discussion.
 - Read more than 2,000 comments of one item.
 - Keep a hash steady when the project changes its screen patterns: a comment that holds a value of the new kind then hashes differently, and the discussion counts as moved.
 

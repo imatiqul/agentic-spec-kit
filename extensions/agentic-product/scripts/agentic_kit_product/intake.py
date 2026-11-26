@@ -21,6 +21,7 @@ STATES = ("new", "triaged", "specified", "duplicate", "delivered", "rejected")
 CLOSED = {"duplicate": "duplicate-of", "delivered": "already-delivered", "rejected": "rejected"}
 PLATFORMS = ("ado", "jira", "clickup", "github", "document", "manual")
 OWNER_ROLES = ["product-owner"]
+KEPT = ("threads", "discussion")  # what a refreshed record keeps: the links a person gave, and the digest of its comments
 
 #: Text that must not enter the repository (working rule W5). Each hit is replaced before a record is written.
 SCREENS = {
@@ -131,6 +132,9 @@ def upsert(root: Path, rec: dict) -> tuple[str, str]:
     if current == rec["hash"]:
         return rel, "unchanged"
     if old.get("status", "new") == "new":
+        for key in KEPT:  # not part of the item's text, so new text does not take them away (CNV-5)
+            if key in old and key not in rec:
+                rec[key] = old[key]
         write_record(root, rec)
         return rel, "updated"
     old["latest"] = {"hash": rec["hash"], "revision": rec["source"].get("revision", ""), "fetched": rec["source"].get("fetched", "")}

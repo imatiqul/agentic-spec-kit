@@ -68,6 +68,13 @@ outcomes:
     source: product analytics, weekly retention report
     review_by: 2099-01-01
 """
+#: What was said on the work item, made up. The sample keeps a count and a hash of it and none of the text (CNV-6).
+SAID = [{"id": "10001", "author": "pat", "body": "Greet by the name on the account, not by the email address."},
+        {"id": "10002", "author": "sam", "body": "Agreed. What is said when the account has no name?"}]
+CONVERSATION = {"summary": "pat asked for a greeting that uses the person's name. sam agreed to take the name from the account.\n"
+                           "Left open: what to say when the account has no name.",
+                "links": ["https://example.atlassian.net/browse/DEMO-1"], "people": ["pat", "sam"],
+                "captured_on": selftest.TODAY, "captured_by": "spec-author", "confirmed_by": "alice"}
 OTHER_SPEC = """---
 spec: {id}
 tier_declared: low
@@ -84,7 +91,7 @@ owner_role: backend
 
 
 def extend_sample(root: Path) -> None:
-    from . import intake, living
+    from . import conversation, intake, living
     w = selftest._write
     w(root, f"{PRODUCT}/index.yml", yaml.safe_dump({"schema": "agentic-product-index/1", "exempt": [], "order": []}, sort_keys=False))
     w(root, f"{PRODUCT}/glossary.yml", GLOSSARY)
@@ -94,14 +101,15 @@ def extend_sample(root: Path) -> None:
     w(root, f"{BASE}/outcomes.yml", OUTCOMES)
     first = intake.make_record("jira", "DEMO-1", "Greet people by name", "As a user I want to be greeted by name, so that the product feels personal.",
                                url="https://example.atlassian.net/browse/DEMO-1", revision="3", fetched=selftest.TODAY, via="backlog")
-    first.update({"status": "specified", "spec": SPEC})
+    first.update({"status": "specified", "spec": SPEC, "discussion": conversation.digest(SAID, fetched=selftest.TODAY)})
     second = intake.make_record("jira", "DEMO-2", "Say hello using the person's name", "Show the name of the person in the hello message.",
                                 url="https://example.atlassian.net/browse/DEMO-2", revision="1", fetched=selftest.TODAY)
     second.update({"status": "duplicate", "disposition": {"decision": "duplicate-of", "target": first["id"], "reason": "Same request from another team",
                                                            "decided_by": {"reviewer": "alice", "role": "product-owner"}}})
     for rec in (first, second):
         intake.write_record(root, rec)
-    w(root, f"{BASE}/origin.yml", yaml.safe_dump({"schema": "agentic-origin/1", "intake": [first["id"]], "dispositions": []}, sort_keys=False))
+    w(root, f"{BASE}/origin.yml", conversation.dump({"schema": "agentic-origin/1", "intake": [first["id"]], "dispositions": [],
+                                                      "conversation": CONVERSATION}))
 
 
 def _open(root: Path) -> None:
@@ -126,6 +134,13 @@ def _merge(root: Path) -> None:
     from . import living
     _release(root)
     living.merge(selftest.context(root), SPEC, write=True)
+
+
+def _moved(root: Path) -> None:
+    """One more comment on the work item, found by a fetch after the spec was written."""
+    from . import conversation, intake
+    later = SAID + [{"id": "10003", "author": "pat", "body": "Use the first name only."}]
+    conversation.store_digest(root, intake.record_id("jira", "DEMO-1"), conversation.digest(later, fetched="2026-11-25"))
 
 
 def _second_spec(sid: str, title: str, requirement: str, delta: str | None = None):
@@ -159,4 +174,5 @@ def fixtures() -> dict:
                               _second_spec("002-other", "Other greeting", "System MUST greet the user by name on the home page.", GREETING_DELTA), {}, {}),
         "CK-ARCHIVE": ("a merged change was never sealed", _merge, {}, {"today": "2027-06-01"}),
         "CK-OUTCOME": ("a high-tier change does not say what result it expects", lambda root: (root / BASE / "outcomes.yml").unlink(), {}, {}),
+        "CK-CONVERSATION": ("the discussion on the work item moved after the spec was written and nobody looked", _moved, {}, {}),
     }
