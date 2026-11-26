@@ -6,6 +6,7 @@
   1. The owner's "fix those three causes" of 2026-11-26 is the go-ahead for all three, the second among them. He had been told that the second changes how the evidence hash reads a file.
   2. Git on the runner has `core.autocrlf` set to `true`, as Git for Windows sets it when it is installed. The run's log does not print the setting. It is inferred: Linux gives the same sixteen failures with that setting and with Python made to write CRLF, and none of them without.
 - **Unverified:** none of these fixes has run on Windows. The next run of the Windows job is what shows whether they hold. Both install scripts are still untried there: the walk stopped before it reached them.
+- **Since then:** the second run, 45881901293 on the push of `3f18fec` on 2026-11-26, passed, with the walk through both install scripts. AC-001 and the closed-pipe test of 2026-11-23 are met on a Windows runner hosted by GitHub.
 
 ## What the run showed
 

@@ -90,6 +90,12 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 - Five tests, each named after an acceptance criterion of that spec. They write line ends as bytes and tell git to convert them, so they are the same on every system. On Linux, with git set as on Windows and Python made to write CRLF, the sixteen failures of the run that come from line ends appear without the change and are gone with it. None of this has run on Windows. The next run of the job shows whether it holds.
 - Seen in the same run and not changed: on Windows, what the kit prints into a pipe goes through the system's code page. `docs/limits.md` says what follows from that.
 
+## 2026-11-26: the kit's tests pass on Windows
+- The second run of the Windows job, on the push of `3f18fec`, passed: 574 unit tests passed and 2 were skipped, the self-test passed on 105 fixtures, and the golden tasks and the demo passed. So the three changes of the section above hold on Windows.
+- In that run the install was walked through both install scripts for the first time on Windows: `install.ps1` in PowerShell, which as far as the record shows had never run anywhere, and `install.sh` in bash.
+- The Windows job is now part of `.github/workflows/tests.yml` and runs on every pull request and every push to `main`; the workflow `windows.yml` is gone, as `docs/design/windows-job.md` said it would be once the job had passed. The run that passed took twenty-one minutes; the two Linux jobs together take about four. So a pull request now waits for Windows.
+- What this does not show: a person's own Windows machine, and `install.ps1` with any profile but Lite. One runner hosted by GitHub, with Python 3.12 and git 2.56, is what passed.
+
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

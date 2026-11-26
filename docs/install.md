@@ -14,7 +14,7 @@ cd my-project && git init -b main               # `specify init` on its own leav
 - Without the version, `uv tool install specify-cli` installs upstream's newest release. On 2026-11-25 that was 1.4.5. The install runs on it, and `doctor` then fails `CK-UPSTREAM-PIN`. Beyond the install and the self-test, the kit has not been tried on 1.4.5.
 - The kit's commands are run as `python .specify/extensions/agentic/scripts/agentic.py`. So `python` has to exist, with PyYAML, wherever you or your coding agent run them. The virtual environment from the README's "Try it" will do, or any other. Debian and Ubuntu refuse `pip install` into the system's own Python.
 - `specify init --integration claude` looks for the Claude Code program, and stops with "Agent Detection Error" where it is not installed. Install Claude Code first, or add `--ignore-agent-tools` and install it later. With `--integration copilot` it asked for no program when that was tried, on Linux, on 2026-11-26.
-- The first line was run on Linux on 2026-11-25. On Windows `specify init` has run once, on 2026-11-26, on a machine without Claude Code, where it stopped as the line above says. Nothing else in this document has been run on Windows: neither install script has.
+- The first line was run on Linux on 2026-11-25. On Windows, what sections 1 to 3 below describe runs in the kit's own pipeline since 2026-11-26, through both install scripts and with the Lite profile, on a runner hosted by GitHub with Spec Kit installed by `pip`. No person is on record as having followed this document on a Windows machine of their own.
 
 ## 1. Install into a Spec Kit project
 ```bash
@@ -24,7 +24,7 @@ bash path/to/agentic-spec-kit/scripts/install.sh . standard     # or lite, or: r
 ```powershell
 path\to\agentic-spec-kit\scripts\install.ps1 -Project . -Profile standard      # add -Pack hipaa for regulated
 ```
-Call the script through `bash`, as written. The PowerShell script has never been run. The script runs ordinary `specify` commands: the `agentic` extension, an optional domain pack, the `agentic-team` extension, the profile preset, the `agentic-gate` step and three workflows (`agentic-sdd`, `agentic-sdd-team`, `agentic-sdd-sequential`).
+Call the script through `bash`, as written. The PowerShell script first ran on 2026-11-26, on a Windows runner in the kit's own pipeline, and only with the Lite profile: with `standard`, with `regulated` and with `-Pack` it has never been run. The script runs ordinary `specify` commands: the `agentic` extension, an optional domain pack, the `agentic-team` extension, the profile preset, the `agentic-gate` step and three workflows (`agentic-sdd`, `agentic-sdd-team`, `agentic-sdd-sequential`).
 
 For Standard and Regulated the script also installs `agentic-system` (the system map and impact analysis), `agentic-quality` (quality packs), `agentic-product` (intake, living specs, duplicates) and `agentic-connect` (trackers, pipelines, notifications). Lite installs none of the four. After installing, draft the map with `agentic.py map discover --write`, give every node an owner, tier and classification, and save it as `system-map/map.yml`. Until that file exists the map checks report "not run".
 
