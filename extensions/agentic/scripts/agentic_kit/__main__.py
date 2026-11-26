@@ -11,6 +11,7 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -21,7 +22,7 @@ from . import __version__, adapters, checks_gov, checks_trace, reports, selftest
 from .checks_gov import DEFAULT_APPROVERS, decisions, gate_roles
 from .checks_trace import build_manifest
 from .core import (DECISIONS, GATES, KIT_DIR, PROFILE_GATES, PROFILES, REGISTRY, Context, KitError, Source,
-                   approval_line, audit_append, evidence_hash, run_check)
+                   approval_line, audit_append, evidence_hash, parse_approval_lines, run_check)
 
 DEFAULT_EVIDENCE = {
     "G1": ["spec.md"], "G2": ["spec.md"], "G3": ["plan.md", "impact.md", "data-change-plan.md"],
@@ -129,6 +130,19 @@ def _evidence_files(ctx: Context, spec: str, gate: str, explicit: list[str] | No
     return sorted(set(out))
 
 
+def _uncommitted(root: Path, files: list[str]) -> list[str] | None:
+    """Which of these files git does not hold as they are now: new, changed or only staged. None where git cannot say (REC-7)."""
+    try:
+        done = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--untracked-files=all", "--", *files],
+                              capture_output=True, text=True)
+    except OSError:
+        return None
+    if done.returncode:
+        return None
+    changed = [line[3:].split(" -> ")[-1].strip().strip('"') for line in done.stdout.splitlines() if line.strip()]
+    return [f for f in files if any(path == f or path.endswith("/" + f) for path in changed)]  # git names paths from its own root
+
+
 def cmd_gate(args) -> int:
     ctx = _context(args)
     if args.gate not in GATES:
@@ -160,6 +174,7 @@ def cmd_gate(args) -> int:
                              and (record.get("evidence") or {}).get("hash") == digest),
             "required_roles": gate_roles(ctx, args.gate, args.spec), "required": True, "lane": spec_lane,
             "paste": approval_line(args.gate, "approve", digest)}
+    info["uncommitted"] = _uncommitted(ctx.src.root, files)
     if args.json:
         print(json.dumps(info, indent=2))
     else:
@@ -171,17 +186,106 @@ def cmd_gate(args) -> int:
         print("\nTo approve, a person holding the role submits an approving review containing this line:\n")
         print(f"  {info['paste']}\n")
         print("To reject, request changes with `reject` in place of `approve`.")
+        if info["uncommitted"]:
+            print("\nNot committed:")
+            for f in info["uncommitted"]:
+                print(f"  {f}")
+            print("A reviewer sees only what is committed and pushed. The line above is for the files as they are on disk now.")
     return 0
+
+
+REVIEW_STATES = {"approve": "APPROVED", "approve-with-conditions": "APPROVED", "reject": "CHANGES_REQUESTED"}
+
+
+def stated_reviews(ctx: Context, spec: str, gate: str, change: str, digest: str, any_role: bool | None = None, reviews=None) -> dict:
+    """What the reviews on `change` say about one gate, for the evidence whose hash is `digest` (REC-1, REC-2).
+
+    Only reviews by a person are read, and of those only the ones that carry the gate's line for that evidence, in the
+    review state the line's decision asks for. Nothing is judged here: CK-APPROVER and CK-GATE-MIRROR read the reviews again.
+    `any_role`: one needed role is enough. Left out, that is so in Lite, as it is for CK-APPROVER."""
+    from .checks_gov import people_by_role
+    if any_role is None:
+        any_role = ctx.profile == "lite"
+    if reviews is None:
+        reviews = [r for r in adapters.enforcement(ctx).reviews(change) if r.account_type == "User"]
+    stated = [(r, decision) for r in reviews for g, decision, d in parse_approval_lines(r.body)
+              if g == gate and d == digest and r.state == REVIEW_STATES[decision]]
+    holders = people_by_role(ctx.roles())
+    needed = gate_roles(ctx, gate, spec)
+    rejecting = [r for r, decision in stated if decision == "reject"]
+    if rejecting:
+        decision = "reject"
+        approvals = [(r.reviewer, role, r) for r in rejecting for role in needed if r.reviewer.lower() in holders.get(role, set())]
+        missing = [] if approvals else list(needed)
+    else:
+        decision = "approve-with-conditions" if any(d == "approve-with-conditions" for _, d in stated) else "approve"
+        approvals, missing = [], []
+        for role in needed:
+            who = next((r for r, _ in stated if r.reviewer.lower() in holders.get(role, set())), None)
+            if who is None:
+                missing.append(role)
+            else:
+                approvals.append((who.reviewer, role, who))
+        if any_role and approvals:
+            missing = []
+    return {"stated": stated, "decision": decision if stated else None, "approvals": approvals, "missing": missing, "needed": list(needed)}
+
+
+def _from_reviews(ctx: Context, args, digest: str) -> tuple | str:
+    """For `record --change`: the decision, the commit and the approvals that the reviews give, or the reason nothing can be recorded (REC-3)."""
+    found = stated_reviews(ctx, args.spec, args.gate, args.change, digest)
+    if not found["stated"]:
+        return (f"no review on {args.change} carries the line for {args.gate} of {args.spec} as its evidence stands now.\n"
+                f"The line is:\n\n  {approval_line(args.gate, 'approve', digest)}\n\n"
+                "It has to stand on a line of its own, in an approving review by a person; `reject` in its place, in a review that requests changes.")
+    carriers = ", ".join(sorted({r.reviewer for r, _ in found["stated"]}))
+    if found["missing"]:
+        return (f"the line is carried by a review of {carriers}, but {args.gate} still needs "
+                f"{'one of' if ctx.profile == 'lite' else 'each of'}: {', '.join(found['missing'])}. "
+                "A reviewer has to hold the role in roles.yml on the base branch.")
+    used = {r.id: r for _, _, r in found["approvals"]}
+    commits = sorted({r.commit for r in used.values()})
+    if len(commits) != 1 or not commits[0]:
+        return f"the reviews that carry the line are not on one commit ({', '.join(c[:12] or 'none' for c in commits)}), and a decision names one"
+    decision, commit = found["decision"], commits[0]
+    if args.decision and args.decision != decision:
+        return f"--decision says {args.decision}, and the review says {decision}"
+    if args.commit and not (commit.startswith(args.commit) or args.commit.startswith(commit)):
+        return f"--commit says {args.commit}, and the review is on {commit[:12]}"
+    if decision == "approve-with-conditions" and not args.condition:
+        return "the review approves with conditions: give each one with --condition"
+    for r in used.values():
+        print(f"found on {args.change}: review {r.id} by {r.reviewer}, {r.state}, on {r.commit[:12]}")
+    try:
+        authors = adapters.enforcement(ctx).authors(args.change)
+    except KitError:
+        authors = set()
+    for who in sorted({r.reviewer for r in used.values() if r.reviewer.lower() in authors}):
+        if not args.exception:
+            print(f"note: {who} also wrote this change. Where the project allows a single-approver exception, give --exception as well.")
+    return decision, args.commit or commit, [f"{who}:{role}:{args.change}#{r.ref_suffix}" for who, role, r in found["approvals"]]
 
 
 def cmd_record(args) -> int:
     """Mirror a review that already exists into a decision record. Does not create approval."""
     ctx = _context(args)
+    files = _evidence_files(ctx, args.spec, args.gate, args.file)
+    digest = evidence_hash(ctx.src, args.spec, args.gate, files)
+    if getattr(args, "change", None):  # a caller that builds its own arguments, as `connect mirror` does, gives the long form
+        if args.approval:
+            print("give --change or --approval, not both", file=sys.stderr)
+            return 2
+        found = _from_reviews(ctx, args, digest)
+        if isinstance(found, str):
+            print(f"{found}\nNothing was recorded.", file=sys.stderr)
+            return 2
+        args.decision, args.commit, args.approval = found
+    elif not (args.decision and args.commit and args.approval):
+        print("give --change pull/<n>, or all three of --decision, --commit and --approval", file=sys.stderr)
+        return 2
     if args.decision not in DECISIONS:
         print(f"decision must be one of {', '.join(DECISIONS)}", file=sys.stderr)
         return 2
-    files = _evidence_files(ctx, args.spec, args.gate, args.file)
-    digest = evidence_hash(ctx.src, args.spec, args.gate, files)
     approvals = []
     for item in args.approval:
         try:
@@ -500,8 +604,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(fn=cmd_gate)
     sp = sub.add_parser("record", help="mirror an existing review into a decision record"); common(sp)
     sp.add_argument("--spec", required=True); sp.add_argument("--gate", required=True, choices=GATES)
-    sp.add_argument("--decision", required=True); sp.add_argument("--commit", required=True)
-    sp.add_argument("--approval", action="append", required=True, help="reviewer:role:pull/<n>#review-<id>")
+    sp.add_argument("--change", help="pull/<n>: read its reviews and take the decision, the commit and the approvals from those that carry the gate's line")
+    sp.add_argument("--decision"); sp.add_argument("--commit")
+    sp.add_argument("--approval", action="append", help="reviewer:role:pull/<n>#review-<id>; with --decision and --commit, in place of --change")
     sp.add_argument("--condition", action="append"); sp.add_argument("--exception", action="store_true")
     sp.add_argument("--file", action="append"); sp.set_defaults(fn=cmd_record)
     sp = sub.add_parser("brief", help="the one-page brief for the person at a gate"); common(sp)

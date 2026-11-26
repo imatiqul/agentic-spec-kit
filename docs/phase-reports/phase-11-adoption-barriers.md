@@ -21,6 +21,8 @@ Two things I read in the installed files, to watch in those runs. The hook that 
 
 **Updated once more, early on 2026-11-26.** The owner said to continue again, and proposal 5 was built as well: `agentic.py demo`. Its spec, `docs/design/demo.md`, was committed before its code.
 
+**And after that.** On the owner's "next", two parts of proposal 4 were built, the two that change no rule: `record --change pull/<n>` finds the review itself, and `gate` lists evidence that is not committed. The spec is `docs/design/record-finds-review.md`. What the gate board calls a decision nobody could verify, and what Lite does then, still wait for the owner.
+
 ## The short version
 
 A newcomer on Linux who already has Spec Kit 1.4.3 gets from a fresh clone to an open gate, with its approval line printed, in a few minutes of commands. The path stops there. The first gate decision is a pull-request review on GitHub, and the kit has never read one.

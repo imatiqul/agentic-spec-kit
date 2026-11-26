@@ -9,14 +9,11 @@ from __future__ import annotations
 import argparse
 
 from agentic_kit import adapters
-from agentic_kit.checks_gov import gate_roles, people_by_role, required_gates
-from agentic_kit.core import REGISTRY, Context, KitError, evidence_hash, parse_approval_lines, run_check
+from agentic_kit.checks_gov import required_gates
+from agentic_kit.core import REGISTRY, Context, KitError, evidence_hash, run_check
 from agentic_kit.lanes import approved_records
 
 from . import notify
-
-STATES = {"approve": "APPROVED", "approve-with-conditions": "APPROVED", "reject": "CHANGES_REQUESTED"}
-
 
 def run_checks(ctx: Context) -> list:
     return [run_check(cid, ctx) for cid in sorted(REGISTRY) if cid != "CK-SELFTEST"]
@@ -60,9 +57,8 @@ def mirror(ctx: Context, change: str, commit: str, write: bool = False) -> list[
     A gate is mirrored only when every role it needs is covered by an approving review from a person who holds that
     role, or when someone sent it back. Returns one row per gate looked at.
     """
-    from agentic_kit.__main__ import _evidence_files, cmd_record
+    from agentic_kit.__main__ import _evidence_files, cmd_record, stated_reviews
     reviews = [r for r in adapters.enforcement(ctx).reviews(change) if r.account_type == "User"]
-    holders = people_by_role(ctx.roles())
     rows = []
     for spec in ctx.specs():
         records = approved_records(ctx, spec)
@@ -73,25 +69,10 @@ def mirror(ctx: Context, change: str, commit: str, write: bool = False) -> list[
             digest = evidence_hash(ctx.src, spec, gate, files)
             if gate in records and (records[gate][1].get("evidence") or {}).get("hash") == digest:
                 continue
-            stated = [(r, decision) for r in reviews for g, decision, d in parse_approval_lines(r.body)
-                      if g == gate and d == digest and r.state == STATES[decision]]
-            if not stated:
+            found = stated_reviews(ctx, spec, gate, change, digest, any_role=False, reviews=reviews)
+            if not found["stated"]:
                 continue
-            needed = gate_roles(ctx, gate, spec)
-            rejecting = [r for r, decision in stated if decision == "reject"]
-            if rejecting:
-                decision = "reject"
-                approvals = [(r.reviewer, role, r) for r in rejecting for role in needed if r.reviewer.lower() in holders.get(role, set())]
-                missing = [] if approvals else needed
-            else:
-                decision = "approve-with-conditions" if any(d == "approve-with-conditions" for _, d in stated) else "approve"
-                approvals, missing = [], []
-                for role in needed:
-                    who = next((r for r, _ in stated if r.reviewer.lower() in holders.get(role, set())), None)
-                    if who is None:
-                        missing.append(role)
-                    else:
-                        approvals.append((who.reviewer, role, who))
+            decision, approvals, missing = found["decision"], found["approvals"], found["missing"]
             row = {"spec": spec, "gate": gate, "decision": decision, "missing": missing, "written": False,
                    "approvals": [f"{who}:{role}:{change}#{r.ref_suffix}" for who, role, r in approvals]}
             if not missing and write:

@@ -71,6 +71,12 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 - After each step the demo compares what the kit printed with what the demo says the kit does, and ends with 1 when the two differ. Nine tests run it, each named after an acceptance criterion of `docs/design/demo.md`. That spec was committed before the code.
 - The README's first day ends with the demo. It was tried on Linux.
 
+## Added on 2026-11-26: `record --change`, and a warning from `gate`
+- `record --spec <spec> --gate <gate> --change pull/<n>` reads the reviews of the pull request and takes the decision, the commit, the reviewer and the role from the review that carries the gate's line for the evidence as it stands. It writes nothing, and says why, when no review carries the line, when a needed role is not covered, or when `--decision` or `--commit` says something else than the review. Before, all five values were copied by hand. The long form still works, and still writes whatever it is given.
+- `gate` lists the evidence files that are not committed, and says that a reviewer sees only what is committed and pushed. Its exit code is unchanged. In a folder that is not a git repository it prints what it printed before.
+- No rule changed. `CK-APPROVER`, `CK-GATE-MIRROR` and `CK-GATE-RECORD` judge a decision record as before, and a record is still only a mirror. `connect mirror` reads the reviews through the same function and does what it did.
+- Eleven tests, each named after an acceptance criterion of `docs/design/record-finds-review.md`, the spec that was committed first. The reviews in them come from the file adapter: none of this has read a review on GitHub.
+
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

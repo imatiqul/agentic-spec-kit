@@ -73,11 +73,13 @@ Fill in an owner and expiry for each group, have it approved in a review, and sa
 | Commit and push the evidence, the brief included, and open a pull request | (git and GitHub) |
 | See what a gate needs and the line to paste | `agentic.py gate --spec <id> --gate G3` |
 | A human submits the review in the pull request, with that line on a line of its own | (in GitHub, not by an agent) |
-| Mirror the review into a decision record | `agentic.py record --spec <id> --gate G3 --decision approve --commit <sha> --approval <user>:<role>:pull/<n>#review-<id>` |
+| Mirror the review into a decision record | `agentic.py record --spec <id> --gate G3 --change pull/<n>` |
 | Build the trace manifest | `agentic.py trace --write` |
 | Run the whole lifecycle with gates | `specify workflow run agentic-sdd -i spec="..."` |
 
-Keep that order. The line that `gate` prints is a hash of the evidence files as they are on disk, the brief among them. A reviewer sees only what was pushed. A decision record that names a commit without the brief fails `CK-GATE-RECORD`.
+Keep that order. The line that `gate` prints is a hash of the evidence files as they are on disk, the brief among them. A reviewer sees only what was pushed. A decision record that names a commit without the brief fails `CK-GATE-RECORD`. `gate` lists the evidence files that are not committed yet.
+
+`record --change` reads the pull request's reviews and takes the decision, the commit, the reviewer and the role from the review that carries the line. It writes nothing when no review carries it. The long form still exists: `--decision approve --commit <sha> --approval <user>:<role>:pull/<n>#review-<id>`.
 
 ## 6. Seeing where things stand
 | You want | Command |
