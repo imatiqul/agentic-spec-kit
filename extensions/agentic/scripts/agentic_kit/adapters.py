@@ -8,9 +8,16 @@ Enforcement adapter interface (GOV-6 to GOV-8, ADP-3):
     setup_report() -> list[dict]       [{"item", "status": pass|fail|not-checkable, "detail"}]
     pulls(commits) -> list[dict]       pull requests that hold one of the commits (DLV-1): [{"change": "pull/<n>",
                                        "state": open|closed|merged, "head", "base", "merge_commit": sha or "", "url"}]
+    commit_at(repo, ref) -> str        the full id of a commit of a repository, named as owner/name; raises where the
+                                       repository or the commit cannot be read (PRG-11)
+    file_at(repo, ref, path) -> str | None             the text of a file at that commit; None where it holds no such file
+    folder_at(repo, ref, path) -> dict[str, str] | None   name -> the id git has for it, for what a folder holds at that
+                                       commit; None where it holds no such folder. An empty ref is the default branch's head
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import re
 import shutil
@@ -35,6 +42,10 @@ class Review:
 
 
 PULL_STATES = ("open", "closed", "merged")  # what `pulls` says of a pull request (DLV-1)
+
+
+REPO_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_.-]+")  # another repository, as owner/name (PRG-8)
+COMMIT_ID = re.compile(r"[0-9a-f]{7,40}")
 
 
 def same_commit(a: str, b: str) -> bool:
@@ -88,6 +99,34 @@ class FileAdapter:
                 out.append({"change": str(change), "state": state, "head": str(body.get("head") or ""), "base": str(body.get("base") or ""),
                             "merge_commit": merge, "url": str(body.get("url") or "")})
         return out
+
+    def _commit(self, repo: str, ref: str) -> tuple[str, dict[str, str]]:
+        """(the full id, path -> text) for what the stand-in says a commit of another repository holds (PRG-11).
+        An empty ref is the commit named as `default`. It proves nothing about what GitHub holds."""
+        body = (self.data.get("repositories") or {}).get(repo)
+        if not isinstance(body, dict):
+            raise KitError(f"{self.PATH} holds no repository {repo}")
+        commits = body.get("commits") if isinstance(body.get("commits"), dict) else {}
+        wanted = str(ref or body.get("default") or "")
+        for sha, files in commits.items():
+            if same_commit(str(sha), wanted):
+                return str(sha), {str(path): str(text) for path, text in (files if isinstance(files, dict) else {}).items()}
+        raise KitError(f"{self.PATH} holds no commit {wanted or '(no default is named)'} of {repo}")
+
+    def commit_at(self, repo: str, ref: str) -> str:
+        return self._commit(repo, ref)[0]
+
+    def file_at(self, repo: str, ref: str, path: str) -> str | None:
+        return self._commit(repo, ref)[1].get(path)
+
+    def folder_at(self, repo: str, ref: str, path: str) -> dict[str, str] | None:
+        prefix = path.strip("/") + "/"
+        inside = {rel[len(prefix):]: text for rel, text in self._commit(repo, ref)[1].items() if rel.startswith(prefix)}
+        out = {}
+        for name in sorted({rel.split("/", 1)[0] for rel in inside}):  # an id that changes when anything under the name does, as git's does
+            below = sorted((rel, text) for rel, text in inside.items() if rel == name or rel.startswith(name + "/"))
+            out[name] = hashlib.sha256(json.dumps(below).encode("utf-8")).hexdigest()
+        return out or None
 
     def agent_credential(self) -> dict:
         """What the credential available to agents can do: {identity, permissions, scopes}. Simulated for tests."""
@@ -185,6 +224,44 @@ class GitHubAdapter:
                     "head": str((row.get("head") or {}).get("ref") or ""), "base": str((row.get("base") or {}).get("ref") or ""),
                     "merge_commit": str(row.get("merge_commit_sha") or "") if merged else "", "url": str(row.get("html_url") or "")})
         return list(found.values())
+
+    def _found(self, path: str):
+        """One request for something that may not be there: None where GitHub answers Not Found. Any other failure is raised."""
+        try:
+            return self._run(path)
+        except KitError as exc:
+            if "HTTP 404" in str(exc):
+                return None
+            raise
+
+    def commit_at(self, repo: str, ref: str) -> str:
+        """The full id of a commit of another repository (PRG-11). Never run against GitHub: the form of a response is
+        taken from its REST reference. GitHub answers a repository it will not show and one that does not exist alike."""
+        row = self._run(f"repos/{repo}/commits/{ref}")
+        sha = str(row.get("sha") or "") if isinstance(row, dict) else ""
+        if not COMMIT_ID.fullmatch(sha):
+            raise KitError(f"gh api repos/{repo}/commits/{ref} did not give a commit")
+        return sha
+
+    def file_at(self, repo: str, ref: str, path: str) -> str | None:
+        """The text of a file at a commit of another repository; None where that commit holds no such file (PRG-11)."""
+        row = self._found(f"repos/{repo}/contents/{path}" + (f"?ref={ref}" if ref else ""))
+        if not isinstance(row, dict) or row.get("type") != "file":
+            return None  # nothing there, or a folder
+        if row.get("encoding") != "base64":  # GitHub sends no content for a file of more than one megabyte
+            raise KitError(f"gh api repos/{repo}/contents/{path} gave no content for the file")
+        try:
+            return base64.b64decode(str(row.get("content") or "")).decode("utf-8", errors="replace")
+        except ValueError as exc:
+            raise KitError(f"gh api repos/{repo}/contents/{path} gave content that is not base64") from exc
+
+    def folder_at(self, repo: str, ref: str, path: str) -> dict[str, str] | None:
+        """name -> git's id for it, for what a folder holds at a commit of another repository; None where there is none (PRG-11).
+        GitHub lists at most 1,000 names of one folder."""
+        rows = self._found(f"repos/{repo}/contents/{path.strip('/')}" + (f"?ref={ref}" if ref else ""))
+        if not isinstance(rows, list):
+            return None  # nothing there, or a file
+        return {str(row.get("name")): str(row.get("sha") or "") for row in rows if isinstance(row, dict) and row.get("name")}
 
     def setup_report(self) -> list[dict]:
         out = []
