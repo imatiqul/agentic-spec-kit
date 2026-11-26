@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 
-from agentic_kit.core import KIT_DIR, Context, KitError, Source, audit_append
+from agentic_kit.core import KIT_DIR, Context, KitError, Source, audit_append, unix_line_ends
 
 from . import agents as ag
 
@@ -288,7 +288,7 @@ def lock_conflicts(ctx: Context, candidates: list[dict] | None = None) -> list[t
 # ── the working life of an item ─────────────────────────────────────────────────
 
 def _file_hash(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else ""
+    return hashlib.sha256(unix_line_ends(path.read_bytes())).hexdigest() if path.is_file() else ""
 
 
 def _dirty(where: Path, base: str) -> list[str]:

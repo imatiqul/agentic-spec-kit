@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agentic_kit import selftest
-from agentic_kit.core import KIT_DIR
+from agentic_kit.core import KIT_DIR, unix_line_ends
 
 from . import checks_change as cc
 from .checks_map import compute_impact, render_impact
@@ -200,7 +200,7 @@ def extend_sample(root: Path) -> None:
     w(root, f"{base}/{cc.SBOM}", SBOM)
     ctx = selftest.context(root)
     smap = load_map(ctx)
-    digest = hashlib.sha256((root / MIGRATION).read_bytes()).hexdigest()
+    digest = hashlib.sha256(unix_line_ends((root / MIGRATION).read_bytes())).hexdigest()
     w(root, f"{base}/{cc.MIGRATION_RUN}",
       f'schema: agentic-migration-run/1\nstore: demo-db\nengine: postgresql\nengine_version: "16.4"\nresult: pass\n'
       f"model_drift: none\napplied:\n  - {{path: {MIGRATION}, sha256: {digest}}}\n")

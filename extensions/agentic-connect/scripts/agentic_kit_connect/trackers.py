@@ -20,7 +20,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import quote
 
-from agentic_kit.core import Context, KitError, front_matter
+from agentic_kit.core import Context, KitError, front_matter, unix_line_ends
 
 from .transport import basic, expect, secret
 
@@ -360,7 +360,7 @@ class Documents(Adapter):
                 rel = path.relative_to(root).as_posix()
                 if not fnmatch.fnmatch(rel, str(glob)):
                     continue
-                raw = path.read_bytes()
+                raw = unix_line_ends(path.read_bytes())  # so that a document has one revision on every checkout
                 rev = hashlib.sha256(raw).hexdigest()[:12]
                 text = raw.decode("utf-8-sig", "replace")
                 ext = path.suffix.lower()

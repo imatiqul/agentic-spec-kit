@@ -609,6 +609,9 @@ def test_only_a_closed_pipe_ends_a_run_quietly(monkeypatch):
             raise OSError(errno.EINVAL, "Invalid argument")
 
     class Intact:
+        def write(self, text):  # since 2026-11-26 the check also tries a line (tests/test_windows_first_run.py, AC-006)
+            pass
+
         def flush(self):
             pass
 

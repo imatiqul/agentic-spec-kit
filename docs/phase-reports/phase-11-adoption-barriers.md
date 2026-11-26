@@ -25,6 +25,8 @@ Two things I read in the installed files, to watch in those runs. The hook that 
 
 **And after that.** On the owner's "next", two parts of proposal 4 were built, the two that change no rule: `record --change pull/<n>` finds the review itself, and `gate` lists evidence that is not committed. The spec is `docs/design/record-finds-review.md`. One thing differs from proposal 4 as written below: more than one review may carry the line, because a gate outside Lite needs a review for each role. The command refuses when those reviews are on different commits. What the gate board calls a decision nobody could verify, and what Lite does then, still wait for the owner.
 
+**Then the owner merged, and Windows ran.** On 2026-11-26 the owner made the commit from the patch, pushed the branch and merged pull request #1. The push started the first run on Windows, and it failed, which is what the job was for: the self-test and the demo passed, 27 unit tests failed or ended in an error, and the golden tasks failed in parallel mode. There were three causes: Spec Kit looks for the coding agent's program, the evidence hash depended on line ends, and a closed pipe was not recognised in one case. `docs/design/windows-first-run.md` sets them out. The owner said to fix all three. They are changed in the code, and none of the changes has run on Windows. The second one is the one that matters to a team on Windows: as Git for Windows sets git up, no gate would have held.
+
 ## The short version
 
 A newcomer on Linux who already has Spec Kit 1.4.3 gets from a fresh clone to an open gate, with its approval line printed, in a few minutes of commands. The path stops there. The first gate decision is a pull-request review on GitHub, and the kit has never read one.
