@@ -56,8 +56,8 @@ AC-001 in full, and the test of 2026-11-23 for a closed pipe, need Windows. They
 
 ## Decisions made here that are the owner's to change
 
-1. **CRLF counts as LF wherever the kit hashes or compares a file.** An approval then covers a text file whatever its line ends. The other way is to leave the hash as it is and have every project on Windows turn git's conversion off; then a file an editor saved with CRLF would still break its gate until it was committed and checked out again.
+1. **CRLF counts as LF wherever the kit hashes or compares a file.** An approval then covers a text file whatever its line ends. The other way is to leave the hash as it is and have every project turn git's conversion off, for everyone who works on it on Windows. A project that instead tells git to normalise line ends would still break a gate whenever an editor saved a file with CRLF, until that file was committed and checked out again.
 2. Binary is what git takes for binary: a NUL byte in the first 8000 bytes. Such a file is hashed as it is.
-3. The hash keeps its label, `agentic-evidence/1`. For files with no CRLF nothing changes. A hash made earlier over a file that does hold CRLF no longer matches. The kit's own tests and its reference example hold no such hash: they pass unchanged.
+3. The hash keeps its label, `agentic-evidence/1`. For files with no CRLF nothing changes. A hash made earlier over a file that does hold CRLF no longer matches. The kit's own tests and its reference example hold no such hash: they pass unchanged, the two tests that read the healthcare repository among them.
 4. The walk test does not check for the coding agent's program. A person who installs the kit for Claude Code still needs Claude Code; the test is about the kit's part.
 5. On Windows the check for a closed pipe may write one empty line to standard output before another error's traceback. That is the price of telling the two apart.
