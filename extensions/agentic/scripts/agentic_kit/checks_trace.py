@@ -221,7 +221,8 @@ def ck_verify_inputs(ctx: Context, res: Result) -> None:
                    "system-map/*"] + list(spec_front(ctx, spec).get("paths") or [])
         for hook in ARTIFACT_HOOKS + READING_HOOKS:
             allowed += hook(ctx, spec)
-        banned = [f"specs/{spec}/notes/*", f"specs/{spec}/verification/*", f"{KIT_DIR}/work/*"]
+        # The generated page of the change repeats what the work records say, so it is no verifier's input either (CHS-9).
+        banned = [f"specs/{spec}/notes/*", f"specs/{spec}/verification/*", f"{KIT_DIR}/work/*", f"specs/{spec}/changeset.md"]
         for rel in ctx.src.files(f"specs/{spec}/verification"):
             if not rel.endswith("-inputs.yml"):
                 continue

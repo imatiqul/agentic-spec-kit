@@ -3,7 +3,7 @@
 - **Phase and date:** Phase 2 (design), 2026-11-21
 - **Requirement IDs covered:** see the "Enforces" column; full mapping in `requirement-map.md`
 - **Assumptions:** every check runs from the repo root with no network, except the approval checks, which make one adapter call
-- **Unverified:** none of these checks existed when this catalogue was written. As of 2026-11-22 all 105 exist, each with a passing and a failing fixture (`agentic.py selftest`); what has and has not been run is in the phase reports
+- **Unverified:** none of these checks existed when this catalogue was written. As of 2026-11-22 all 105 exist, each with a passing and a failing fixture (`agentic.py selftest`); what has and has not been run is in the phase reports. Phase 12 added two on 2026-11-26, listed at the end of this file, which makes 107
 
 Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: **L** local command, **A** agent runtime event where supported, **CI** continuous integration. CI is authoritative. Checks for slices 0.4 to 0.6 were built after this catalogue was written and are listed at the end of this file.
 
@@ -25,7 +25,7 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 | CK-AUDIT-CHAIN | A log entry's hash or previous-hash is wrong; sequence numbers skip; a decision record's `audit_head` is not in the log | TRC-5, TRC-6 | L, CI | One edited entry |
 | CK-DRIFT-SPEC | After merge, a file under a spec's declared paths changed with no spec, or the trace manifest no longer builds clean | TRC-8 | CI (default branch) | Change to a traced file with no spec |
 | CK-METRIC-SOURCE | A metric is displayed with no data source | TRC-11, TRC-14 | L, CI | Metric configured with no source |
-| CK-VERIFY-INPUTS | The verifier's input manifest lists anything other than the artifact, spec, constitution and map, or the verifier's agent id equals the author's. The artifact is the paths the spec names, the paths its task list names, and the files of the components it says it touches; a verifier may also read the files of the components the spec says it depends on. The work records, notes and other verification files are never allowed | QLT-1 | L, CI | Manifest that includes the author's notes |
+| CK-VERIFY-INPUTS | The verifier's input manifest lists anything other than the artifact, spec, constitution and map, or the verifier's agent id equals the author's. The artifact is the paths the spec names, the paths its task list names, and the files of the components it says it touches; a verifier may also read the files of the components the spec says it depends on. The work records, notes and other verification files are never allowed, and since 2026-11-26 neither is the generated page of the change, `specs/<spec>/changeset.md`, which repeats the work records | QLT-1 | L, CI | Manifest that includes the author's notes |
 | CK-DOMAIN-SECTIONS | A spec in a Regulated project lacks a section the active pack requires | ADP-14 | L, CI | HIPAA spec without the safeguards section |
 | CK-SELFTEST | Any check lacks a passing or failing fixture, or its failing fixture passes | TRC-17 | CI | A check directory with one fixture |
 
@@ -208,7 +208,7 @@ Detail the summaries leave out:
 | CK-AGENT-MEMORY | Agent instruction files are under version control and review, grant nothing the kit forbids, and point at files that exist | AGT-18 | Standard, Regulated |
 
 Detail the summaries leave out:
-- CK-CONTEXT fails when an agent is at work with no context pack, the pack was edited by hand, a source changed since it was built, or it draws on a sealed change.
+- CK-CONTEXT fails when an agent is at work with no context pack, the pack was edited by hand, a source changed since it was built, or it draws on a sealed change. Since 2026-11-26 it looks for the pack's mark where the pack's own text begins, after the list of sources: it used to look in the first 1,200 characters, and a pack with ten sources had its mark past them and was taken for an edited one. Since that day a pack is also stale when the spec's decision log comes to hold an entry that touches its task.
 - CK-TOOL-ALLOWLIST fails when an MCP server is configured that is not on the allowlist, is launched differently from what was reviewed, is not pinned, or holds a stored credential; or a setting trusts every server. The allowlist is read from the base branch.
 - CK-RUN-RECORD reads the `agent.<action>` entries of the audit log. A step whose tools were not reported by the runtime is recorded as `declared`, taken from the agent spec, and says so.
 - CK-ROUTING requires a routing policy at Regulated only. Where a policy exists at Standard it is enforced. Model and cost are what the runtime reported (see `docs/limits.md`).
@@ -247,3 +247,12 @@ None of these checks runs a scanner, an evaluation or an accessibility tool. Eac
 Detail the summaries leave out:
 - CK-PROGRESSIVE asks a Critical change for a rollback rehearsal in two steps. While the spec is planned, the rollout must say how the rollback will be rehearsed (`rollback_rehearsal.plan`): a rollback cannot be rehearsed before the change is built. Once G7 is approved, the rehearsal must have a date and evidence that exists.
 - CK-TEST-STRATEGY asks a Critical change for a resilience test per external system it relies on. Those are the external systems its touched components call, and the ones the spec lists under `depends_on`. For one a touched component calls and the change has nothing to do with, the strategy may say so: `{not_relied_on: <reason>}`. That is not accepted for a system the spec itself lists, and a placeholder is not an answer.
+
+## Phase 12, 2026-11-26 (built after this catalogue was written)
+
+| Check | Fails when | Enforces | Profiles |
+|---|---|---|---|
+| CK-DECISION-LOG | A spec's decision log is not a log, an entry has no title, an id of another form, an id used twice or an unknown state; a decided entry lacks its outcome, its day or an owner whom `roles.yml` lists as a person; an entry that is not decided carries an outcome; a superseded entry names no other entry; `affects` names a requirement or a task the spec does not have; or G5 is approved while an entry is still open or proposed, or without the log among its evidence. A spec with no log passes | GOV-5, TRC-18 | all |
+| CK-CONVERSATION | A discussion moved after someone acted on its intake record and no Product Owner acknowledged it; or what is kept of a conversation holds what the screen removes, lacks its summary, its writer or its day, has a link that carries a credential, or names a confirmer whom `roles.yml` does not list | INT-2, INT-7 | Standard, Regulated |
+
+The two are registered under requirement IDs of `docs/prompts/spec/`, because the as-built map is made from the IDs in that folder. Their own requirements are DEC-10 to DEC-14 in `decision-log.md` and CNV-10 and CNV-11 in `conversation.md`. No other feature of Phase 12 adds a check: the page of a change, the search, the MCP server, the view of a programme and the workflow that opens a pull request judge nothing.

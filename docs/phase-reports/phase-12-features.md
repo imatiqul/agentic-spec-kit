@@ -1,0 +1,116 @@
+# Phase 12: one change, seen whole
+
+- **Phase and date:** Phase 12 (features); 2026-11-26. Not a phase of the original plan, which ends at 10
+- **What this is:** what the owner asked for, what the kit had and lacked, what was built, how it was reviewed and merged, what was run, and what is his to decide
+- **Assumptions:**
+  1. On 2026-11-26 the owner brought a public post about another spec-driven tool, called Intent, whose unit of work is a "changeset". He asked which of its features the kit lacks and for a plan, and then asked for the features to be built in parallel and tested on the reference project with GitHub. This report covers the build. The test on GitHub has not started.
+  2. Nothing of that tool was installed or used. What is said of it comes from the post, in my words.
+  3. Questions the owner did not answer were decided as recommended. Each such decision is listed in its feature's spec as his to change, and the ones that matter most are at the end of this report.
+- **Unverified:** nothing of Phase 12 has read GitHub, a tracker or a chat service. No coding agent has used any of it. When this was written, none of it had run on Windows: the pull request that brings it is its first run there.
+- **Who "I" is:** the session that planned the phase, wrote two of the pieces and merged the rest. Five other agents each built one feature.
+
+## What was asked, and where the kit stood
+
+The post lists ten things its tool keeps or does for one change. Against `main` as it was that morning:
+
+| # | The post's tool | The kit before | The kit now |
+|---|---|---|---|
+| R1 | Everything about a change is one object | In the repository, in seven places; no page showed one change whole | `changeset`: one page, built from those seven places |
+| R2 | The conversation that started it | The request was kept; the discussion was not | A summary that a person confirms, links, and a count and a hash of an item's comments |
+| R3 | Decisions, each with an owner and an outcome | Six kinds of decision had a record; a choice made inside a change had none | A decision log for each change, part of the evidence of G5 |
+| R4 | Specs versioned against the code | Had it | The page lists each version and the decisions made on it |
+| R5 | A plan for each repository | Programme specs plan it; a parent could not see its children | The parent's page shows where each child stands |
+| R6 | The repositories indexed for search | No search | `search`, ordered by the system map; no index |
+| R7 | The branches and pull requests | Recorded in three places; nothing put them together | A ledger of commits, branches and pull requests, on the page |
+| R8 | Nothing to reconcile | By design the kit does not replace the tracker | Unchanged; R2 and R3 close the gap that mattered |
+| R9 | In the repository | Had it | Unchanged |
+| R10 | Through MCP | The kit was not an MCP server | A read-only MCP server, as an optional extension |
+
+A first reading had R5 as missing. The kit already had programme specs (MAP-14, `CK-PROGRAMME`), so feature 7 became a view and no more.
+
+The specs of this phase call its plan `phase-12-changeset-gap-analysis`, or "the Phase 12 review", and number its proposals 1 to 7. That plan is in the owner's project notes and not in this repository. The table above carries what matters of it, and the proposals are the rows of the next table, in this order: 1 and 4 the page with its branches and pull requests, 2 the decision log, 3 the conversation, 5 the search, 6 the MCP server, 7 the programme.
+
+## What was built
+
+Each feature has a spec under `docs/design/`, committed before its code, and a test named after each acceptance criterion.
+
+| Feature | Spec | Requirements | Tests | Where it lives |
+|---|---|---|---|---|
+| A page for each change, and its branches and pull requests | `changeset.md` | CHS-1 to CHS-12, DLV-1 to DLV-10 | 23 | Core, so Lite has it |
+| A decision log for each change | `decision-log.md` | DEC-1 to DEC-19 | 46 | Core, with the hand-off and the context pack in the team extension |
+| The conversation behind a change | `conversation.md` | CNV-1 to CNV-14 | 29 | Product and connect extensions |
+| Search that knows the system map | `search.md` | SRC-1 to SRC-14 | 19 | Core |
+| An MCP server, read-only | `mcp-server.md` | MCP-1 to MCP-21 | 33 | A new optional extension, `agentic-mcp` |
+| A programme seen from its parent | `programme-view.md` | PRG-1 to PRG-12 | 14 | System extension, with three reading methods on the adapters |
+| A pull request opened by a workflow | `pull-request-by-workflow.md` | BOT-1 to BOT-6 | 5 | A template beside the kit's pipeline file, and `init --open-pr-workflow` |
+| The places where they meet | | | 2 | `tests/test_phase12_together.py` |
+
+Two checks were added, `CK-DECISION-LOG` and `CK-CONVERSATION`, each with a passing and a failing fixture. That makes 107. No gate was added, and no rule about who approves changed.
+
+The last row but one is not from the post. It answers a finding of Phase 11: one person with one account cannot pass a gate on GitHub, because the author of a pull request may not approve it. A pull request that a workflow opens has the workflow's account as its author.
+
+## How it was built
+
+Five features were built at the same time, each by an agent in a working copy of its own, from one written brief: the spec first and alone in a commit, then the code; the three pipeline steps on the final tree; no edit to the shared documents. I wrote the workflow and, once the page existed, the view of a programme. One line of code went in before all of it: the list that other extensions add sections of a change's page to.
+
+I read each branch before I merged it: the spec, every change to a file that existed, and the new code where it touches a gate, a path or a network. What the review changed:
+
+- **The MCP server met the modules it was written for.** Its tools had only been tried on stand-ins, because the search and the page did not exist yet. The kit's search gives a list of hits that also knows how many hits there were and what to tell the caller. Passed on as a list, that was lost; the tool now passes on the whole answer. The tool's description said that a spec narrows a search, where it puts the spec's nodes first. AC-025 was added, and it compares the three tools with the commands.
+- **The setting that the workflow needs does more than its use.** "Allow GitHub Actions to create and approve pull requests" is one switch for both. BOT-6 was added: the workflow's header says so, and a test shows that the kit's gate refuses an approval by the workflow's account.
+- **Nothing else was changed in the agents' code.** The decision-log agent had found and corrected one thing in an existing check, and I kept it: `CK-CONTEXT` looked for a context pack's mark in its first 1,200 characters, and a pack with ten sources has its mark past them.
+
+Then I checked what no single branch could: with every extension loaded, the page of the sample project has the sections of all features in a fixed order; writing the page changes the result of no check and the evidence of no gate; and the evidence of a spec with no decision log is byte for byte what it was.
+
+## What was run
+
+On the merged tree, on Linux with Python 3.12.3, pytest 9.2.0 and Spec Kit 1.4.3:
+
+- `python -m pytest tests -q`: 739 passed and 3 skipped, of 742. Two of the skipped need a clone of the reference repository, and one needs the official `mcp` package.
+- `agentic.py selftest`: every check behaved as expected on 107 fixtures.
+- `agentic.py golden run --fixture fixtures/multi-app`: exit 0, 10 of 10 in each mode.
+- The same three with git set as Git for Windows sets it and Python made to write CRLF, on Linux, on the merged code before the last documents were written: 739 passed and 3 skipped, 107 fixtures, 10 of 10 in each mode. That emulates line ends and nothing else of Windows.
+- All 33 tests of the MCP server in an environment that has the official `mcp` package for Python, version 2.3.0: 33 passed, the one that opens the server with that client among them.
+- The unit tests with Spec Kit taken off the path, as the Linux jobs of the kit's own pipeline have it: 733 passed and 9 skipped. The six more are the five of the install walk and the one in which Spec Kit installs the MCP extension.
+- The three steps on Python 3.10.20 with pytest 9.2.0 and on Python 3.13.18 with pytest 9.1.1, the two pairs of that pipeline, without Spec Kit: 733 passed and 9 skipped on each, 107 fixtures, 10 of 10 in each mode. That run was on this tree but for this one line.
+
+The agents ran the three steps on their own branches as well, and parts of their tests on Python 3.10, 3.11 and 3.13.
+
+## What was not run
+
+- Anything against GitHub. `pulls`, the three methods that read another repository, the comments of an issue, and the workflow that opens a pull request have met only answers written by hand from GitHub's documents.
+- Anything against Jira or Azure DevOps.
+- The MCP server with a coding agent such as Claude Code, GitHub Copilot or Cursor.
+- Any of the new commands by a coding agent, and a hand-off by one that writes a decision log.
+- Any of it on Windows, when this was written.
+- The search on a real large repository.
+
+## What changes for a project that already has the kit
+
+1. `specs/<spec>/changeset.md` is a name the kit takes. A file of that name is never gate evidence.
+2. `report all` writes a ninth view, `changesets`. Where the adapter is GitHub, that view, `changeset` and `audit-pack` ask GitHub once for each commit of a change, for at most fifty of each spec.
+3. The manifest of an evidence pack has a new key, `delivery`.
+4. `connect fetch` asks once more for each item of Jira, Azure DevOps and GitHub, for its comments. A row of `connect fetch --json` has a new key, `discussion`.
+5. Where a spec has a decision log, the log is part of the evidence of G5. A spec with none has the evidence and the hash it had.
+6. A brief may have two new sections: "Decisions", where the spec has a log, and "The conversation behind it", at the first gate, where one is recorded.
+7. With the team extension: `work handoff --question` writes proposals into the decision log, the path guard refuses that log to an agent's file tools, a context pack may show decisions, and `CK-CONTEXT` no longer takes a pack with ten or more sources for an edited one.
+8. `CK-VERIFY-INPUTS` refuses the page of a change as a verifier's input.
+9. The file that plays GitHub in tests may hold the state of a pull request, and what another repository holds at a commit.
+
+## Decisions that are the owner's to change
+
+Each spec ends with its own list. These are the ones I would look at first.
+
+1. **The decision log is evidence of G5, and a decision's owner is claimed, not proven.** The kit cannot tell who typed `decision decide`. The person who approves G5 is shown every entry. The other way is to bind a decision to a review, as a gate decision is bound.
+2. **`report all` and the evidence pack now ask GitHub.** The other way is to show pull requests only on the page of one change.
+3. **Every fetch reads the comments of every item.** One request more for each item, with no setting to turn it off.
+4. **The MCP protocol is written by hand**, so that PyYAML stays the kit's only dependency. The server speaks the four revisions with a handshake and the one of 2026-07-28, which has none. The other way is the official library, as a dependency of that one extension.
+5. **The MCP server only reads.** A tool that adds a question to a decision log would be the first that writes, and needs a spec of its own.
+6. **A parent's gate does not wait for its children.** The view of a programme adds no rule. The other way is a check that holds a parent's release until each child has passed its own.
+7. **Only fixed words cross from another repository onto a programme's page**: no title and no name.
+8. **The workflow that opens a pull request needs a setting that also lets a workflow approve.** The other way is a second account or a GitHub App.
+9. **"One edge away" in the search counts an edge in either direction**, where the impact report follows it one way.
+10. **`CK-CONTEXT` was changed**, to correct what is described above. It is a change to an existing check.
+
+## The test on GitHub
+
+The owner asked for the features to be proven on the reference project with a GitHub repository, issues, a Project and Actions. That has not started. Its plan is in the project's notes, in stages: an issue with its discussion, a pull request that installs the kit into the reference repository, a fetch in Actions, a change branch whose pull request the workflow opens, a first real gate approved by the owner in a review, and then the page, the search and the MCP server on the result. Nothing is created on GitHub before the owner has seen and approved what would be created. Its results, whatever they are, go into `docs/limits.md`.

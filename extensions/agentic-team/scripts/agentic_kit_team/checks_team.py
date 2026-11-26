@@ -206,7 +206,7 @@ def ck_path_diff(ctx: Context, res: Result) -> None:
             continue
         allowed = work.allowed_globs(ctx, item, specs)
         for f in c["files"]:
-            if not f.startswith(work.STATE_PATHS) and not work.match(f, allowed):
+            if not work.kit_written(f) and not work.match(f, allowed):
                 res.fail(f"commit {c.get('commit', '?')} for {c['item']} changed {f}, outside the item's paths", f)
     changed = _changed(ctx)
     if changed is None:

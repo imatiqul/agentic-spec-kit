@@ -11,7 +11,7 @@ import yaml
 
 from agentic_kit import core
 
-from . import checks_change, checks_map, discover, sample
+from . import checks_change, checks_map, discover, programme, sample
 from .mapmodel import MAP_PATH, load_map
 
 __version__ = "0.2.0"
@@ -23,6 +23,7 @@ core.BRIEF_HOOKS.append(checks_map.brief_hook)
 core.ARTIFACT_HOOKS.append(checks_map.artifact_hook)
 core.READING_HOOKS.append(checks_map.reading_hook)
 core.WHY_HOOKS.append(checks_map.why_hook)
+core.CHANGESET_HOOKS.append(programme.section)  # a programme seen from its parent (PRG-1)
 
 
 def map_view(ctx) -> str:

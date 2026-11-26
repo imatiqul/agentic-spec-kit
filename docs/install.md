@@ -94,8 +94,17 @@ Keep that order. The line that `gate` prints is a hash of the evidence files as 
 | The reviewer's one page for a gate | `agentic.py brief --spec <id> --gate G3 --write` |
 | The evidence pack for a release | `agentic.py audit-pack --spec <id> --write` |
 | Why a line of code exists | `agentic.py why <file>:<line>` |
+| One change, whole: origin, gates, versions, tasks, branches and pull requests, and what is open | `agentic.py changeset --spec <id>` |
+| One line for each change | `agentic.py report changesets` |
+| What was decided inside a change, and what is still open | `agentic.py decision list --spec <id>` |
+| What is recorded of the conversation behind a change | `agentic.py product conversation --spec <id>` |
+| Where a text is in the code, by component | `agentic.py search "<text>" --spec <id>` |
 
 What each role does with these is in `docs/guide/roles.md`. What the kit does not do is in `docs/limits.md`.
+
+The last five were added on 2026-11-26 and are in the README under "One change, seen whole". A coding agent can ask for most of this through MCP as well: the optional extension `extensions/agentic-mcp` is a read-only server, and its README says how a person adds it.
+
+**If you are the only person.** GitHub does not let the author of a pull request approve it, so with one account you cannot pass a gate on a pull request you opened. `agentic.py init --profile <profile> --open-pr-workflow` also writes `.github/workflows/agentic-open-pull-request.yml`, which opens the pull request as the workflow's own account, so that you may review it. Read the header of that file first. It needs the repository setting "Allow GitHub Actions to create and approve pull requests", and that setting also lets a workflow approve a pull request. The kit's gate never counts such an approval; a branch rule that only counts approvals may. `gates.single_approver_exception` has to be `allowed`, and each record then says that the exception was used. As of 2026-11-26 this workflow has not run on GitHub.
 
 ## Lite in one page
 Lite needs three gates (G1 spec, G3 plan, G5 implementation), one approver each, and requirements linked to tasks. You edit two files: `roles.yml` and CODEOWNERS. The constitution map, the trace manifest, domain packs, drift detection and the evidence-hash line are not required.

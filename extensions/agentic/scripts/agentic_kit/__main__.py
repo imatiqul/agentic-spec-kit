@@ -109,9 +109,23 @@ def cmd_doctor(args) -> int:
 CONSTITUTION_EVIDENCE = [".specify/memory/constitution.md", f"{KIT_DIR}/constitution.map.yml"]
 
 
+def _names(root: Path, given: str, rel: str) -> bool:
+    """Does a path that was given by hand name this file of the repository, however it is written?"""
+    if str(given).replace("\\", "/").lstrip("./") == rel:
+        return True
+    try:
+        return (root / str(given)).resolve() == (root / rel).resolve()
+    except (OSError, ValueError):
+        return False
+
+
 def _evidence_files(ctx: Context, spec: str, gate: str, explicit: list[str] | None) -> list[str]:
     base = f"specs/{spec}"
+    from .changeset import page_path  # the page of a change is generated: it is never evidence, whatever a pattern says (CHS-9)
+    page = page_path(spec)
     if explicit:
+        if any(_names(ctx.src.root, f, page) for f in explicit):
+            raise KitError(f"{page} is the generated page of the change. It is never gate evidence: writing it again would open the gate")
         return sorted(explicit)
     import fnmatch
     if gate == "G0":
@@ -127,7 +141,7 @@ def _evidence_files(ctx: Context, spec: str, gate: str, explicit: list[str] | No
     out = []
     for pat in patterns:
         out += [p for p in present if fnmatch.fnmatch(p, f"{base}/{pat}")]
-    return sorted(set(out))
+    return sorted(set(out) - {page})
 
 
 def _uncommitted(root: Path, files: list[str]) -> list[str] | None:
@@ -317,6 +331,17 @@ def cmd_record(args) -> int:
     print(f"wrote {path.relative_to(ctx.src.root).as_posix()}")
     print("This is a mirror. CK-APPROVER and CK-GATE-MIRROR decide whether the review behind it is valid.")
     return 0
+
+
+from . import decision_log  # noqa: E402  (here, with its command: registers CK-DECISION-LOG, its fixtures and its two views)
+
+# The person who approves the implementation approves the decisions it rests on. A spec with no log has the evidence it had (DEC-8, DEC-9).
+DEFAULT_EVIDENCE[decision_log.GATE].append(decision_log.LOG_NAME)
+
+
+def cmd_decision(args) -> int:
+    """The decision log of one change: add a question, record what a person decided, list. Writing an entry approves nothing (DEC-7)."""
+    return decision_log.command(_context(args), args)
 
 
 def cmd_brief(args) -> int:
@@ -531,6 +556,13 @@ def cmd_init(args) -> int:
         ci.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, ci)
         written.append(ci)
+    if getattr(args, "open_pr_workflow", False):  # for the person who pushes a branch and also approves its gate (BOT-4)
+        opener = root / ".github" / "workflows" / "agentic-open-pull-request.yml"
+        source = Path(__file__).resolve().parents[2] / "ci" / "agentic-open-pull-request.yml"
+        if source.exists() and (not opener.exists() or args.force):
+            opener.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, opener)
+            written.append(opener)
     if not (kit_dir / "audit" / "kit.jsonl").exists():
         audit_append(root, "kit", {"type": "kit", "id": "init"}, "kit.init", profile=args.profile)
         written.append(kit_dir / "audit" / "kit.jsonl")
@@ -576,11 +608,53 @@ def cmd_demo(args) -> int:
     return demo.run(_captured, keep=args.keep)
 
 
+def cmd_changeset(args) -> int:
+    """One page for one change, built from the repository. It records nothing and decides nothing (CHS-1)."""
+    from . import changeset
+    ctx = _context(args)
+    if args.spec not in ctx.specs():
+        print(f"spec {args.spec} does not exist", file=sys.stderr)
+        return 2
+    doc = changeset.build(ctx, args.spec)
+    if args.write:
+        try:
+            done = changeset.write(ctx, args.spec, doc)
+        except (KitError, OSError) as exc:
+            print(f"{exc}\nNothing was written.", file=sys.stderr)
+            return 2
+        print(done, file=sys.stderr if args.json else sys.stdout)  # with --json, standard output holds the document and nothing else
+    if args.json:
+        print(json.dumps(doc, indent=2, default=str))
+    elif not args.write:
+        print(changeset.render(doc), end="")
+    return 0
+
+
 def cmd_list(args) -> int:
     for cid in sorted(REGISTRY):
         c = REGISTRY[cid]
         print(f"{cid:20} {', '.join(c.requirements):32} {'/'.join(c.profiles):26} {c.summary}")
     return 0
+
+
+def cmd_search(args) -> int:
+    """Find text in the files git tracks, each hit with the map node that owns its file (SRC-1 to SRC-14). It writes nothing.
+
+    Ends as grep does: 0 with hits, 1 with none, 2 when it could not search."""
+    from . import search
+    try:
+        found = search.search(_context(args), args.text, spec=args.spec, node=args.node, limit=args.limit, regex=args.regex,
+                              ignore_case=args.ignore_case, kind=args.kind)
+    except KitError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    except Exception:  # a fault of the kit's own is shown as it is, and never ends with 1: that would say "no hits" (SRC-12)
+        import traceback
+        traceback.print_exc()
+        return 2
+    for line in [json.dumps(found.document(), indent=2)] if args.json else search.plain(found, args.spec):
+        search.say(line)
+    return 0 if found.total else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -609,6 +683,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--approval", action="append", help="reviewer:role:pull/<n>#review-<id>; with --decision and --commit, in place of --change")
     sp.add_argument("--condition", action="append"); sp.add_argument("--exception", action="store_true")
     sp.add_argument("--file", action="append"); sp.set_defaults(fn=cmd_record)
+    sp = sub.add_parser("decision", help="the decision log of a change: add a question, record what a person decided, list; "
+                                         "writing an entry approves nothing"); common(sp)
+    sp.add_argument("action", choices=["add", "decide", "supersede", "list"]); sp.add_argument("--spec", required=True)
+    sp.add_argument("--title", help="with add: the question")
+    sp.add_argument("--by", help="with add: who asks; an id that roles.yml does not list as a person makes the entry a proposal. "
+                                 "With supersede: the id of the entry that replaces this one")
+    sp.add_argument("--id", help="with decide and supersede: the entry, as D-001")
+    sp.add_argument("--outcome", help="with decide: what was decided"); sp.add_argument("--owner", help="with decide: the person who decided, as roles.yml lists them")
+    sp.add_argument("--why", help="with decide: the reason"); sp.add_argument("--on", help="with decide: the day, as 2026-11-26 (default: today)")
+    sp.add_argument("--affects", action="append", help="with add and decide: FR-001, T003, node:<map node id> or adr:<file>; repeat for several")
+    sp.add_argument("--source", help="with add and decide: a link to where it was asked or decided"); sp.set_defaults(fn=cmd_decision)
     sp = sub.add_parser("brief", help="the one-page brief for the person at a gate"); common(sp)
     sp.add_argument("--spec", required=True); sp.add_argument("--gate", required=True, choices=GATES)
     sp.add_argument("--write", action="store_true"); sp.set_defaults(fn=cmd_brief)
@@ -631,7 +716,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--baseline", action="store_true"); sp.set_defaults(fn=cmd_suppressions)
     sp = sub.add_parser("init", help="write kit.yml, roles.yml, the constitution map and the CI workflow")
     sp.add_argument("--profile", required=True); sp.add_argument("--repository"); sp.add_argument("--pack", action="append")
-    sp.add_argument("--force", action="store_true"); sp.set_defaults(fn=cmd_init)
+    sp.add_argument("--force", action="store_true")
+    sp.add_argument("--open-pr-workflow", action="store_true",
+                    help="also write a workflow that opens a pull request as the workflow's own account, for the person who pushes a branch and approves its gate")
+    sp.set_defaults(fn=cmd_init)
     sp = sub.add_parser("audit", help="append an entry to an audit log")
     sp.add_argument("--log", required=True); sp.add_argument("--actor-type", required=True, choices=["human", "agent", "kit"])
     sp.add_argument("--actor-id", required=True); sp.add_argument("--action", required=True)
@@ -639,10 +727,26 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("selftest", help="prove every check fails on its broken fixture"); sp.add_argument("--json", action="store_true")
     sp.set_defaults(fn=cmd_selftest)
     sp = sub.add_parser("list", help="list checks"); sp.set_defaults(fn=cmd_list)
+    sp = sub.add_parser("search", help="find text in the files git tracks; with a system map each hit names its node, "
+                                       "and --spec puts what a spec touches first"); common(sp, base=False)
+    from .search import KINDS, LIMIT
+    sp.add_argument("text", help="the text to find, as a fixed string; put `--` before one that starts with a dash")
+    sp.add_argument("--spec", help="put first the hits in the nodes this spec touches, then those one edge away, then the rest")
+    sp.add_argument("--node", help="search the files of this node of the system map only")
+    sp.add_argument("--regex", action="store_true", help="read the text as an extended regular expression, as `git grep -E` does")
+    sp.add_argument("--ignore-case", action="store_true", help="take upper and lower case as the same")
+    sp.add_argument("--kind", choices=KINDS, default="all", help="specs is specs/, records is .specify/, code is everything else")
+    sp.add_argument("--limit", type=int, default=LIMIT, help="the most hits to show; 0 shows all (default: %(default)s)")
+    sp.set_defaults(fn=cmd_search)
     sp = sub.add_parser("demo", help="watch one gate close and open again, in a throwaway project where a file plays GitHub; "
                                      "it proves nothing about who approved")
     sp.add_argument("--keep", action="store_true", help="leave the throwaway project in place, and say where it is")
     sp.set_defaults(fn=cmd_demo)
+    sp = sub.add_parser("changeset", help="one page for one change: where it came from, its gates, versions, tasks, branches and pull requests; "
+                                          "it shows what is recorded and decides nothing")
+    common(sp); sp.add_argument("--spec", required=True)
+    sp.add_argument("--write", action="store_true", help="keep the page as specs/<spec>/changeset.md; it is never gate evidence")
+    sp.set_defaults(fn=cmd_changeset)
 
     from .core import CLI_HOOKS
     for hook in CLI_HOOKS:

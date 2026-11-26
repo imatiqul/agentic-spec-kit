@@ -1,6 +1,6 @@
 # agentic-spec-kit
 
-> **Status: pre-alpha, public.** All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture. The kit has been used once on real work, and it has never been run against a live GitHub repository, a live tracker or a chat service. Do not rely on it for real work.
+> **Status: pre-alpha, public.** All six slices (0.1 to 0.6) are built, and seven features were added on 2026-11-26: 107 checks, each with a passing and a failing fixture. The kit has been used once on real work, and it has never been run against a live GitHub repository, a live tracker or a chat service. Do not rely on it for real work.
 > [Status in detail](#status-in-detail) has the particulars. [`docs/limits.md`](docs/limits.md) lists what the kit does not do.
 
 An Agentic Specification-Driven Development toolkit that builds on
@@ -21,6 +21,9 @@ Find the row that says what you want. The last column is for people who work wit
 | See it work, in ten minutes | [Try it](#try-it), then [Your first day](#your-first-day) | In a clone of this repository: "Give me the agentic-spec-kit tour." (skill `agentic-spec-kit-try`) |
 | Put it on a project | [`docs/install.md`](docs/install.md) | In a clone of this repository: "Install agentic-spec-kit into my project." (skill `agentic-spec-kit-install`) |
 | Know what to do next, in a project that has it | [How one change moves](#how-one-change-moves) | `/speckit.agentic.guide` |
+| See one change whole: where it came from, its gates, its tasks and its pull requests | [One change, seen whole](#one-change-seen-whole) | `/speckit.agentic.guide` |
+| Find what is already in the code before you write a spec against it | [One change, seen whole](#one-change-seen-whole) | |
+| Let a coding agent ask the kit directly, through MCP | [`extensions/agentic-mcp/README.md`](extensions/agentic-mcp/README.md) | `/speckit.agentic-mcp.setup` |
 | Review a change you did not write | [Who does what](#who-does-what) | "Review this change independently." (skill `agentic-spec-kit-review`, in any repository) |
 | Approve at a gate | [What happens on a pull request](#what-happens-on-a-pull-request) and [`docs/guide/roles.md`](docs/guide/roles.md) | No agent can do this for you |
 | Set up the repository so that approvals count | [`docs/admin-setup.md`](docs/admin-setup.md) | No agent can do this for you |
@@ -305,6 +308,23 @@ Phase 7 took one change of the reference system through the kit. The change make
 
 No gate is passed for that change. No review carried a gate's line, so its project has no decision record. One model played every agent.
 
+## One change, seen whole
+
+Added on 2026-11-26, in Phase 12. The kit keeps everything about one change in the repository, in seven places. These commands put it together, and keep three things that were not kept before: the choices made inside a change, the conversation behind it, and its pull requests. None of them approves anything, and none changes how a gate is judged.
+
+| You want | Command | What it will not do |
+|---|---|---|
+| One page for a change: where it came from, its gates and who approved, the versions of its spec, plan and tasks, its tasks, its branches and pull requests, and what is open | `agentic.py changeset --spec <spec>`. `--json` is for a tool, and `--write` keeps the page as `specs/<spec>/changeset.md` | Decide or judge. It shows what is recorded; the checks judge. A kept page is never gate evidence |
+| One line for each change | `agentic.py report changesets` | |
+| A record of the choices made inside a change: the question, who asked it, what a person decided and why | `agentic.py decision add --spec <spec> --title "<the question>"`, then `agentic.py decision decide --spec <spec> --id D-001 --outcome "<what was decided>" --owner <person>`. `agentic.py decision list --spec <spec>` shows the log | Know who typed a decision. The log is part of the evidence of G5 instead: the person who approves the implementation approves its decisions, and an entry added later opens G5 again |
+| What was said before the spec was written | `agentic.py product conversation --spec <spec> --summary "<a few lines>" --link <url> --captured-by <who> --write`. A person who was there confirms it with `--confirmed-by`. For an item of Jira, Azure DevOps or GitHub, `agentic.py connect fetch` keeps a count and a hash of its comments, so a discussion that moves on is noticed | Copy a thread, read a chat system, or say whether a summary is true |
+| What is already in the code, before a spec is written against it | `agentic.py search "<text>" --spec <spec>`. Each hit names the node of the system map that owns its file, and what the spec touches comes first | Find meaning. It finds words, in the files git tracks |
+| A coding agent that asks the kit directly | The optional extension [`extensions/agentic-mcp`](extensions/agentic-mcp/README.md): a read-only MCP server over stdio | Write, approve, or listen on a network |
+| Where the children of a programme stand | `agentic.py changeset --spec <parent>`: the parent's page has a section for them, also for a child in another repository | Hold a parent's gate until its children have passed theirs |
+| A pull request that you may approve, where you are the only person | `agentic.py init --profile <profile> --open-pr-workflow` adds a workflow that opens the pull request as the workflow's own account | Approve. Read the header of that file before you use it: the repository setting it needs also lets a workflow approve |
+
+Each has a spec under [`docs/design/`](docs/design/): `changeset.md`, `decision-log.md`, `conversation.md`, `search.md`, `mcp-server.md`, `programme-view.md` and `pull-request-by-workflow.md`. As of 2026-11-26 none of this has read GitHub or a tracker, and no MCP client but the official test client has spoken to the server. [`docs/limits.md`](docs/limits.md) has the rest of what it has not done.
+
 ## What the kit refuses, and where it stops
 
 Some things are refused on the spot by a command. Others are found later by a check, when `check` runs on your machine or in the pipeline.
@@ -325,6 +345,10 @@ Some things are refused on the spot by a command. Others are found later by a ch
 | Leave an acceptance criterion with no passing test and no open task | `CK-TRACE` fails: the criterion is a "gap" |
 | Put a spec on the fast lane yourself | `CK-LANE` fails (Standard and Regulated) |
 | Edit or delete an entry of the audit log | `CK-AUDIT-CHAIN` fails |
+| Give the generated page of a change to a gate as evidence | `gate` and `record` stop |
+| Record a decision in a change's log under a name that `roles.yml` does not list as a person | `decision decide` stops, and `CK-DECISION-LOG` fails a log edited by hand |
+| Leave a question of the decision log open, or add one, after G5 was approved | `CK-DECISION-LOG` fails, and G5 is open again |
+| Let a discussion move on after work began, with nobody saying what that means | `CK-CONVERSATION` fails until a Product Owner acknowledges it (Standard and Regulated) |
 
 The kit also has limits you should know before you trust it. Some are named in the sections above. These are four more. [`docs/limits.md`](docs/limits.md) has them all.
 
@@ -445,12 +469,13 @@ Every diagram on this page and in the guide was checked against the code and the
 | `docs/phase-reports/` | Evidence from each completed phase. |
 | `docs/design/` | Phase 2 design: architecture, schemas, check catalogue, agent team, source review, requirement map. Also the comparison with other spec-driven tools, and `requirement-map-as-built.md`: every requirement and the checks that enforce it today. |
 | `docs/adapters/` | How each adapter works and how to add one: engines, contract formats, agent runtimes, domain packs, trackers, pipelines. |
-| `extensions/agentic/` | Slice 0.1: the check CLI, commands, templates and the CI workflow. Slice 0.4: the fast and emergency lanes, amendments, the reviewer's one page, report views and the auditor evidence pack. |
-| `extensions/agentic-system/` | Slice 0.2: system map, discovery, impact analysis, and change packs for data stores, contracts, shared components, external services and the supply chain. |
-| `extensions/agentic-team/` | Slice 0.3: sixteen agents rendered per runtime, work items, path locks, rework limit, run budgets, golden tasks. Slice 0.4: a context pack per task, an allowlist of tool servers, a record of every step (model, inputs, tools, cost), a routing policy with spend limits, a golden baseline, planted-instruction tests and a lint of instruction files. |
+| `extensions/agentic/` | Slice 0.1: the check CLI, commands, templates and the CI workflow. Slice 0.4: the fast and emergency lanes, amendments, the reviewer's one page, report views and the auditor evidence pack. Phase 12: the page of a change with its branches and pull requests, the decision log, the search, and a workflow that opens a pull request as the workflow's own account. |
+| `extensions/agentic-system/` | Slice 0.2: system map, discovery, impact analysis, and change packs for data stores, contracts, shared components, external services and the supply chain. Phase 12: a programme seen from its parent, as a section of a change's page. |
+| `extensions/agentic-team/` | Slice 0.3: sixteen agents rendered per runtime, work items, path locks, rework limit, run budgets, golden tasks. Slice 0.4: a context pack per task, an allowlist of tool servers, a record of every step (model, inputs, tools, cost), a routing policy with spend limits, a golden baseline, planted-instruction tests and a lint of instruction files. Phase 12: the open questions of a hand-off become proposals in the change's decision log, and a context pack shows the decisions that touch its task. |
 | `extensions/agentic-quality/` | Slice 0.4: quality packs for security, privacy, test depth, AI systems, release and feedback. |
-| `extensions/agentic-product/` | Slice 0.5: intake records, requirement linting, living capability specs fed by deltas, duplicate detection decided by a person, outcomes, lineage. |
-| `extensions/agentic-connect/` | Slice 0.6: requirements from Azure DevOps, Jira, ClickUp, GitHub and documents; pipelines for GitHub Actions, Azure Pipelines and GitLab CI; notifications to Slack, Teams, email and the work item. |
+| `extensions/agentic-product/` | Slice 0.5: intake records, requirement linting, living capability specs fed by deltas, duplicate detection decided by a person, outcomes, lineage. Phase 12: a summary of the conversation behind a change, which a person confirms, and `CK-CONVERSATION`. |
+| `extensions/agentic-connect/` | Slice 0.6: requirements from Azure DevOps, Jira, ClickUp, GitHub and documents; pipelines for GitHub Actions, Azure Pipelines and GitLab CI; notifications to Slack, Teams, email and the work item. Phase 12: a count and a hash of an item's comments, for Jira, Azure DevOps and GitHub. |
+| `extensions/agentic-mcp/` | Phase 12: a read-only MCP server that a coding agent starts over stdio. Tools for the specs, a gate's status, a spec's text, the decision records and the decision log, a change's page, the search, a work item's context pack, `why` and the checks. Optional: no profile installs it. A person adds it with `specify extension add --dev` and lists it in `tools.yml`. No MCP client such as Claude Code or GitHub Copilot has been run against it. |
 | `fixtures/multi-app/` | Two services, a shared library, a shared database and an external API, for cross-application tests. |
 | `extensions/agentic-hipaa/` | HIPAA domain pack (an engineering aid, not legal advice). |
 | `presets/`, `steps/`, `workflows/`, `bundles/` | Profile presets, the `agentic-gate` step, the lifecycle workflow, bundle manifests. |
@@ -468,7 +493,7 @@ Every diagram on this page and in the guide was checked against the code and the
 
 ## Status in detail
 
-All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture.
+All six slices (0.1 to 0.6) are built: 105 checks, each with a passing and a failing fixture. Phase 12, on 2026-11-26, added seven features and two checks, which makes 107.
 
 It has been used once on real work: one change to the reference system was written and reviewed by agents under it. The owner merged it into that repository's `main` on 2026-11-22 with no gate review, then built it and ran its unit tests: 520 of 520 passed. Nothing has been run against a live GitHub repository or a live tracker or chat service yet. The reference example has an approved constitution (Phase 4, now version 2) and twenty-five specs (Phase 5): sixteen approved at gates G1 and G2, in conversation and not yet by a pull-request review, and nine drafts that wait at those gates. Six of the specs have a draft plan (Phase 6). One change, for finding C4, is written and has been reviewed twice by agents that did not write it (Phase 7); no gate is passed for it. Its unit tests were run by the owner after the merge: 520 of 520 passed, among them the 80 tests of the change, and an agent that had not written the change verified it again on those results. Do not rely on any of this for real work. `docs/limits.md` lists what the kit does not do.
 
@@ -479,6 +504,8 @@ On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub C
 On 2026-11-24 the owner published a video guide, five minutes and 25 seconds long: <https://youtu.be/l3Xegefi2TQ>. Every terminal in it is a real command with its real output, run on the kit as it was at commit `b650c96`, and the narration is a synthetic voice. A video does not follow the repository: nothing that changes after that commit is in it.
 
 On 2026-11-25 the documents were followed on a fresh clone once more, this time as a new team would: the tour, the Lite install into a new project, and one small spec taken to an open gate. No coding agent took part; its steps were done by hand. The walk stopped at the first gate decision, which needs a pull-request review on GitHub. [`docs/phase-reports/phase-11-adoption-barriers.md`](docs/phase-reports/phase-11-adoption-barriers.md) has what it found, with every command and its output beside it. "Try it" and [`docs/install.md`](docs/install.md) were corrected for what it found in them. What it found and nobody has fixed is in [`docs/limits.md`](docs/limits.md). A few hours later, early on 2026-11-26, `agentic.py demo` was added: one gate closes and opens again in a throwaway project, with a file in place of GitHub.
+
+On 2026-11-26 the owner brought a post about another spec-driven tool and asked which of its features the kit lacks. Seven were built that day, each with its spec first: a page that shows one change whole, the branches and pull requests that deliver it, a decision log for each change, the conversation behind it, a search that knows the system map, a read-only MCP server, and a view of a programme from its parent. A workflow that opens a pull request as the workflow's own account came with them. [One change, seen whole](#one-change-seen-whole) names the commands, and [`docs/phase-reports/phase-12-features.md`](docs/phase-reports/phase-12-features.md) says how they were built and what is the owner's to decide. None of them has read GitHub, a tracker or a chat service yet. The owner asked for them to be tested on the reference project with a live GitHub repository; that test has not started.
 
 ## Progress
 
@@ -498,6 +525,7 @@ On 2026-11-25 the documents were followed on a fresh clone once more, this time 
 | 7 | C4 walkthrough | Done as far as an agent can take it, 2026-11-22, and merged by the owner the same day (pull requests #73 to #75), which passes no gate: the change (14 files, 80 tests), the run log, a security review and an independent verification by agents that had not written it, one rework round, and the trace from each changed line. The reviews found four things wrong in the change and its tests, four in the plan's documents and seven in the approved spec; the first two groups are fixed, the third is proposed to the owner. Not built or run by the solution's own tests: the package registry cannot be reached, and no workflow runs there. No gate is passed. (After merging it the owner built it and ran the unit tests on his machine: 520 of 520 passed, the 80 tests of the change among them, as the stand-in run had said. An independent verifier agent then returned the record of that run once, accepted it corrected, and repeated its verification on the real results. `docs/phase-reports/phase-10-final.md` has what that run does and does not show.) See `docs/phase-reports/phase-7-c4-walkthrough.md` |
 | 8–10 | The halves that need the reference: acceptance of the reference example, slice 0.4 applied to the showcase findings, a sample evidence pack for the C4 change | Done where the reference allows, 2026-11-22: a proposed adoption baseline for 635 suppressions, a threat model and an authorization matrix for C2 as analysis, finding H4 reproduced by the kit, and a sample evidence pack. Of the 54 acceptance lines, 39 are met, 5 are met only with a stand-in, 6 in part, 3 are not met and 1 was not measured; of the six for the reference example, two are not met and one is met in part, and each of those needs a person or a build. The report also looks at the whole kit again: what held, what using it on real work showed, and what is still weak. See `docs/phase-reports/phase-10-final.md` |
 | 11 | Adoption: a newcomer's walk on a fresh clone, and ranked proposals. Not a phase of the original plan, which ends at 10 | Steps 1 and 2 done, 2026-11-25, on Linux, with the coding agent's steps done by hand. Two proposals are built, and part of two more. The first is a quick start that works as written, as documents and two command files. The fifth is `agentic.py demo`, which shows one gate close and open again in a throwaway project. Of the fourth, the two parts that change no rule: `record --change` finds the review, and `gate` lists evidence that is not committed. Of the sixth there is a Windows job, and a test that walks the install. The job failed on its first run, on 2026-11-26. Three causes were found and changed in the code, and its second run passed the same day, with the install walked through both install scripts. Windows is part of the kit's own pipeline since. The rest waits for the owner. See `docs/phase-reports/phase-11-adoption-barriers.md` |
+| 12 | Features: one change seen whole. Not a phase of the original plan | Built, 2026-11-26: seven features and a workflow template, with two new checks (107) and 171 new unit tests. Five of the features were built at the same time, each by an agent in a working copy of its own, and merged after review. Nothing of it has read GitHub, a tracker or a chat service, and no coding agent has used it. The test on the reference project with a live GitHub repository, which the owner asked for, has not started. See `docs/phase-reports/phase-12-features.md` |
 
 ## Release slices
 

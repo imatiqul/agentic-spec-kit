@@ -19,6 +19,7 @@ from pathlib import Path
 
 import yaml
 
+from agentic_kit import decision_log
 from agentic_kit.core import KIT_DIR, Context, KitError, Source, audit_append, unix_line_ends
 
 from . import agents as ag
@@ -40,7 +41,8 @@ REWORK_LIMIT = 2
 #: Written only by kit commands or by people, never by an agent's file tools.
 PROTECTED = [f"{KIT_DIR}/decisions/*", f"{KIT_DIR}/audit/*", f"{KIT_DIR}/roles.yml", f"{KIT_DIR}/kit.yml", f"{KIT_DIR}/agents/*",
              f"{KIT_DIR}/_adapter/*", f"{KIT_DIR}/work/*", f"{KIT_DIR}/runs/*", f"{KIT_DIR}/golden/*", ".github/CODEOWNERS",
-             f"{KIT_DIR}/context/*", f"{KIT_DIR}/tools.yml", f"{KIT_DIR}/product/*", f"{KIT_DIR}/intake/*", f"{KIT_DIR}/connect.yml"]
+             f"{KIT_DIR}/context/*", f"{KIT_DIR}/tools.yml", f"{KIT_DIR}/product/*", f"{KIT_DIR}/intake/*", f"{KIT_DIR}/connect.yml",
+             f"specs/*/{decision_log.LOG_NAME}"]  # the decision log: `decision` and a hand-off write it (DEC-18)
 STATE_PATHS = (f"{KIT_DIR}/work/", f"{KIT_DIR}/runs/", f"{KIT_DIR}/audit/", f"{KIT_DIR}/context/")
 WRITE_TOOLS = {"write", "edit", "multiedit", "notebookedit", "create", "str_replace", "str_replace_editor", "apply_patch", "insert",
                "create_file", "replace_string_in_file", "write_file", "edit_file", "delete_file"}
@@ -291,9 +293,16 @@ def _file_hash(path: Path) -> str:
     return hashlib.sha256(unix_line_ends(path.read_bytes())).hexdigest() if path.is_file() else ""
 
 
+def kit_written(path: str) -> bool:
+    """Is this a file the kit's own commands write, so that a change to it is not the work of whoever holds a work item?
+
+    The records under STATE_PATHS, and a spec's decision log: a hand-off puts its questions there itself (DEC-18)."""
+    return path.startswith(STATE_PATHS) or decision_log.is_log(path)
+
+
 def _dirty(where: Path, base: str) -> list[str]:
     changed = _git(where, "diff", "--name-only", base).splitlines() + _git(where, "ls-files", "--others", "--exclude-standard").splitlines()
-    return sorted({f for f in changed if f and not f.startswith(STATE_PATHS)})
+    return sorted({f for f in changed if f and not kit_written(f)})
 
 
 def workdir(ctx: Context, item: dict) -> Path:
@@ -383,8 +392,14 @@ def handoff(ctx: Context, spec: str, item_id: str, agent: str, done: str, eviden
             _git(where, "add", "-A")
             _git(where, "-c", "user.name=agentic-kit", "-c", f"user.email={agent}@agents.invalid", "commit", "-q", "-m",
                  f"{item_id}: {done.strip()[:60]}\n\nWork-Item: {spec}/{item_id}\nAgent: {agent}")
+    # Each open question becomes a proposal in the spec's decision log, once, for a person to decide (DEC-18). Where the log
+    # cannot be read this stops the hand-off, before anything is written into the work item.
+    asked = decision_log.propose(ctx, spec, questions, by=agent, affects=[item_id], actor=actor(ctx, agent)) if questions else []
     item["handoff"] = {"done": done.strip(), "evidence": list(evidence), "open_questions": list(questions or []), "files": files or []}
-    return transition(ctx, item, "in-review", agent, outputs=(files or [])[:50])
+    item = transition(ctx, item, "in-review", agent, outputs=(files or [])[:50])
+    if asked:
+        item["_questions"] = [f"{e['id']} ({e['state']})" for e in asked]  # for the command to say; a key that starts with _ is not written
+    return item
 
 
 def escalation_path(spec: str, item_id: str) -> str:

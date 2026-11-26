@@ -30,3 +30,18 @@ $A audit-pack --from 2026-10-01 --to 2026-12-31 --out pack   # every release in 
 ```
 
 The evidence pack supports an audit. It does not certify compliance with any law, regulation or standard, and it says so on its first line.
+
+## Added on 2026-11-26 (Phase 12)
+
+```bash
+$A changeset --spec <spec>                    # one page for a change: origin, gates, versions, tasks, branches and pull requests, what is open
+$A changeset --spec <spec> --write            # keeps it as specs/<spec>/changeset.md, which is never gate evidence
+$A report changesets                          # one line for each change
+$A decision add --spec <spec> --title "<the question>"       # a question for the change's decision log
+$A decision decide --spec <spec> --id D-001 --outcome "<what was decided>" --owner <person>
+$A decision list --spec <spec>                # what was decided inside the change, and what is still open
+$A search "<text>" --spec <spec>              # text in the files git tracks; each hit names its map node, a spec's nodes first
+$A init --profile <profile> --open-pr-workflow   # also writes a workflow that opens a pull request as the workflow's own account
+```
+
+The page of a change shows what is recorded and decides nothing. The decision log is part of the evidence of G5: the kit cannot tell who typed a decision, so the person who approves the implementation approves the decisions in the log. The workflow is for the person who pushes a branch and also approves its gate; its header says what the repository setting it needs also allows. The specs are `docs/design/changeset.md`, `decision-log.md`, `search.md` and `pull-request-by-workflow.md` in the kit's repository.

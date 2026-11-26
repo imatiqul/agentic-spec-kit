@@ -6,9 +6,18 @@ Enforcement adapter interface (GOV-6 to GOV-8, ADP-3):
     reviews(change) -> list[Review]    reviews on a change, e.g. change = "pull/12"
     authors(change) -> set[str]        accounts that authored the commits in the change
     setup_report() -> list[dict]       [{"item", "status": pass|fail|not-checkable, "detail"}]
+    pulls(commits) -> list[dict]       pull requests that hold one of the commits (DLV-1): [{"change": "pull/<n>",
+                                       "state": open|closed|merged, "head", "base", "merge_commit": sha or "", "url"}]
+    commit_at(repo, ref) -> str        the full id of a commit of a repository, named as owner/name; raises where the
+                                       repository or the commit cannot be read (PRG-11)
+    file_at(repo, ref, path) -> str | None             the text of a file at that commit; None where it holds no such file
+    folder_at(repo, ref, path) -> dict[str, str] | None   name -> the id git has for it, for what a folder holds at that
+                                       commit; None where it holds no such folder. An empty ref is the default branch's head
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import re
 import shutil
@@ -30,6 +39,18 @@ class Review:
     @property
     def ref_suffix(self) -> str:
         return f"review-{self.id}"
+
+
+PULL_STATES = ("open", "closed", "merged")  # what `pulls` says of a pull request (DLV-1)
+
+
+REPO_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_.-]+")  # another repository, as owner/name (PRG-8)
+COMMIT_ID = re.compile(r"[0-9a-f]{7,40}")
+
+
+def same_commit(a: str, b: str) -> bool:
+    """Do two commit ids name one commit? One of them may be cut short, to seven characters or more."""
+    return min(len(a), len(b)) >= 7 and (a.startswith(b) or b.startswith(a))
 
 
 class FileAdapter:
@@ -60,6 +81,52 @@ class FileAdapter:
 
     def authors(self, change: str) -> set[str]:
         return {a.lower() for a in self._change(change).get("authors", [])}
+
+    def pulls(self, commits: list[str]) -> list[dict]:
+        """The pull requests the stand-in says hold one of these commits (DLV-3). It proves nothing about what GitHub holds.
+
+        An entry holds a commit that it lists under `commits`, names as its `merge_commit`, or carries a review on."""
+        out = []
+        for change, body in (self.data.get("changes") or {}).items():
+            body = body if isinstance(body, dict) else {}
+            merge = str(body.get("merge_commit") or "")
+            state = str(body.get("state") or ("merged" if merge else "open"))
+            if state not in PULL_STATES:
+                raise KitError(f"{self.PATH}: the state of {change} is {state!r}; it is one of {', '.join(PULL_STATES)}")
+            merge = merge if state == "merged" else ""  # before a merge, what GitHub names is a test merge: no commit of the pull request
+            held = [str(c) for c in body.get("commits") or []] + [merge] + [str(r.get("commit") or "") for r in body.get("reviews") or [] if isinstance(r, dict)]
+            if any(same_commit(c, h) for c in commits for h in held):
+                out.append({"change": str(change), "state": state, "head": str(body.get("head") or ""), "base": str(body.get("base") or ""),
+                            "merge_commit": merge, "url": str(body.get("url") or "")})
+        return out
+
+    def _commit(self, repo: str, ref: str) -> tuple[str, dict[str, str]]:
+        """(the full id, path -> text) for what the stand-in says a commit of another repository holds (PRG-11).
+        An empty ref is the commit named as `default`. It proves nothing about what GitHub holds."""
+        body = (self.data.get("repositories") or {}).get(repo)
+        if not isinstance(body, dict):
+            raise KitError(f"{self.PATH} holds no repository {repo}")
+        commits = body.get("commits") if isinstance(body.get("commits"), dict) else {}
+        wanted = str(ref or body.get("default") or "")
+        for sha, files in commits.items():
+            if same_commit(str(sha), wanted):
+                return str(sha), {str(path): str(text) for path, text in (files if isinstance(files, dict) else {}).items()}
+        raise KitError(f"{self.PATH} holds no commit {wanted or '(no default is named)'} of {repo}")
+
+    def commit_at(self, repo: str, ref: str) -> str:
+        return self._commit(repo, ref)[0]
+
+    def file_at(self, repo: str, ref: str, path: str) -> str | None:
+        return self._commit(repo, ref)[1].get(path)
+
+    def folder_at(self, repo: str, ref: str, path: str) -> dict[str, str] | None:
+        prefix = path.strip("/") + "/"
+        inside = {rel[len(prefix):]: text for rel, text in self._commit(repo, ref)[1].items() if rel.startswith(prefix)}
+        out = {}
+        for name in sorted({rel.split("/", 1)[0] for rel in inside}):  # an id that changes when anything under the name does, as git's does
+            below = sorted((rel, text) for rel, text in inside.items() if rel == name or rel.startswith(name + "/"))
+            out[name] = hashlib.sha256(json.dumps(below).encode("utf-8")).hexdigest()
+        return out or None
 
     def agent_credential(self) -> dict:
         """What the credential available to agents can do: {identity, permissions, scopes}. Simulated for tests."""
@@ -139,6 +206,62 @@ class GitHubAdapter:
     def authors(self, change: str) -> set[str]:
         rows = self._run(f"repos/{self._repo()}/pulls/{self._number(change)}/commits") or []
         return {(r.get("author") or {}).get("login", "").lower() for r in rows if (r.get("author") or {}).get("login")}
+
+    def pulls(self, commits: list[str]) -> list[dict]:
+        """The pull requests GitHub lists for each of these commits, each once (DLV-2). One request for each commit.
+
+        Never run against GitHub: the form of a response is taken from its REST documentation. A request that fails
+        is raised, as for the other calls. Before a merge `merge_commit_sha` names a test merge, so it is not passed on."""
+        found: dict[str, dict] = {}
+        for sha in commits:
+            rows = self._run(f"repos/{self._repo()}/commits/{sha}/pulls") or []
+            if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+                raise KitError(f"gh api repos/{self._repo()}/commits/{sha}/pulls did not give a list of pull requests")
+            for row in rows:
+                merged = bool(row.get("merged_at"))
+                found.setdefault(f"pull/{row.get('number')}", {
+                    "change": f"pull/{row.get('number')}", "state": "merged" if merged else ("closed" if row.get("state") == "closed" else "open"),
+                    "head": str((row.get("head") or {}).get("ref") or ""), "base": str((row.get("base") or {}).get("ref") or ""),
+                    "merge_commit": str(row.get("merge_commit_sha") or "") if merged else "", "url": str(row.get("html_url") or "")})
+        return list(found.values())
+
+    def _found(self, path: str):
+        """One request for something that may not be there: None where GitHub answers Not Found. Any other failure is raised."""
+        try:
+            return self._run(path)
+        except KitError as exc:
+            if "HTTP 404" in str(exc):
+                return None
+            raise
+
+    def commit_at(self, repo: str, ref: str) -> str:
+        """The full id of a commit of another repository (PRG-11). Never run against GitHub: the form of a response is
+        taken from its REST reference. GitHub answers a repository it will not show and one that does not exist alike."""
+        row = self._run(f"repos/{repo}/commits/{ref}")
+        sha = str(row.get("sha") or "") if isinstance(row, dict) else ""
+        if not COMMIT_ID.fullmatch(sha):
+            raise KitError(f"gh api repos/{repo}/commits/{ref} did not give a commit")
+        return sha
+
+    def file_at(self, repo: str, ref: str, path: str) -> str | None:
+        """The text of a file at a commit of another repository; None where that commit holds no such file (PRG-11)."""
+        row = self._found(f"repos/{repo}/contents/{path}" + (f"?ref={ref}" if ref else ""))
+        if not isinstance(row, dict) or row.get("type") != "file":
+            return None  # nothing there, or a folder
+        if row.get("encoding") != "base64":  # GitHub sends no content for a file of more than one megabyte
+            raise KitError(f"gh api repos/{repo}/contents/{path} gave no content for the file")
+        try:
+            return base64.b64decode(str(row.get("content") or "")).decode("utf-8", errors="replace")
+        except ValueError as exc:
+            raise KitError(f"gh api repos/{repo}/contents/{path} gave content that is not base64") from exc
+
+    def folder_at(self, repo: str, ref: str, path: str) -> dict[str, str] | None:
+        """name -> git's id for it, for what a folder holds at a commit of another repository; None where there is none (PRG-11).
+        GitHub lists at most 1,000 names of one folder."""
+        rows = self._found(f"repos/{repo}/contents/{path.strip('/')}" + (f"?ref={ref}" if ref else ""))
+        if not isinstance(rows, list):
+            return None  # nothing there, or a file
+        return {str(row.get("name")): str(row.get("sha") or "") for row in rows if isinstance(row, dict) and row.get("name")}
 
     def setup_report(self) -> list[dict]:
         out = []
