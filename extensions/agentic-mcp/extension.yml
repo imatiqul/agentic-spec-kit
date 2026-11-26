@@ -1,0 +1,28 @@
+schema_version: "1.0"
+
+extension:
+  id: "agentic-mcp"
+  name: "Agentic Spec Kit — MCP server"
+  version: "0.1.0"
+  description: "A read-only Model Context Protocol server over the kit: a coding agent asks which specs there are, where a gate stands, what a decision record says and what the checks report. No tool writes a file, and none approves anything."
+  author: "Atiqul Islam"
+  repository: "https://github.com/imatiqul/agentic-spec-kit"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=1.4.3"
+  extensions:
+    - id: "agentic"
+      version: ">=0.1.0"
+
+provides:
+  commands:
+    - name: "speckit.agentic-mcp.setup"
+      file: "commands/setup.md"
+      description: "Show a person the two entries that let a coding agent ask the kit through MCP: one for the tool allowlist, one for the client's configuration. Adds neither."
+
+tags:
+  - "mcp"
+  - "read-only"
+  - "agents"
+  - "governance"
