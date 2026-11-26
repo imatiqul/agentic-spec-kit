@@ -1,7 +1,7 @@
 # `record` finds the review, and `gate` says when its evidence is not committed
 
 - **Phase and date:** Phase 11 (adoption), the two parts of proposal 4 that change no rule; 2026-11-26
-- **Requirement IDs covered:** REC-1 to REC-7, new with this document. They add no rule and change none: `CK-APPROVER`, `CK-GATE-MIRROR` and `CK-GATE-RECORD` judge a decision record exactly as before
+- **Requirement IDs covered:** REC-1 to REC-8, new with this document. They add no rule and change none: `CK-APPROVER`, `CK-GATE-MIRROR` and `CK-GATE-RECORD` judge a decision record exactly as before
 - **Assumptions:**
   1. The owner's "next" of 2026-11-26 is the go-ahead to build these two parts as `docs/phase-reports/phase-11-adoption-barriers.md` describes them.
   2. The other two parts of proposal 4 wait for him: what the gate board calls a recorded decision whose review nobody could read, and whether Lite fails or warns in that case.
@@ -22,6 +22,7 @@ To mirror a review, a person or an agent copies five values by hand: the decisio
 | REC-5 | The record is still a mirror. Writing it approves nothing, the command says so as before, and the three checks read the review again. |
 | REC-6 | The pipeline's `connect mirror` uses the same reading of the reviews, and does what it did. |
 | REC-7 | `gate` lists the evidence files that are not committed, and says that a reviewer sees only what is committed and pushed. With `--json` the list is under `uncommitted`. Where the folder is not a git repository it says nothing more than before, and `uncommitted` is null. The exit code does not change. |
+| REC-8 | When a reviewer whose review it uses is also among the authors of the change, `record --change` says so. It does not set the single-approver exception: `--exception` stays with the person. |
 
 ## Acceptance criteria
 
@@ -34,6 +35,11 @@ To mirror a review, a person or an agent copies five values by hand: the decisio
 - **AC-007** (verifies REC-6): The tests of `connect mirror` pass unchanged.
 - **AC-008** (verifies REC-7): Given a git repository with a brief that is not committed, When `gate` runs, Then the output names that file under "Not committed"; once it is committed, it does not; and `--json` carries the list.
 - **AC-009** (verifies REC-7): Given a folder that is not a git repository, When `gate` runs, Then its output is what it was before.
+- **AC-010** (verifies REC-3): Given a review that approves with conditions, When `record --change` runs with no `--condition`, Then nothing is written and the command ends with 2. With the condition given, the record holds it and the three checks pass.
+- **AC-011** (verifies REC-2, REC-3): Given a gate that needs two roles, in a project that is not Lite, When one role is not covered, or the two reviews are on different commits, Then nothing is written and the command ends with 2. With both reviews on one commit, the record names both approvals.
+- **AC-012** (verifies REC-8): Given a reviewer who is also an author of the change, When `record --change` runs, Then it says so, and the record carries the single-approver exception only when `--exception` is given.
+
+AC-010 to AC-012 and REC-8 were added on 2026-11-26, after the code. The code already did what they ask. No criterion asked for it, and no test tried it.
 
 ## What it will not do
 

@@ -1,4 +1,4 @@
-"""`record --change` and the warning from `gate` (REC-1 to REC-7, docs/design/record-finds-review.md).
+"""`record --change` and the warning from `gate` (REC-1 to REC-8, docs/design/record-finds-review.md).
 Each test is named after the acceptance criterion it proves. The reviews come from the file adapter.
 Run: python -m pytest tests/test_record_change.py -q"""
 import json
@@ -137,3 +137,67 @@ def test_AC_009_in_a_folder_that_is_not_a_git_repository_gate_says_what_it_said_
     assert code == 0 and "Not committed" not in text
     assert text.rstrip().endswith("To reject, request changes with `reject` in place of `approve`.")
     assert json.loads(kit(tmp_path, "gate", "--spec", SPEC, "--gate", GATE, "--json")[1])["uncommitted"] is None
+
+
+def test_AC_010_an_approval_with_conditions_is_not_mirrored_until_each_condition_is_given(project):
+    root, commit, line = project
+    demo._reviews(root, [demo._review(2, demo.PERSON, commit, line.replace(" approve ", " approve-with-conditions "))])
+    code, text = kit(root, *SHORT)
+    assert code == 2 and "--condition" in text and "Nothing was recorded." in text
+    assert not (root / RECORD).exists()
+    code, text = kit(root, *SHORT, "--condition", "The greeting is read once more before release")
+    assert code == 0, text
+    record = yaml.safe_load((root / RECORD).read_text(encoding="utf-8"))
+    assert record["decision"] == "approve-with-conditions"
+    assert record["conditions"] == ["The greeting is read once more before release"]
+    assert kit(root, "check", *demo.APPROVAL_CHECKS)[0] == 0
+
+
+def test_AC_011_reviews_on_different_commits_are_not_mirrored_into_one_record(project):
+    root, first, _ = project
+    kit_yml, roles = root / core.KIT_DIR / "kit.yml", root / core.KIT_DIR / "roles.yml"
+    settings = yaml.safe_load(kit_yml.read_text(encoding="utf-8"))
+    settings["profile"] = "standard"               # so that G2 is a gate here, and each of its two roles has to be covered
+    kit_yml.write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8", newline="\n")
+    listed = yaml.safe_load(roles.read_text(encoding="utf-8"))
+    listed["people"] = [{"id": demo.PERSON, "roles": [demo.ROLE]}, {"id": "sam", "roles": ["solutions-architect"]}]
+    roles.write_text(yaml.safe_dump(listed, sort_keys=False), encoding="utf-8", newline="\n")
+    second = demo._commit(root, "a standard project, and sam is its architect")
+    text = kit(root, "gate", "--spec", SPEC, "--gate", "G2")[1]
+    line = next(row.strip() for row in text.splitlines() if row.strip().startswith("gate G2 approve sha256:"))
+    short = ("record", "--spec", SPEC, "--gate", "G2", "--change", CHANGE)
+    record = root / core.KIT_DIR / "decisions" / SPEC / "G2.yml"
+
+    demo._reviews(root, [demo._review(2, demo.PERSON, second, line)])
+    code, text = kit(root, *short)                 # outside Lite one role of two is not enough
+    assert code == 2 and "solutions-architect" in text and "Nothing was recorded." in text
+
+    demo._reviews(root, [demo._review(2, demo.PERSON, first, line), demo._review(3, "sam", second, line)])
+    code, text = kit(root, *short)
+    assert code == 2 and "not on one commit" in text and "Nothing was recorded." in text
+    assert first[:12] in text and second[:12] in text
+    assert not record.exists()
+
+    demo._reviews(root, [demo._review(2, demo.PERSON, second, line), demo._review(3, "sam", second, line)])
+    code, text = kit(root, *short)
+    assert code == 0, text
+    written = yaml.safe_load(record.read_text(encoding="utf-8"))
+    assert written["commit"] == second
+    assert [(a["reviewer"], a["role"]) for a in written["approvals"]] == [(demo.PERSON, demo.ROLE), ("sam", "solutions-architect")]
+
+
+def test_AC_012_a_reviewer_who_also_wrote_the_change_is_named_and_the_exception_is_left_to_the_person(project):
+    root, commit, line = project
+    adapter = root / demo.ADAPTER
+    held = json.loads(adapter.read_text(encoding="utf-8"))
+    held["changes"][CHANGE] = {"authors": [demo.PERSON], "reviews": [demo._review(2, demo.PERSON, commit, line)]}
+    adapter.write_text(json.dumps(held, indent=2) + "\n", encoding="utf-8", newline="\n")
+    code, text = kit(root, *SHORT)
+    assert code == 0, text
+    assert f"note: {demo.PERSON} also wrote this change." in text and "--exception" in text
+    assert mirrored(root)["single_approver_exception"] is False
+    (root / RECORD).unlink()
+    code, text = kit(root, *SHORT, "--exception")
+    assert code == 0, text
+    assert "note:" not in text
+    assert mirrored(root)["single_approver_exception"] is True
