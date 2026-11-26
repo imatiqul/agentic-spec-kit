@@ -590,6 +590,26 @@ def cmd_list(args) -> int:
     return 0
 
 
+def cmd_search(args) -> int:
+    """Find text in the files git tracks, each hit with the map node that owns its file (SRC-1 to SRC-14). It writes nothing.
+
+    Ends as grep does: 0 with hits, 1 with none, 2 when it could not search."""
+    from . import search
+    try:
+        found = search.search(_context(args), args.text, spec=args.spec, node=args.node, limit=args.limit, regex=args.regex,
+                              ignore_case=args.ignore_case, kind=args.kind)
+    except KitError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    except Exception:  # a fault of the kit's own is shown as it is, and never ends with 1: that would say "no hits" (SRC-12)
+        import traceback
+        traceback.print_exc()
+        return 2
+    for line in [json.dumps(found.document(), indent=2)] if args.json else search.plain(found, args.spec):
+        search.say(line)
+    return 0 if found.total else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Every command, action and flag the kit accepts, with what the other extensions add."""
     p = argparse.ArgumentParser(prog="agentic", description=f"agentic-spec-kit {__version__}")
@@ -649,6 +669,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("selftest", help="prove every check fails on its broken fixture"); sp.add_argument("--json", action="store_true")
     sp.set_defaults(fn=cmd_selftest)
     sp = sub.add_parser("list", help="list checks"); sp.set_defaults(fn=cmd_list)
+    sp = sub.add_parser("search", help="find text in the files git tracks; with a system map each hit names its node, "
+                                       "and --spec puts what a spec touches first"); common(sp, base=False)
+    from .search import KINDS, LIMIT
+    sp.add_argument("text", help="the text to find, as a fixed string; put `--` before one that starts with a dash")
+    sp.add_argument("--spec", help="put first the hits in the nodes this spec touches, then those one edge away, then the rest")
+    sp.add_argument("--node", help="search the files of this node of the system map only")
+    sp.add_argument("--regex", action="store_true", help="read the text as an extended regular expression, as `git grep -E` does")
+    sp.add_argument("--ignore-case", action="store_true", help="take upper and lower case as the same")
+    sp.add_argument("--kind", choices=KINDS, default="all", help="specs is specs/, records is .specify/, code is everything else")
+    sp.add_argument("--limit", type=int, default=LIMIT, help="the most hits to show; 0 shows all (default: %(default)s)")
+    sp.set_defaults(fn=cmd_search)
     sp = sub.add_parser("demo", help="watch one gate close and open again, in a throwaway project where a file plays GitHub; "
                                      "it proves nothing about who approved")
     sp.add_argument("--keep", action="store_true", help="leave the throwaway project in place, and say where it is")
