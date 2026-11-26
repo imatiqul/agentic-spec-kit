@@ -27,6 +27,8 @@ Two things I read in the installed files, to watch in those runs. The hook that 
 
 **Then the owner merged, and Windows ran.** On 2026-11-26 the owner made the commit from the patch, pushed the branch and merged pull request #1. The push started the first run on Windows, and it failed, which is what the job was for: the self-test and the demo passed, 27 unit tests failed or ended in an error, and the golden tasks failed in parallel mode. There were three causes: Spec Kit looks for the coding agent's program, the evidence hash depended on line ends, and a closed pipe was not recognised in one case. `docs/design/windows-first-run.md` sets them out. The owner said to fix all three. They are changed in the code, and none of the changes has run on Windows. The second one is the one that matters to a team on Windows: as Git for Windows sets git up, no gate would have held.
 
+**And Windows passed.** The owner pushed the branch with the three changes, and the second run of the job passed the same day: 574 unit tests passed and 2 were skipped, with the install walked through `install.ps1` and `install.sh`, and the self-test, the golden tasks and the demo passed. He merged it as pull request #2. The Windows job then moved into the kit's own test workflow, as its spec had said. What has still not happened is a person following the install on a Windows machine of their own.
+
 ## The short version
 
 A newcomer on Linux who already has Spec Kit 1.4.3 gets from a fresh clone to an open gate, with its approval line printed, in a few minutes of commands. The path stops there. The first gate decision is a pull-request review on GitHub, and the kit has never read one.

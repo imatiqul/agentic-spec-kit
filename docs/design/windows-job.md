@@ -6,6 +6,7 @@
   1. The owner's "continue" of 2026-11-26 is the go-ahead to build this half of the proposal as `docs/phase-reports/phase-11-adoption-barriers.md` describes it.
   2. A Windows runner hosted by GitHub stands for "Windows" until a person has run the same on a machine of their own.
 - **Unverified:** everything here about Windows. No part of this has run there; the job is how that gets found out. The walk test ran on Linux.
+- **Since then:** the job failed on its first run and passed on its second, both on 2026-11-26 (`docs/design/windows-first-run.md`). AC-003 is met, and WIN-6 was carried out the same day: the job moved into `tests.yml`, and `windows.yml` is gone. It is a job of its own there, not a row of the matrix as WIN-6 words it, because it installs Spec Kit and runs the demo, which the Linux jobs do not.
 
 ## Why
 

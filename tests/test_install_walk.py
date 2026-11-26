@@ -41,7 +41,7 @@ pytestmark = pytest.mark.skipif(shutil.which("specify") is None,
 
 def bash_program():
     """bash, and on Windows the one that comes with Git. `bash` on the path there can be the launcher of the Linux
-    subsystem, which is another machine with another file system. Not yet seen to matter: no run has got this far."""
+    subsystem, which is another machine with another file system. The run of 2026-11-26 passed with what this returned there; its log does not say which file that was."""
     if os.name == "nt" and shutil.which("git"):
         for folder in Path(shutil.which("git")).resolve().parents[:3]:
             if (folder / "bin" / "bash.exe").is_file():
