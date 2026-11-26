@@ -333,6 +333,17 @@ def cmd_record(args) -> int:
     return 0
 
 
+from . import decision_log  # noqa: E402  (here, with its command: registers CK-DECISION-LOG, its fixtures and its two views)
+
+# The person who approves the implementation approves the decisions it rests on. A spec with no log has the evidence it had (DEC-8, DEC-9).
+DEFAULT_EVIDENCE[decision_log.GATE].append(decision_log.LOG_NAME)
+
+
+def cmd_decision(args) -> int:
+    """The decision log of one change: add a question, record what a person decided, list. Writing an entry approves nothing (DEC-7)."""
+    return decision_log.command(_context(args), args)
+
+
 def cmd_brief(args) -> int:
     from . import lanes
     ctx = _context(args)
@@ -672,6 +683,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--approval", action="append", help="reviewer:role:pull/<n>#review-<id>; with --decision and --commit, in place of --change")
     sp.add_argument("--condition", action="append"); sp.add_argument("--exception", action="store_true")
     sp.add_argument("--file", action="append"); sp.set_defaults(fn=cmd_record)
+    sp = sub.add_parser("decision", help="the decision log of a change: add a question, record what a person decided, list; "
+                                         "writing an entry approves nothing"); common(sp)
+    sp.add_argument("action", choices=["add", "decide", "supersede", "list"]); sp.add_argument("--spec", required=True)
+    sp.add_argument("--title", help="with add: the question")
+    sp.add_argument("--by", help="with add: who asks; an id that roles.yml does not list as a person makes the entry a proposal. "
+                                 "With supersede: the id of the entry that replaces this one")
+    sp.add_argument("--id", help="with decide and supersede: the entry, as D-001")
+    sp.add_argument("--outcome", help="with decide: what was decided"); sp.add_argument("--owner", help="with decide: the person who decided, as roles.yml lists them")
+    sp.add_argument("--why", help="with decide: the reason"); sp.add_argument("--on", help="with decide: the day, as 2026-11-26 (default: today)")
+    sp.add_argument("--affects", action="append", help="with add and decide: FR-001, T003, node:<map node id> or adr:<file>; repeat for several")
+    sp.add_argument("--source", help="with add and decide: a link to where it was asked or decided"); sp.set_defaults(fn=cmd_decision)
     sp = sub.add_parser("brief", help="the one-page brief for the person at a gate"); common(sp)
     sp.add_argument("--spec", required=True); sp.add_argument("--gate", required=True, choices=GATES)
     sp.add_argument("--write", action="store_true"); sp.set_defaults(fn=cmd_brief)

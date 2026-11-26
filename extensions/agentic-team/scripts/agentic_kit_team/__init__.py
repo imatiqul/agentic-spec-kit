@@ -228,6 +228,9 @@ def cmd_work(args) -> int:
     if args.action == "handoff":
         item = work.handoff(ctx, spec, args.item, args.agent or "", args.done or "", args.evidence or [], args.question or [])
         print(f"{spec}/{args.item} is in review. Files changed: {', '.join(item['handoff']['files']) or 'not recorded'}")
+        if item.get("_questions"):
+            print(f"The questions of this hand-off are in {work.decision_log.log_path(spec)}: {', '.join(item['_questions'])}. "
+                  "A proposal is not a decision: a person decides it, and `decision decide` records that.")
         return 0
     if args.action == "review":
         if args.accept == bool(args.return_):
