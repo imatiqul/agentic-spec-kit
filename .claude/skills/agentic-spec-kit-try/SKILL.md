@@ -1,6 +1,6 @@
 ---
 name: agentic-spec-kit-try
-description: Give a first tour of agentic-spec-kit on its sample project. Runs the kit's read-only commands (doctor, check, report gates, gate, impact) from a clone of the kit and explains what each result means. Use when someone is new to agentic-spec-kit and asks to try it, see it work, or understand what its checks and gates print.
+description: Give a first tour of agentic-spec-kit on its sample project. Runs the kit's read-only commands (doctor, check, report gates, gate, impact) from a clone of the kit and explains what each result means, then shows one gate being decided in a throwaway project. Use when someone is new to agentic-spec-kit and asks to try it, see it work, or understand what its checks and gates print.
 license: MIT
 compatibility: Run from the root of a clone of github.com/imatiqul/agentic-spec-kit. Needs Python 3.10 or later with PyYAML. Tried by hand on Linux, and run by the kit's owner on Windows in Claude Code and in GitHub Copilot.
 metadata:
@@ -58,6 +58,28 @@ What to point out at each step:
 - **Step 5.** The spec changes the shared library, so the two services that build with it appear,
   with the roles that must now approve the plan. Nobody picks those approvers. The kit works them
   out from the system map.
+
+## Then one gate, decided
+
+The five commands write nothing, so none of them shows a decision being made. Run one more:
+
+```bash
+python extensions/agentic/scripts/agentic.py demo
+```
+
+It writes a small project into a temporary folder, works only there, and deletes it at the end.
+Nothing is written into the clone. Show its output as it is, then say what it showed:
+
+- An approval by the agent's own account did not pass. The check that reads the review rejected it.
+- An approval by a person listed in `roles.yml` passed, for the evidence as it stood.
+- One edit to the approved spec opened the gate again.
+
+Say as plainly what it did not show. A file played GitHub in that project. It is a stand-in, and it
+proves nothing about who approved. The kit has not yet read a pull-request review on a live GitHub
+repository.
+
+If the demo ends with 1, it and the kit disagree. Report its last lines as they are. Do not explain
+them away.
 
 ## How to read a result
 

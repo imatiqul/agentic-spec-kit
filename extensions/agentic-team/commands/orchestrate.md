@@ -45,7 +45,7 @@ In what follows, `A` means `python .specify/extensions/agentic/scripts/agentic.p
 5. For the `spec` stage, after the Spec Author has drafted: run `/speckit.agentic-product.shape` where the product extension is installed, so the delta, the duplicate candidates and the expected outcome are in front of the Product Owner at G1.
    For the `release` stage, after G7 is approved: run `/speckit.agentic-product.release` to merge the change into the living specs and seal it. At Regulated, make the evidence pack before G7: `A audit-pack --spec <spec> --write`.
 6. When the stage's work is finished, run `A check` and report every failure and every "not run" exactly as printed.
-7. Stop at the gate. Write the reviewer's page with `A brief --spec <spec> --gate <gate> --write`, then show the output of `A gate --spec <spec> --gate <gate>` so the people who decide can review. Do not go on to the next stage.
+7. Stop at the gate. Write the reviewer's page with `A brief --spec <spec> --gate <gate> --write`, then show the output of `A gate --spec <spec> --gate <gate>` so the people who decide can review. Say that the brief has to be committed and pushed with the rest of the evidence before anyone reviews. Do not go on to the next stage.
 
 ## Rules for the agent
 

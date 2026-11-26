@@ -2,6 +2,19 @@
 
 Needs: Spec Kit 1.4.3 (`specify --version`), Python 3.10 or later with PyYAML (3.11 or later if agents use a Codex `.codex/config.toml`), git. For real approvals: a GitHub repository and the `gh` CLI.
 
+## Before you start
+A project needs three things first. They are yours to do; the install does none of them.
+
+```bash
+uv tool install specify-cli==1.4.3              # Spec Kit, at the release this kit is pinned to
+specify init my-project --integration claude    # or copilot; this makes the .specify/ folder
+cd my-project && git init -b main               # `specify init` on its own leaves a folder that is not a git repository
+```
+
+- Without the version, `uv tool install specify-cli` installs upstream's newest release. On 2026-11-25 that was 1.4.5. The install runs on it, and `doctor` then fails `CK-UPSTREAM-PIN`. Beyond the install and the self-test, the kit has not been tried on 1.4.5.
+- The kit's commands are run as `python .specify/extensions/agentic/scripts/agentic.py`. So `python` has to exist, with PyYAML, wherever you or your coding agent run them. The virtual environment from the README's "Try it" will do, or any other. Debian and Ubuntu refuse `pip install` into the system's own Python.
+- The first line was run on Linux on 2026-11-25. Nothing in this document has been run on Windows.
+
 ## 1. Install into a Spec Kit project
 ```bash
 # from the root of a project already set up with `specify init`
@@ -43,6 +56,8 @@ python .specify/extensions/agentic/scripts/agentic.py selftest   # prove each ch
 ```
 Exit codes: 0 pass, 1 a check failed, 2 a check could not run. In Lite, "could not run" is a warning. A command whose output is piped into a program that stops reading early, such as `head`, ends with 141.
 
+To see a gate decided before you decide one: `python .specify/extensions/agentic/scripts/agentic.py demo`. It works in a throwaway project of its own, where a file plays GitHub, and writes nothing into yours.
+
 ## 4. Adopting an existing codebase
 ```bash
 python .specify/extensions/agentic/scripts/agentic.py suppressions              # what is suppressed today
@@ -54,11 +69,17 @@ Fill in an owner and expiry for each group, have it approved in a review, and sa
 | Step | Command |
 |---|---|
 | Find out where a change stands and what comes next | `/speckit.agentic.guide`, in your coding agent |
+| Write the reviewer's page | `agentic.py brief --spec <id> --gate G3 --write` |
+| Commit and push the evidence, the brief included, and open a pull request | (git and GitHub) |
 | See what a gate needs and the line to paste | `agentic.py gate --spec <id> --gate G3` |
 | A human submits the review in the pull request, with that line on a line of its own | (in GitHub, not by an agent) |
-| Mirror the review into a decision record | `agentic.py record --spec <id> --gate G3 --decision approve --commit <sha> --approval <user>:<role>:pull/<n>#review-<id>` |
+| Mirror the review into a decision record | `agentic.py record --spec <id> --gate G3 --change pull/<n>` |
 | Build the trace manifest | `agentic.py trace --write` |
 | Run the whole lifecycle with gates | `specify workflow run agentic-sdd -i spec="..."` |
+
+Keep that order. The line that `gate` prints is a hash of the evidence files as they are on disk, the brief among them. A reviewer sees only what was pushed. A decision record that names a commit without the brief fails `CK-GATE-RECORD`. `gate` lists the evidence files that are not committed yet.
+
+`record --change` reads the pull request's reviews and takes the decision, the commit, the reviewer and the role from the review that carries the line. It writes nothing when no review carries it. The long form still exists: `--decision approve --commit <sha> --approval <user>:<role>:pull/<n>#review-<id>`.
 
 ## 6. Seeing where things stand
 | You want | Command |

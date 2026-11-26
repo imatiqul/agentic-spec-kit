@@ -12,7 +12,7 @@ python .specify/extensions/agentic/scripts/agentic.py check
 
 Requires Python 3.10 or later and PyYAML (3.11 or later to read a Codex `.codex/config.toml`). See `docs/install.md` and `docs/admin-setup.md` in the repository.
 
-Run `python .specify/extensions/agentic/scripts/agentic.py selftest` to see every check fail on its broken fixture.
+Run `python .specify/extensions/agentic/scripts/agentic.py selftest` to see every check fail on its broken fixture. Run `python .specify/extensions/agentic/scripts/agentic.py demo` to watch one gate close and open again in a throwaway project, where a file plays GitHub and proves nothing about who approved.
 
 In a coding agent, start with `/speckit.agentic.guide`. It says where a change stands, what is needed next and from whom, and which command to run.
 

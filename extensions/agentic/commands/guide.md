@@ -30,7 +30,7 @@ In what follows, `A` means `python .specify/extensions/agentic/scripts/agentic.p
    | G7 | release | the release notes under `specs/<spec>/release/` |
 
    A Lite project has G1, G3 and G5 only. `A lane` prints the gates each spec needs. Where the agent team is installed, `/speckit.agentic-team.orchestrate` runs one stage with the team and stops at its gate.
-5. When a stage's work is finished and the checks say nothing against it, prepare the gate for the people who decide: write their page with `A brief --spec <spec> --gate <gate> --write`, then run `/speckit.agentic.gate`. Stop there.
+5. When a stage's work is finished and the checks say nothing against it, prepare the gate for the people who decide: write their page with `A brief --spec <spec> --gate <gate> --write`, then run `/speckit.agentic.gate`. Tell the user that the brief has to be committed and pushed with the rest of the evidence before anyone reviews: the line that `gate` prints is a hash of those files as they are on disk, and a reviewer sees only what was pushed. Do not commit or push for them unless they ask. Stop there.
 6. If the user is one of the approvers, tell them what only they can do: read the brief and as much of the evidence as they need, then approve or reject in a pull-request review, with the line that `gate` prints on a line of its own. A reply in chat is not a decision.
 
 ## Rules for the agent

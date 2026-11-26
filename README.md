@@ -52,7 +52,7 @@ The kit reaches a coding agent in three ways. All three are files in a repositor
 
 | Skill | What it does | Where it works |
 |---|---|---|
-| `agentic-spec-kit-try` | A first tour on the sample project: five commands that write nothing, each result explained | In a clone of this repository |
+| `agentic-spec-kit-try` | A first tour on the sample project: five commands that write nothing, each result explained, then `agentic.py demo`, which shows one gate being decided in a throwaway project | In a clone of this repository |
 | `agentic-spec-kit-install` | Installs the kit into a Spec Kit project and configures it, then walks you through what only people do | In a clone of this repository, working on your project |
 | `agentic-spec-kit-review` | An independent review of a change, from the diff and the requirement alone: findings with file and line, then accept or return. It never edits | In any repository, with or without the kit |
 
@@ -213,9 +213,9 @@ sequenceDiagram
 Step by step:
 
 1. **The checks run.** `agentic.py init` puts a pipeline file into the project: `.github/workflows/agentic-checks.yml`. It runs `selftest` and then `check` when a pull request is opened or updated, when a review is submitted, and on every push to `main`. On a pull request the checks read `roles.yml` and `kit.yml` from the base branch, the branch the pull request will merge into. So a pull request cannot give itself new approvers.
-2. **Someone asks for the decision.** `agentic.py brief --spec <spec> --gate G3 --write` writes the brief. `agentic.py gate --spec <spec> --gate G3` lists the evidence files and the roles that must approve, and prints one line, for example `gate G3 approve sha256:…`. The long value at the end is the evidence hash.
+2. **Someone asks for the decision.** `agentic.py brief --spec <spec> --gate G3 --write` writes the brief. `agentic.py gate --spec <spec> --gate G3` lists the evidence files and the roles that must approve, and prints one line, for example `gate G3 approve sha256:…`. The long value at the end is the evidence hash. It also lists any evidence file that is not committed yet.
 3. **A person decides.** The reviewer reads the brief, then as much of the evidence as they need, and submits an approving review that contains that line, on a line of its own. To send the work back, they request changes and write `reject` in place of `approve`. A third decision, `approve-with-conditions`, needs at least one condition in the record.
-4. **The review is mirrored.** `agentic.py record` copies the review into a decision record under `.specify/agentic/decisions/`. Where the connect extension is installed, a pipeline can do the same with `agentic.py connect mirror`. The record is only a mirror. Writing one approves nothing.
+4. **The review is mirrored.** `agentic.py record` copies the review into a decision record under `.specify/agentic/decisions/`. With `--change pull/<n>` it finds the review itself: the one that carries the gate's line for the evidence as it stands. Where the connect extension is installed, a pipeline can do the same with `agentic.py connect mirror`. The record is only a mirror. Writing one approves nothing.
 5. **The checks compare.** Three checks read the review itself and compare it with the record: `CK-APPROVER`, `CK-GATE-MIRROR` and `CK-GATE-RECORD`. They fail when the reviewer is not listed in `roles.yml`, or does not hold a role the gate needs. They fail when the review comes from the agent's own account, from the pipeline's account, or from an account that is not a person's. And they fail when the reviewer wrote the change, reviewed another commit, or stated another hash.
 6. **A later change re-opens the gate.** If a file in the evidence changes after the approval, the recorded hash no longer matches. `gate` then prints `approve recorded for DIFFERENT evidence (the files changed since)`, and `agentic.py report gates` shows the gate as `open` again. That view compares every evidence file, so it also reacts to routine progress, such as a task ticked off in `tasks.md`. The check that fails is narrower. `CK-AMENDMENT` (Standard and Regulated) compares what was approved in the spec, the plan and the task list, and leaves out progress marks and generated files. It names the gates that need a new decision, and only those: a changed requirement re-opens G1 and G2, a changed plan G3, a new task G4.
 
@@ -335,10 +335,17 @@ The kit also has limits you should know before you trust it. Some are named in t
 
 ## Try it
 ```bash
-pip install pyyaml pytest
+python3 -m venv .venv            # a virtual environment, in a folder this repository ignores
+. .venv/bin/activate             # from here on, `python` is the environment's own
+pip install pyyaml
 python extensions/agentic/scripts/agentic.py selftest     # every check fails on its broken fixture
-python -m pytest tests -q
 ```
+The self-test takes under a minute. Then go on to [Your first day](#your-first-day): four commands on the sample project, each of which takes about a second.
+
+The virtual environment is there for two reasons. Debian and Ubuntu refuse `pip install` into the system's own Python, with `error: externally-managed-environment`. And inside one, `python` exists even where the system has only `python3`. On Windows the same steps are `py -m venv .venv` and `.venv\Scripts\activate`. They have not been run: [`docs/limits.md`](docs/limits.md) says what has never been run on Windows.
+
+To run the kit's own tests as well, which takes a few minutes: `pip install pytest`, then `python -m pytest tests -q`.
+
 See [`docs/install.md`](docs/install.md) to install it into a Spec Kit project, or ask your coding agent: the skill `agentic-spec-kit-install` does the same steps.
 
 ## Your first day
@@ -400,6 +407,14 @@ Steps 3 and 4 show where the work stands. `report gates` prints one row for each
 
 In a project that has the kit installed the commands are the same. Only the path changes: `python .specify/extensions/agentic/scripts/agentic.py <command>`, with no `--root`.
 
+Then watch a gate close. None of the four commands writes anything, so none of them shows a decision being made. This one does, in a throwaway project of its own:
+
+```bash
+python extensions/agentic/scripts/agentic.py demo
+```
+
+It takes a few seconds and shows three things, each with the kit's own commands and what they print. An approval by the agent's own account fails `CK-APPROVER`. An approval by a person listed in `roles.yml` passes, and the board shows the gate as approved. One edit to the approved spec opens the gate again. In that project a file plays GitHub. It is a stand-in and proves nothing about who approved; the demo says so when it starts and when it ends. `--keep` leaves the project in place for you to look at.
+
 What you do yourself, day to day:
 
 - Run `check` before you ask for a review, and read every `FAIL` and `NOT RUN`.
@@ -443,6 +458,7 @@ Every diagram on this page and in the guide was checked against the code and the
 | `scripts/` | Install scripts for bash and PowerShell. The PowerShell one has never been run. |
 | `tests/` | Unit tests, and one that compares the command lines written in the skills, the command files and the guides with the CLI. Self-tests live in the CLI: `agentic.py selftest`. |
 | `.github/workflows/tests.yml` | This repository's own pipeline: the unit tests, the self-test and the golden tasks, on pull requests and pushes to `main`. Read-only, no secret. Added 2026-11-22; its first run, on the push of `6e217c2`, passed on Python 3.10 and 3.13. |
+| `.github/workflows/windows.yml` | The same on a Windows runner, with the demo, and with the install walked by `tests/test_install_walk.py`. Added 2026-11-26. It has not run: it starts when a branch other than `main` is pushed, or by hand, and it stays off `main` until it has passed once. See `docs/design/windows-job.md`. |
 | `docs/install.md`, `docs/admin-setup.md` | How to install, and what an administrator must configure. |
 | `docs/guide/roles.md` | What each role approves, what they look at, and where. |
 | `docs/guide/workflow.md` | More workflow diagrams, one level below this page: the life of one task, the lanes, and the trace from a line of code. |
@@ -463,6 +479,8 @@ On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub C
 
 On 2026-11-24 the owner published a video guide, five minutes and 25 seconds long: <https://youtu.be/l3Xegefi2TQ>. Every terminal in it is a real command with its real output, run on the kit as it was at commit `b650c96`, and the narration is a synthetic voice. A video does not follow the repository: nothing that changes after that commit is in it.
 
+On 2026-11-25 the documents were followed on a fresh clone once more, this time as a new team would: the tour, the Lite install into a new project, and one small spec taken to an open gate. No coding agent took part; its steps were done by hand. The walk stopped at the first gate decision, which needs a pull-request review on GitHub. [`docs/phase-reports/phase-11-adoption-barriers.md`](docs/phase-reports/phase-11-adoption-barriers.md) has what it found, with every command and its output beside it. "Try it" and [`docs/install.md`](docs/install.md) were corrected for what it found in them. What it found and nobody has fixed is in [`docs/limits.md`](docs/limits.md). A few hours later, early on 2026-11-26, `agentic.py demo` was added: one gate closes and opens again in a throwaway project, with a file in place of GitHub.
+
 ## Progress
 
 | Phase | Output | State |
@@ -480,6 +498,7 @@ On 2026-11-24 the owner published a video guide, five minutes and 25 seconds lon
 | 6 | Plans and tasks for C1 and C3 to C6, a data-change plan for H5, a breakdown of C2 | Drafted, 2026-11-22; they wait at G3 and G4. The kit's gate check fails on them, as it should: no pull-request review has approved a gate. Planning corrected one Phase 1 finding and the map, and found nine things in the code that Phase 1 had not. See `docs/phase-reports/phase-6-plans.md` |
 | 7 | C4 walkthrough | Done as far as an agent can take it, 2026-11-22, and merged by the owner the same day (pull requests #73 to #75), which passes no gate: the change (14 files, 80 tests), the run log, a security review and an independent verification by agents that had not written it, one rework round, and the trace from each changed line. The reviews found four things wrong in the change and its tests, four in the plan's documents and seven in the approved spec; the first two groups are fixed, the third is proposed to the owner. Not built or run by the solution's own tests: the package registry cannot be reached, and no workflow runs there. No gate is passed. (After merging it the owner built it and ran the unit tests on his machine: 520 of 520 passed, the 80 tests of the change among them, as the stand-in run had said. An independent verifier agent then returned the record of that run once, accepted it corrected, and repeated its verification on the real results. `docs/phase-reports/phase-10-final.md` has what that run does and does not show.) See `docs/phase-reports/phase-7-c4-walkthrough.md` |
 | 8–10 | The halves that need the reference: acceptance of the reference example, slice 0.4 applied to the showcase findings, a sample evidence pack for the C4 change | Done where the reference allows, 2026-11-22: a proposed adoption baseline for 635 suppressions, a threat model and an authorization matrix for C2 as analysis, finding H4 reproduced by the kit, and a sample evidence pack. Of the 54 acceptance lines, 39 are met, 5 are met only with a stand-in, 6 in part, 3 are not met and 1 was not measured; of the six for the reference example, two are not met and one is met in part, and each of those needs a person or a build. The report also looks at the whole kit again: what held, what using it on real work showed, and what is still weak. See `docs/phase-reports/phase-10-final.md` |
+| 11 | Adoption: a newcomer's walk on a fresh clone, and ranked proposals. Not a phase of the original plan, which ends at 10 | Steps 1 and 2 done, 2026-11-25, on Linux, with the coding agent's steps done by hand. Two proposals are built, and part of two more. The first is a quick start that works as written, as documents and two command files. The fifth is `agentic.py demo`, which shows one gate close and open again in a throwaway project. Of the fourth, the two parts that change no rule: `record --change` finds the review, and `gate` lists evidence that is not committed. Of the sixth there is a Windows job, and a test that walks the install; the job has not run. The rest waits for the owner. See `docs/phase-reports/phase-11-adoption-barriers.md` |
 
 ## Release slices
 
