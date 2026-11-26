@@ -52,10 +52,10 @@ def current(ctx: Context, spec: str, gate: str, records: dict) -> bool:
         return False
 
 
-def board(ctx: Context) -> list[dict]:
-    """Where every spec stands: one row per spec with the state of each gate it needs."""
+def board(ctx: Context, only: list[str] | None = None) -> list[dict]:
+    """Where every spec stands: one row per spec with the state of each gate it needs. With `only`, the rows of those specs."""
     rows = []
-    for spec in ctx.specs():
+    for spec in ctx.specs() if only is None else only:
         records = approved_records(ctx, spec)
         gates, waiting = {}, False
         for gate in required_gates(ctx, spec):
@@ -195,9 +195,15 @@ def view_metrics(ctx: Context) -> str:
     return "\n".join(lines) + "\n"
 
 
+def view_changesets(ctx: Context) -> str:
+    """One line for each change: its open gate, its tier and its pull requests (CHS-11)."""
+    from . import changeset  # imported here: changeset imports this module
+    return changeset.view(ctx)
+
+
 def views() -> dict:
     """name -> (ctx) -> Markdown. The core's views, then those other extensions registered."""
-    return {"gates": view_gates, "waivers": view_waivers, "trace": view_trace, "metrics": view_metrics, **VIEW_HOOKS}
+    return {"gates": view_gates, "changesets": view_changesets, "waivers": view_waivers, "trace": view_trace, "metrics": view_metrics, **VIEW_HOOKS}
 
 
 # ── one page a person can open without a terminal ───────────────────────────────
@@ -350,6 +356,8 @@ def build_pack(ctx: Context, specs: list[str], scope: dict | None = None) -> tup
                 "scope": {"specs": specs, **(scope or {})}, "controls": controls, "approvals": approvals, "waivers": waiver_rows, "exceptions": exceptions,
                 "checks": results, "audit_log": "intact" if chain.ok else "NOT INTACT: " + "; ".join(f.message for f in chain.findings[:3]),
                 "sources": dict(sorted(sources.items())), "files": {name: sha(data) for name, data in sorted(files.items())}}
+    from . import delivery
+    manifest["delivery"] = {spec: delivery.ledger(ctx, spec) for spec in specs}  # as found on the day the pack is made (DLV-9)
     readme = [f"# Evidence pack: {', '.join(specs) or 'no spec in scope'}", "", f"**{STATEMENT}**", "",
               f"Generated on {manifest['generated_on']} by agentic-spec-kit {__version__}, profile {ctx.profile}.", "",
               "| Folder | Holds |", "|---|---|", "| `decisions/` | One record per gate decision: who approved, in which role, in which review, and the hash of what they reviewed |",
@@ -360,6 +368,7 @@ def build_pack(ctx: Context, specs: list[str], scope: dict | None = None) -> tup
               "answers each control, every approval, waiver and exception, and the result of every check on the day the pack was made.", "",
               f"Audit log: {manifest['audit_log']}.", f"Checks: {sum(v == 'pass' for v in results.values())} passed, {sum(v == 'fail' for v in results.values())} failed, "
               f"{sum(v == 'not run' for v in results.values())} not run, {sum(v == 'skipped' for v in results.values())} not required by the profile."]
+    readme += ["", "Under `delivery`, `MANIFEST.json` also holds the commits, branches and pull requests of each spec, as they were found on that day."]
     files["README.md"] = ("\n".join(readme) + "\n").encode("utf-8")
     manifest["files"]["README.md"] = sha(files["README.md"])
     return manifest, files

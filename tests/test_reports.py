@@ -67,7 +67,7 @@ def release(root):
 
 def test_views_come_from_the_core_and_from_each_extension(sample):
     code, out = cli(sample, "report", "list")
-    assert code == 0 and out.split() == ["capabilities", "debt", "gates", "map", "metrics", "spend", "trace", "waivers"]
+    assert code == 0 and out.split() == ["capabilities", "changesets", "debt", "gates", "map", "metrics", "spend", "trace", "waivers"]
     assert cli(sample, "report", "nonsense")[0] == 2
 
 
@@ -139,8 +139,9 @@ def test_writing_a_brief_that_has_not_changed_adds_nothing_to_the_audit_log(samp
 def test_all_views_can_be_written_as_files_and_as_one_page(sample, tmp_path_factory):
     out = tmp_path_factory.mktemp("report")
     code, text = cli(sample, "report", "all", "--out", str(out), "--html", "--today", "2026-11-22")
-    assert code == 0 and "wrote 8 view(s)" in text
-    assert sorted(p.name for p in out.iterdir()) == ["capabilities.md", "debt.md", "gates.md", "index.html", "map.md", "metrics.md", "spend.md", "trace.md", "waivers.md"]
+    assert code == 0 and "wrote 9 view(s)" in text
+    assert sorted(p.name for p in out.iterdir()) == ["capabilities.md", "changesets.md", "debt.md", "gates.md", "index.html", "map.md", "metrics.md", "spend.md",
+                                                     "trace.md", "waivers.md"]
     page = (out / "index.html").read_text(encoding="utf-8")
     assert page.startswith("<!DOCTYPE html>") and '<section id="gates">' in page and "<th>Spec</th>" in page and "Generated on 2026-11-22" in page
     assert "<script" not in page and "http" not in page.replace("http-equiv", ""), "the page stands alone: no script and nothing fetched"

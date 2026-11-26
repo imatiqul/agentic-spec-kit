@@ -109,9 +109,23 @@ def cmd_doctor(args) -> int:
 CONSTITUTION_EVIDENCE = [".specify/memory/constitution.md", f"{KIT_DIR}/constitution.map.yml"]
 
 
+def _names(root: Path, given: str, rel: str) -> bool:
+    """Does a path that was given by hand name this file of the repository, however it is written?"""
+    if str(given).replace("\\", "/").lstrip("./") == rel:
+        return True
+    try:
+        return (root / str(given)).resolve() == (root / rel).resolve()
+    except (OSError, ValueError):
+        return False
+
+
 def _evidence_files(ctx: Context, spec: str, gate: str, explicit: list[str] | None) -> list[str]:
     base = f"specs/{spec}"
+    from .changeset import page_path  # the page of a change is generated: it is never evidence, whatever a pattern says (CHS-9)
+    page = page_path(spec)
     if explicit:
+        if any(_names(ctx.src.root, f, page) for f in explicit):
+            raise KitError(f"{page} is the generated page of the change. It is never gate evidence: writing it again would open the gate")
         return sorted(explicit)
     import fnmatch
     if gate == "G0":
@@ -127,7 +141,7 @@ def _evidence_files(ctx: Context, spec: str, gate: str, explicit: list[str] | No
     out = []
     for pat in patterns:
         out += [p for p in present if fnmatch.fnmatch(p, f"{base}/{pat}")]
-    return sorted(set(out))
+    return sorted(set(out) - {page})
 
 
 def _uncommitted(root: Path, files: list[str]) -> list[str] | None:
@@ -583,6 +597,28 @@ def cmd_demo(args) -> int:
     return demo.run(_captured, keep=args.keep)
 
 
+def cmd_changeset(args) -> int:
+    """One page for one change, built from the repository. It records nothing and decides nothing (CHS-1)."""
+    from . import changeset
+    ctx = _context(args)
+    if args.spec not in ctx.specs():
+        print(f"spec {args.spec} does not exist", file=sys.stderr)
+        return 2
+    doc = changeset.build(ctx, args.spec)
+    if args.write:
+        try:
+            done = changeset.write(ctx, args.spec, doc)
+        except (KitError, OSError) as exc:
+            print(f"{exc}\nNothing was written.", file=sys.stderr)
+            return 2
+        print(done, file=sys.stderr if args.json else sys.stdout)  # with --json, standard output holds the document and nothing else
+    if args.json:
+        print(json.dumps(doc, indent=2, default=str))
+    elif not args.write:
+        print(changeset.render(doc), end="")
+    return 0
+
+
 def cmd_list(args) -> int:
     for cid in sorted(REGISTRY):
         c = REGISTRY[cid]
@@ -684,6 +720,11 @@ def build_parser() -> argparse.ArgumentParser:
                                      "it proves nothing about who approved")
     sp.add_argument("--keep", action="store_true", help="leave the throwaway project in place, and say where it is")
     sp.set_defaults(fn=cmd_demo)
+    sp = sub.add_parser("changeset", help="one page for one change: where it came from, its gates, versions, tasks, branches and pull requests; "
+                                          "it shows what is recorded and decides nothing")
+    common(sp); sp.add_argument("--spec", required=True)
+    sp.add_argument("--write", action="store_true", help="keep the page as specs/<spec>/changeset.md; it is never gate evidence")
+    sp.set_defaults(fn=cmd_changeset)
 
     from .core import CLI_HOOKS
     for hook in CLI_HOOKS:

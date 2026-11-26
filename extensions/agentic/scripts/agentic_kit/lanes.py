@@ -332,7 +332,8 @@ def _since_last_review(ctx: Context, spec: str, gate: str, files: list[str]) -> 
         return [f"The last decision was {last}; its commit is not in this repository, so the changes since cannot be listed."]
     p = subprocess.run(["git", "-C", str(ctx.src.root), "diff", "--name-only", commit, "--", f"specs/{spec}"], capture_output=True, text=True)
     q = subprocess.run(["git", "-C", str(ctx.src.root), "ls-files", "--others", "--exclude-standard", "--", f"specs/{spec}"], capture_output=True, text=True)
-    changed = sorted({x for x in (p.stdout + q.stdout).splitlines() if x and "/briefs/" not in x})
+    # The page of the change is generated and is no part of a review: listing it would change the brief, and so the evidence (CHS-9).
+    changed = sorted({x for x in (p.stdout + q.stdout).splitlines() if x and "/briefs/" not in x and not x.endswith(f"specs/{spec}/changeset.md")})
     out = [f"Since {last} was approved at `{commit[:10]}`:"]
     before = Source(ctx.src.root, commit)
     for rel in changed:

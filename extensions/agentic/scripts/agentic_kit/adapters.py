@@ -6,6 +6,8 @@ Enforcement adapter interface (GOV-6 to GOV-8, ADP-3):
     reviews(change) -> list[Review]    reviews on a change, e.g. change = "pull/12"
     authors(change) -> set[str]        accounts that authored the commits in the change
     setup_report() -> list[dict]       [{"item", "status": pass|fail|not-checkable, "detail"}]
+    pulls(commits) -> list[dict]       pull requests that hold one of the commits (DLV-1): [{"change": "pull/<n>",
+                                       "state": open|closed|merged, "head", "base", "merge_commit": sha or "", "url"}]
 """
 from __future__ import annotations
 
@@ -30,6 +32,14 @@ class Review:
     @property
     def ref_suffix(self) -> str:
         return f"review-{self.id}"
+
+
+PULL_STATES = ("open", "closed", "merged")  # what `pulls` says of a pull request (DLV-1)
+
+
+def same_commit(a: str, b: str) -> bool:
+    """Do two commit ids name one commit? One of them may be cut short, to seven characters or more."""
+    return min(len(a), len(b)) >= 7 and (a.startswith(b) or b.startswith(a))
 
 
 class FileAdapter:
@@ -60,6 +70,24 @@ class FileAdapter:
 
     def authors(self, change: str) -> set[str]:
         return {a.lower() for a in self._change(change).get("authors", [])}
+
+    def pulls(self, commits: list[str]) -> list[dict]:
+        """The pull requests the stand-in says hold one of these commits (DLV-3). It proves nothing about what GitHub holds.
+
+        An entry holds a commit that it lists under `commits`, names as its `merge_commit`, or carries a review on."""
+        out = []
+        for change, body in (self.data.get("changes") or {}).items():
+            body = body if isinstance(body, dict) else {}
+            merge = str(body.get("merge_commit") or "")
+            state = str(body.get("state") or ("merged" if merge else "open"))
+            if state not in PULL_STATES:
+                raise KitError(f"{self.PATH}: the state of {change} is {state!r}; it is one of {', '.join(PULL_STATES)}")
+            merge = merge if state == "merged" else ""  # before a merge, what GitHub names is a test merge: no commit of the pull request
+            held = [str(c) for c in body.get("commits") or []] + [merge] + [str(r.get("commit") or "") for r in body.get("reviews") or [] if isinstance(r, dict)]
+            if any(same_commit(c, h) for c in commits for h in held):
+                out.append({"change": str(change), "state": state, "head": str(body.get("head") or ""), "base": str(body.get("base") or ""),
+                            "merge_commit": merge, "url": str(body.get("url") or "")})
+        return out
 
     def agent_credential(self) -> dict:
         """What the credential available to agents can do: {identity, permissions, scopes}. Simulated for tests."""
@@ -139,6 +167,24 @@ class GitHubAdapter:
     def authors(self, change: str) -> set[str]:
         rows = self._run(f"repos/{self._repo()}/pulls/{self._number(change)}/commits") or []
         return {(r.get("author") or {}).get("login", "").lower() for r in rows if (r.get("author") or {}).get("login")}
+
+    def pulls(self, commits: list[str]) -> list[dict]:
+        """The pull requests GitHub lists for each of these commits, each once (DLV-2). One request for each commit.
+
+        Never run against GitHub: the form of a response is taken from its REST documentation. A request that fails
+        is raised, as for the other calls. Before a merge `merge_commit_sha` names a test merge, so it is not passed on."""
+        found: dict[str, dict] = {}
+        for sha in commits:
+            rows = self._run(f"repos/{self._repo()}/commits/{sha}/pulls") or []
+            if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+                raise KitError(f"gh api repos/{self._repo()}/commits/{sha}/pulls did not give a list of pull requests")
+            for row in rows:
+                merged = bool(row.get("merged_at"))
+                found.setdefault(f"pull/{row.get('number')}", {
+                    "change": f"pull/{row.get('number')}", "state": "merged" if merged else ("closed" if row.get("state") == "closed" else "open"),
+                    "head": str((row.get("head") or {}).get("ref") or ""), "base": str((row.get("base") or {}).get("ref") or ""),
+                    "merge_commit": str(row.get("merge_commit_sha") or "") if merged else "", "url": str(row.get("html_url") or "")})
+        return list(found.values())
 
     def setup_report(self) -> list[dict]:
         out = []
