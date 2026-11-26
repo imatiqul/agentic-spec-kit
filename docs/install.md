@@ -56,6 +56,8 @@ python .specify/extensions/agentic/scripts/agentic.py selftest   # prove each ch
 ```
 Exit codes: 0 pass, 1 a check failed, 2 a check could not run. In Lite, "could not run" is a warning. A command whose output is piped into a program that stops reading early, such as `head`, ends with 141.
 
+To see a gate decided before you decide one: `python .specify/extensions/agentic/scripts/agentic.py demo`. It works in a throwaway project of its own, where a file plays GitHub, and writes nothing into yours.
+
 ## 4. Adopting an existing codebase
 ```bash
 python .specify/extensions/agentic/scripts/agentic.py suppressions              # what is suppressed today

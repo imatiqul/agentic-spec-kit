@@ -19,6 +19,8 @@ Two things I read in the installed files, to watch in those runs. The hook that 
 
 **Updated later that evening, after the owner said to continue.** Proposal 1 was built, as documents and two command files only; `docs/release-notes.md` says what changed. No other proposal was started: 2 and 4 wait for the owner's decisions, and the rest for his word. I had also offered to run the Copilot sessions in VS Code on the owner's screen. That offer was wrong: on his computer I may click in an IDE or a terminal, but not type there.
 
+**Updated once more, early on 2026-11-26.** The owner said to continue again, and proposal 5 was built as well: `agentic.py demo`. Its spec, `docs/design/demo.md`, was committed before its code.
+
 ## The short version
 
 A newcomer on Linux who already has Spec Kit 1.4.3 gets from a fresh clone to an open gate, with its approval line printed, in a few minutes of commands. The path stops there. The first gate decision is a pull-request review on GitHub, and the kit has never read one.

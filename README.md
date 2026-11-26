@@ -407,6 +407,14 @@ Steps 3 and 4 show where the work stands. `report gates` prints one row for each
 
 In a project that has the kit installed the commands are the same. Only the path changes: `python .specify/extensions/agentic/scripts/agentic.py <command>`, with no `--root`.
 
+Then watch a gate close. None of the four commands writes anything, so none of them shows a decision being made. This one does, in a throwaway project of its own:
+
+```bash
+python extensions/agentic/scripts/agentic.py demo
+```
+
+It takes a few seconds and shows three things, each with the kit's own commands and what they print. An approval by the agent's own account fails `CK-APPROVER`. An approval by a person listed in `roles.yml` passes, and the board shows the gate as approved. One edit to the approved spec opens the gate again. In that project a file plays GitHub. It is a stand-in and proves nothing about who approved; the demo says so when it starts and when it ends. `--keep` leaves the project in place for you to look at.
+
 What you do yourself, day to day:
 
 - Run `check` before you ask for a review, and read every `FAIL` and `NOT RUN`.
@@ -470,7 +478,7 @@ On 2026-11-23, at the owner's request, three skills for Claude Code and GitHub C
 
 On 2026-11-24 the owner published a video guide, five minutes and 25 seconds long: <https://youtu.be/l3Xegefi2TQ>. Every terminal in it is a real command with its real output, run on the kit as it was at commit `b650c96`, and the narration is a synthetic voice. A video does not follow the repository: nothing that changes after that commit is in it.
 
-On 2026-11-25 the documents were followed on a fresh clone once more, this time as a new team would: the tour, the Lite install into a new project, and one small spec taken to an open gate. No coding agent took part; its steps were done by hand. The walk stopped at the first gate decision, which needs a pull-request review on GitHub. [`docs/phase-reports/phase-11-adoption-barriers.md`](docs/phase-reports/phase-11-adoption-barriers.md) has what it found, with every command and its output beside it. "Try it" and [`docs/install.md`](docs/install.md) were corrected for what it found in them. What it found and nobody has fixed is in [`docs/limits.md`](docs/limits.md).
+On 2026-11-25 the documents were followed on a fresh clone once more, this time as a new team would: the tour, the Lite install into a new project, and one small spec taken to an open gate. No coding agent took part; its steps were done by hand. The walk stopped at the first gate decision, which needs a pull-request review on GitHub. [`docs/phase-reports/phase-11-adoption-barriers.md`](docs/phase-reports/phase-11-adoption-barriers.md) has what it found, with every command and its output beside it. "Try it" and [`docs/install.md`](docs/install.md) were corrected for what it found in them. What it found and nobody has fixed is in [`docs/limits.md`](docs/limits.md). A few hours later, early on 2026-11-26, `agentic.py demo` was added: one gate closes and opens again in a throwaway project, with a file in place of GitHub.
 
 ## Progress
 
@@ -489,7 +497,7 @@ On 2026-11-25 the documents were followed on a fresh clone once more, this time 
 | 6 | Plans and tasks for C1 and C3 to C6, a data-change plan for H5, a breakdown of C2 | Drafted, 2026-11-22; they wait at G3 and G4. The kit's gate check fails on them, as it should: no pull-request review has approved a gate. Planning corrected one Phase 1 finding and the map, and found nine things in the code that Phase 1 had not. See `docs/phase-reports/phase-6-plans.md` |
 | 7 | C4 walkthrough | Done as far as an agent can take it, 2026-11-22, and merged by the owner the same day (pull requests #73 to #75), which passes no gate: the change (14 files, 80 tests), the run log, a security review and an independent verification by agents that had not written it, one rework round, and the trace from each changed line. The reviews found four things wrong in the change and its tests, four in the plan's documents and seven in the approved spec; the first two groups are fixed, the third is proposed to the owner. Not built or run by the solution's own tests: the package registry cannot be reached, and no workflow runs there. No gate is passed. (After merging it the owner built it and ran the unit tests on his machine: 520 of 520 passed, the 80 tests of the change among them, as the stand-in run had said. An independent verifier agent then returned the record of that run once, accepted it corrected, and repeated its verification on the real results. `docs/phase-reports/phase-10-final.md` has what that run does and does not show.) See `docs/phase-reports/phase-7-c4-walkthrough.md` |
 | 8–10 | The halves that need the reference: acceptance of the reference example, slice 0.4 applied to the showcase findings, a sample evidence pack for the C4 change | Done where the reference allows, 2026-11-22: a proposed adoption baseline for 635 suppressions, a threat model and an authorization matrix for C2 as analysis, finding H4 reproduced by the kit, and a sample evidence pack. Of the 54 acceptance lines, 39 are met, 5 are met only with a stand-in, 6 in part, 3 are not met and 1 was not measured; of the six for the reference example, two are not met and one is met in part, and each of those needs a person or a build. The report also looks at the whole kit again: what held, what using it on real work showed, and what is still weak. See `docs/phase-reports/phase-10-final.md` |
-| 11 | Adoption: a newcomer's walk on a fresh clone, and ranked proposals. Not a phase of the original plan, which ends at 10 | Steps 1 and 2 done, 2026-11-25, on Linux, with the coding agent's steps done by hand. The first proposal, a quick start that works as written, is built, as documents and two command files. The other seven wait for the owner. See `docs/phase-reports/phase-11-adoption-barriers.md` |
+| 11 | Adoption: a newcomer's walk on a fresh clone, and ranked proposals. Not a phase of the original plan, which ends at 10 | Steps 1 and 2 done, 2026-11-25, on Linux, with the coding agent's steps done by hand. Two proposals are built. The first is a quick start that works as written, as documents and two command files. The fifth is `agentic.py demo`, which shows one gate close and open again in a throwaway project. The other six wait for the owner. See `docs/phase-reports/phase-11-adoption-barriers.md` |
 
 ## Release slices
 

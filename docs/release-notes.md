@@ -65,6 +65,12 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 - `docs/install.md`, the command `/speckit.agentic.guide` and the command `/speckit.agentic-team.orchestrate` say that the reviewer's brief is committed and pushed with the rest of the evidence before anyone reviews. Before, a brief that was written and not committed changed the line that `gate` prints, and nothing said so.
 - These are changes to documents and to two command files. No check changed, and no command of the CLI. `docs/phase-reports/phase-11-adoption-barriers.md` is the report of the walk, with every command and its output beside it. `docs/limits.md` lists what the walk found that is not fixed.
 
+## Added on 2026-11-26: a demo of one gate
+- `agentic.py demo` writes a small Lite project into a temporary folder and shows three things there with the kit's own commands. An approval by the agent's own account fails `CK-APPROVER`. An approval by a person listed in `roles.yml` passes `CK-APPROVER`, `CK-GATE-MIRROR` and `CK-GATE-RECORD`, and the board shows the gate approved. An edit to the approved spec opens the gate again. The demo reads and writes nothing in the folder it is run from, and deletes its own unless `--keep` is given.
+- In that project a file plays GitHub: the file adapter. It proves nothing about who approved, and the demo says so at its start and at its end. It is not the first real gate on a live repository. That has still not happened.
+- After each step the demo compares what the kit printed with what the demo says the kit does, and ends with 1 when the two differ. Nine tests run it, each named after an acceptance criterion of `docs/design/demo.md`. That spec was committed before the code.
+- The README's first day ends with the demo. It was tried on Linux.
+
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

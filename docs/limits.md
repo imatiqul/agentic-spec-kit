@@ -10,7 +10,7 @@ A tool that governs agents is only useful if you know where its guarantees stop.
 ## It cannot make an approval trustworthy on its own
 
 - Approvals are read from GitHub pull-request reviews. If the default branch is not protected, anyone with push rights can merge without one, and no check here can stop it. `agentic.py doctor` reports what is missing; an administrator has to fix it (`docs/admin-setup.md`).
-- The file adapter, used in tests and offline demos, proves nothing about who approved. Anyone who can write the repository can write its file.
+- The file adapter, used in tests and offline demos, proves nothing about who approved. Anyone who can write the repository can write its file. `agentic.py demo` shows a gate close and open again with it, in a throwaway project, and says the same at its start and at its end.
 - The kit does not stop a person pushing to the default branch. It fails the checks afterwards.
 - Approvals made in Azure Repos or GitLab merge requests are not read.
 
@@ -99,7 +99,7 @@ On 2026-11-25 the documents were followed on a fresh clone as a new team would f
 - **`record` writes whatever it is given.** It does not look the review up; the checks do, afterwards. Its five values are copied by hand, the review's number among them.
 - **In Lite, a record nobody could verify reads as `approved`.** Where GitHub cannot be read, `CK-APPROVER` and `CK-GATE-MIRROR` do not run. Lite treats that as a warning, so `check` ends with 0, and the gate board shows `approved` for a record whose review nobody looked up. The pipeline is where it fails.
 - **`gate` says nothing when its evidence is not committed.** It prints a hash of the files as they are on disk.
-- **The tour stops before a gate closes.** Its commands write nothing. A newcomer sees a gate close, and open again when the approved file changes, only by playing an approval through the file adapter by hand.
+- **The tour skill stops before a gate closes.** `agentic.py demo`, added a few hours later, shows one close and open again, and the README's first day ends with it. The skill `agentic-spec-kit-try` does not run it yet.
 - **There is no release.** The repository has no tag, the install needs a clone and points Spec Kit at folders inside it, and no document says how to move a project to a newer kit.
 - **In a Lite project with nobody listed, `CK-ROLES` asks for people at G0** as well as at G1, G3 and G5. Lite has three gates.
 
@@ -114,4 +114,5 @@ As of 2026-11-22 none of the following has happened, so everything that depends 
 - any of the three pipeline files the kit ships, in its CI system. So what git says about the branch in each system's clone, which the gate check relies on there, has been tried on clones made by hand and not in a run. This repository's own `.github/workflows/tests.yml` has run: first on the owner's push of 2026-11-22, where it passed on Python 3.10 and 3.13. It runs the kit's tests. It is not the kit running on a project;
 - any pipeline of the reference system: no workflow of that repository has run since May 2026. Its unit tests were run by the owner on his machine on 2026-11-22, after the reference change had been merged: 520 of 520 passed, read from his results file. Its other test projects have not run. From where the change was written the package registry could not be reached;
 - the install on Windows, by either script, and any command on Windows PowerShell as far as the record shows. The first trace of the kit's CLI running on Windows is the bytecode of 2026-11-23 named above; the shell it ran in is not on record;
+- `agentic.py demo`, added on 2026-11-26, on Windows or by a coding agent. It was run by hand and by its tests, on Linux;
 - a migration applied to a database.

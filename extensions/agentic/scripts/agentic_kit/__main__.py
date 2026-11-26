@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import argparse
 import errno
+import io
 import json
 import os
 import shutil
 import sys
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 import yaml
@@ -453,6 +455,23 @@ def cmd_selftest(args) -> int:
     return 0 if good else 1
 
 
+def _captured(argv: list[str]) -> tuple[int, str]:
+    """One command of the kit, run in this process: its exit code, and everything it printed."""
+    printed = io.StringIO()
+    with redirect_stdout(printed), redirect_stderr(printed):
+        try:
+            code = main(argv)
+        except SystemExit as stop:  # argparse, after a usage error
+            code = stop.code if isinstance(stop.code, int) else 2
+    return code, printed.getvalue()
+
+
+def cmd_demo(args) -> int:
+    """One gate closes and opens again, in a throwaway project of the demo's own. `--root` is not read (DEMO-1)."""
+    from . import demo
+    return demo.run(_captured, keep=args.keep)
+
+
 def cmd_list(args) -> int:
     for cid in sorted(REGISTRY):
         c = REGISTRY[cid]
@@ -515,6 +534,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("selftest", help="prove every check fails on its broken fixture"); sp.add_argument("--json", action="store_true")
     sp.set_defaults(fn=cmd_selftest)
     sp = sub.add_parser("list", help="list checks"); sp.set_defaults(fn=cmd_list)
+    sp = sub.add_parser("demo", help="watch one gate close and open again, in a throwaway project where a file plays GitHub; "
+                                     "it proves nothing about who approved")
+    sp.add_argument("--keep", action="store_true", help="leave the throwaway project in place, and say where it is")
+    sp.set_defaults(fn=cmd_demo)
 
     from .core import CLI_HOOKS
     for hook in CLI_HOOKS:
