@@ -59,6 +59,12 @@ Requirements from Azure DevOps, Jira, ClickUp, GitHub Issues and Projects, and d
 - The notes of CK-AGENT-SPEC say in a sentence how each runtime enforces write paths. Before, the notes for GitHub Copilot and for the sequential mode read "paths are enforced not enforced by the runtime; the diff check after the run" and "paths are enforced the diff check after the run (and the event script, where the integration supports events)". `team list` prints the same three texts.
 - A test compares every command line written in the skills, the command files and the guides with the CLI's own parser. It fails on a command, an action, a view or a flag the CLI does not have. On the day it was added it read 73 command lines in the 22 skills and command files and 94 in 17 guides, and found nothing wrong. It compares names only; `docs/limits.md` says what it does not see.
 
+## Changed on 2026-11-25, after a newcomer's walk on a fresh clone
+- The README's "Try it" makes a virtual environment first, and installs PyYAML alone. Before, it opened with `pip install pyyaml pytest`, which Ubuntu 24.04's own Python refuses with `error: externally-managed-environment`. The kit's own tests are now a line after the self-test, for those who want them.
+- `docs/install.md` has a section "Before you start": the line that installs Spec Kit at the pinned release, `specify init`, and `git init`. Before, no document gave any of the three.
+- `docs/install.md`, the command `/speckit.agentic.guide` and the command `/speckit.agentic-team.orchestrate` say that the reviewer's brief is committed and pushed with the rest of the evidence before anyone reviews. Before, a brief that was written and not committed changed the line that `gate` prints, and nothing said so.
+- These are changes to documents and to two command files. No check changed, and no command of the CLI. `docs/phase-reports/phase-11-adoption-barriers.md` is the report of the walk, with every command and its output beside it. `docs/limits.md` lists what the walk found that is not fixed.
+
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

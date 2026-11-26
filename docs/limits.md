@@ -88,6 +88,21 @@ On 2026-11-23 the commands of the README and of `docs/install.md` were run as wr
 - **A reader that stops early is handled as far as it was tried, which is on Linux.** A command whose output goes to a program that stops reading, as in `agentic.py list | head`, ends with exit code 141 and no traceback. Windows can report a closed pipe as another error than Linux does. The kit treats that error the same way when standard output can no longer be flushed; a test simulates this, and it has not been tried on Windows. On any system the command cannot know of a reader that stops after its last write, and `--help` written to a reader that has gone still ends with 0.
 - **Only this repository's own tests compare the skills, the command files and the guides with the CLI, and they compare names.** A test reads every command line written in them and fails when one names a command, an action, a view or a flag the CLI does not have. It does not check what a command does or prints, and it does not see a sentence that describes a command without writing it out. A project that installs the kit gets the command files and not this test: a copy that is edited there is compared with nothing.
 
+## Found by a newcomer's walk on 2026-11-25, and not fixed
+
+On 2026-11-25 the documents were followed on a fresh clone as a new team would follow them: the tour, the Lite install into a new project, and one small spec taken to an open gate. It ran on Linux, and the coding agent's steps were done by hand (`docs/phase-reports/phase-11-adoption-barriers.md`). What it found in the documents is corrected (`docs/release-notes.md`). These were not:
+
+- **A newer Spec Kit fails the first `doctor`.** `init` writes `speckit: "1.4.3"` into `kit.yml` whatever is installed, and on 1.4.5 `CK-UPSTREAM-PIN` fails. The install guide now gives the line for the pinned release. Nothing decides which later releases the kit accepts.
+- **Nothing says who opens the pull request, or from which account.** No document says how to give the coding agent an account of its own.
+- **An approver who runs `doctor` under their own login gets a failure.** With the GitHub adapter the kit takes the account behind the token in use to be the agent's. Where that account is listed in `roles.yml`, `CK-ENFORCE-SETUP` fails, and on that machine `CK-APPROVER` reads that person's reviews as the agent's own. Read in the code and seen with the file adapter. Not run on GitHub.
+- **One person with one account cannot pass a gate on GitHub.** The checks accept a review only in the state `APPROVED`, and GitHub does not let the author of a pull request approve it. `gates.single_approver_exception: allowed` covers a reviewer who is among the authors of the commits, which helps only when another account opened the pull request. Where one person holds every role, `doctor` does not warn of this. Read, not run.
+- **`record` writes whatever it is given.** It does not look the review up; the checks do, afterwards. Its five values are copied by hand, the review's number among them.
+- **In Lite, a record nobody could verify reads as `approved`.** Where GitHub cannot be read, `CK-APPROVER` and `CK-GATE-MIRROR` do not run. Lite treats that as a warning, so `check` ends with 0, and the gate board shows `approved` for a record whose review nobody looked up. The pipeline is where it fails.
+- **`gate` says nothing when its evidence is not committed.** It prints a hash of the files as they are on disk.
+- **The tour stops before a gate closes.** Its commands write nothing. A newcomer sees a gate close, and open again when the approved file changes, only by playing an approval through the file adapter by hand.
+- **There is no release.** The repository has no tag, the install needs a clone and points Spec Kit at folders inside it, and no document says how to move a project to a newer kit.
+- **In a Lite project with nobody listed, `CK-ROLES` asks for people at G0** as well as at G1, G3 and G5. Lite has three gates.
+
 ## Never run
 
 As of 2026-11-22 none of the following has happened, so everything that depends on it is unproven:
