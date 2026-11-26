@@ -36,6 +36,16 @@ class KitError(Exception):
 _PARSED: dict[str, Any] = {}   # parsed YAML by the hash of its text; see Source.yaml
 
 
+def unix_line_ends(data: bytes) -> bytes:
+    """A file's bytes with CRLF read as LF, unless git would take the file for binary (WIN-8).
+
+    Git for Windows, as it is installed, keeps LF in a commit and writes CRLF to the working copy, and Python
+    on Windows writes CRLF for text unless told otherwise. So one file is two byte strings, and a hash of the
+    one is not a hash of the other. Whatever the kit hashes or compares is read through this. Binary is what
+    git takes for binary: a NUL byte in the first 8000 bytes. Such a file is left as it is."""
+    return data if b"\0" in data[:8000] else data.replace(b"\r\n", b"\n")
+
+
 class Source:
     """Reads repository files either from the working tree or from a git ref.
 
@@ -63,12 +73,13 @@ class Source:
         return p.returncode == 0
 
     def read_bytes(self, rel: str) -> bytes:
+        """The file's content, the same from a working copy and from a commit: see `unix_line_ends`."""
         if self.ref is None:
-            return (self.root / rel).read_bytes()
+            return unix_line_ends((self.root / rel).read_bytes())
         p = subprocess.run(["git", "-C", str(self.root), "show", f"{self.ref}:{rel}"], capture_output=True)
         if p.returncode:
             raise KitError(f"{rel} not found at {self.ref}")
-        return p.stdout
+        return unix_line_ends(p.stdout)
 
     def read(self, rel: str) -> str:
         return self.read_bytes(rel).decode("utf-8-sig", errors="replace")

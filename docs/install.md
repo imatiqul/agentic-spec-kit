@@ -13,7 +13,8 @@ cd my-project && git init -b main               # `specify init` on its own leav
 
 - Without the version, `uv tool install specify-cli` installs upstream's newest release. On 2026-11-25 that was 1.4.5. The install runs on it, and `doctor` then fails `CK-UPSTREAM-PIN`. Beyond the install and the self-test, the kit has not been tried on 1.4.5.
 - The kit's commands are run as `python .specify/extensions/agentic/scripts/agentic.py`. So `python` has to exist, with PyYAML, wherever you or your coding agent run them. The virtual environment from the README's "Try it" will do, or any other. Debian and Ubuntu refuse `pip install` into the system's own Python.
-- The first line was run on Linux on 2026-11-25. Nothing in this document has been run on Windows.
+- `specify init --integration claude` looks for the Claude Code program, and stops with "Agent Detection Error" where it is not installed. Install Claude Code first, or add `--ignore-agent-tools` and install it later. With `--integration copilot` it asked for no program when that was tried, on Linux, on 2026-11-26.
+- The first line was run on Linux on 2026-11-25. On Windows `specify init` has run once, on 2026-11-26, on a machine without Claude Code, where it stopped as the line above says. Nothing else in this document has been run on Windows: neither install script has.
 
 ## 1. Install into a Spec Kit project
 ```bash

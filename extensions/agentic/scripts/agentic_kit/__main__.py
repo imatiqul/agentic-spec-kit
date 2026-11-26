@@ -666,13 +666,23 @@ def reader_went_away(exc: OSError, stream=None, windows: bool | None = None) -> 
     """Whether `exc` says that whatever was reading standard output has stopped, as `head` does.
 
     Mostly that is a broken pipe. Windows can report it as an invalid argument, which can mean other
-    things, so there it counts only when standard output itself can no longer be flushed."""
+    things, so there it counts only when standard output itself can no longer take a line. A flush alone
+    does not show that: a write larger than the buffer goes straight to the pipe, and when it fails nothing
+    is left to flush (the first run on Windows, 2026-11-26; WIN-11). So an empty line is written and
+    flushed. Where the output is intact that line reaches it, ahead of the other error's traceback."""
     if isinstance(exc, BrokenPipeError):
         return True
     if not ((os.name == "nt" if windows is None else windows) and exc.errno == errno.EINVAL):
         return False
+    if exc.filename is not None or getattr(exc, "winerror", None) is not None:
+        return False  # an invalid file name, or a refusal by Windows itself: a failed write is neither
+    out = sys.stdout if stream is None else stream
+    if out is None:
+        return False
     try:
-        (sys.stdout if stream is None else stream).flush()
+        out.flush()
+        out.write("\n")
+        out.flush()
     except (OSError, ValueError):
         return True
     return False
