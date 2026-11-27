@@ -129,7 +129,7 @@ Seven features were added in Phase 12. Each has a spec under `docs/design/` with
 - **A programme's page copies only fixed words from another repository**: a tier, the gates with a decision record at the pinned commit, and each decision. Whether the reviews behind those records count is for that repository's own checks. A parent's gate does not wait for its children.
 - **The workflow that opens a pull request needs a repository setting that does more.** "Allow GitHub Actions to create and approve pull requests" is one switch for both. With it on, a workflow whose job may write pull requests can approve one. The kit's gate never counts such an approval: `CK-APPROVER` refuses a review by an account that is not a person's, and by the pipeline's own. A branch rule that only counts approvals may count it; that was not tried. A second account, or a GitHub App, opens a pull request without the switch.
 - **As of 2026-11-26 none of this has read GitHub, a tracker or a chat service**, and none of it had run on Windows when it was written: every answer of GitHub in its tests was written by hand from GitHub's documents. The MCP server has been spoken to by its tests and by the official `mcp` client for Python (2.3.0 and 1.30.0), and by no coding agent. Since 2026-11-27 `connect fetch` has read one issue, one Project and the issue's comments on GitHub; nothing else of these features has read GitHub.
-- **On Windows the features of 2026-11-26 have been run by the kit's tests only**, first on that day, on a runner hosted by GitHub: 743 unit tests passed and one failed, for a fault of that test (`docs/release-notes.md` has the run). No person has run one of the new commands, or the MCP server, on a Windows machine.
+- **On Windows the features of 2026-11-26 have been run by the kit's tests only**, first on that day, on a runner hosted by GitHub: 743 unit tests passed and one failed, for a fault of that test (`docs/release-notes.md` has the run). With the test corrected, the job passed on 2026-11-27, on pull request 5 and on `main` at `c08eb5b`: 744 passed and 3 were skipped. No person has run one of the new commands, or the MCP server, on a Windows machine.
 
 ## Found by the first runs on GitHub, 2026-11-27
 
@@ -153,6 +153,31 @@ What those runs showed, and what was changed on 2026-11-27. None of the changes 
 - **A pipeline that opens pull requests makes branches.** Each intake run that finds something pushes one, and a repository that forbids deleting branches keeps every one of them.
 
 Not run on GitHub as of 2026-11-27: the workflow that opens a pull request for a branch, the mirror job, a review that carries a gate's line, `record --change`, the pull requests of a change read by `changeset`, and a programme's child in another repository.
+
+## Found by the first review from outside, 2026-11-27
+
+The reference repository asks for a review by GitHub Copilot on every pull request. Its review of the pull request that installed the kit there arrived six minutes after the merge: 13 findings in the kit's code and templates. Each was checked against the code. Twelve hold, and `docs/design/first-outside-review.md` has all thirteen, with what was changed (REV-1 to REV-12). No person outside this project has reviewed the kit.
+
+What was wrong until 2026-11-27, most serious first:
+
+- **A redirect took the credential with it.** The transport followed any redirect and sent the `Authorization` header to the address it named, on another host and over plain `http` too. Tried on one machine with two servers: the second received the header. Now a redirect is followed only to the scheme, host and port that were asked.
+- **A pull request could bring the addresses that the secrets were sent to**, in one case: a repository that has the connect workflow on its default branch and no `connect.yml` there. The notify job, which holds every secret the workflow names, then read the `connect.yml` of the pull request. Now nothing is sent with a file that is not on the base branch. On the reference repository the two were merged together, so the case did not arise there.
+- **A pull request could add an MCP server and approve it itself**, where the base branch had no allowlist yet. AGT-20 says it cannot. Now the allowlist a change brings counts only for servers the base branch already has.
+- **`server@1` passed as a pinned version.** For `npx`, `bunx` and `pnpx` that is a range. Now three numbers are asked for.
+- **A production check dated next year, or before the release, satisfied `CK-POST-RELEASE`.** Now both fail.
+- **The mirror job wrote records that the checks then failed**: for a review that approves with conditions, and for a reviewer who also wrote the change. The first is now left to a person; the second is recorded with the single-approver exception where the project allows it.
+- **The template said that a run started by hand is on the default branch.** A person chooses the branch. The intake job now runs on the default branch only, and the file says what that is worth: nothing against a person who may push a branch and change the workflow there. An environment limited to the default branch is what keeps a secret from a branch, and the template sets none up.
+- **The notify and mirror jobs would have failed on a pull request from a fork**, because the pinned `actions/checkout` refuses a fork's commit in such a job. They now skip it. So a pull request from a fork is checked and is neither notified nor mirrored.
+- **On GitLab and Azure a build of the default branch was compared with itself**, so the checks that look at what changed saw nothing there. Neither file has been run by its CI system, before or after.
+- **Two files told agents the wrong thing**: the Independent Verifier was pointed at the input list of G6 at every gate, and in Lite the orchestrator's table left the plan and the tasks without an author.
+
+What was left as it is:
+
+- **Mirroring asks for every role of a gate, also in Lite.** PIP-6 says so, and the connect extension is not installed with Lite. A project that installs it there by hand, and wants the mirror job, records such a gate with `record --change`.
+- **`kit.yml`, `roles.yml`, the domain packs, the glossary, the capability index and the waiver baseline are still read from the change where the base branch has none.** That is the change that installs the kit, and it has to be checked against something. Those files send nothing. Whoever reviews that one change is the control; `CODEOWNERS` should name that person.
+- **A review by a bot leaves a run of `agentic-checks` waiting.** The workflow runs again on every review, so that a gate's line is judged at once, and GitHub holds a run that a bot started until a person approves it. Copilot's review did that. Such a run can be left: the approval checks read reviews by people only.
+
+None of the changes has run on GitHub, and the review's own threads on that pull request are not answered.
 
 ## Never run
 

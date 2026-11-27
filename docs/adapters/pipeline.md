@@ -17,7 +17,7 @@
 
 A command whose output is piped into a program that stops reading before the end, such as `head`, ends with 141 and gives no result. Under `set -o pipefail` that fails the step. Read the output to the end, or send it to a file.
 
-`--base-ref` is the commit to compare with: the target branch for a proposed change, the previous commit on the default branch. Roles, settings, domain packs, agent specs, the tool allowlist and `connect.yml` are read from it.
+`--base-ref` is the commit to compare with: the target branch for a proposed change, the previous commit on the default branch. Roles, settings, domain packs, agent specs, the tool allowlist and `connect.yml` are read from it. Where it has no copy of one of these, the copy that the change brings is read, so that the change which brings the file can be checked. Two things do not follow that copy, since 2026-11-27: nothing is sent with a `connect.yml` that is not on the base, and an allowlist that arrives with a change counts only for the servers the base already has (`docs/design/first-outside-review.md`, REV-2 and REV-5).
 
 On the default branch the gate check also asks each spec whose work is there for G5 and G6; on a proposed change it does not (`docs/design/checks.md`). The pipeline does not have to say which of the two it is. It makes a full clone of the project's repository, and git says: either the default branch is checked out, or the commit that is checked out is on it. The three shipped files rely on that and pass nothing for it.
 
@@ -33,7 +33,7 @@ A job that runs on a proposed change takes its pipeline file, and the kit's own 
 |---|---|---|
 | Checks | Every proposed change and the default branch | None |
 | Notify, mirror | After the checks, from the default branch's copy of the pipeline and the kit. The proposed change is read as data and never executed | Tracker and notification secrets |
-| Intake | A schedule, on the default branch | Tracker secrets |
+| Intake | A schedule, or a person who starts it; on the default branch only | Tracker secrets |
 | Any agent | Its own job | The agent's model key only. Never a tracker or notification secret |
 
 `CK-PIPELINE-SECRETS` fails a pipeline that breaks these rules where it can see them: a stored secret in any pipeline file, and for GitHub Actions also a `pull_request` or `pull_request_target` workflow that names a tracker or notification secret, and an agent step with one in scope.
@@ -41,14 +41,21 @@ A job that runs on a proposed change takes its pipeline file, and the kit's own 
 How each platform enforces the middle rows:
 
 - **GitHub Actions** (`ci/github-actions.yml`): the connect workflow is triggered by `workflow_run`, which runs the default branch's copy. It checks the default branch out under `trusted/` and the change under `head/`, and runs `trusted/.../agentic.py --root head`.
+  - A pull request from a fork is not notified and not mirrored. The release of `actions/checkout` that the file pins refuses to check out a fork's commit in a `workflow_run` job unless the step sets `allow-unsafe-pr-checkout`, and the two jobs skip such a run. The file's opening comment says what to read before a project sets that input for the notify job.
+  - The intake job runs on the default branch only. A person who starts the workflow by hand chooses a branch, and on any other branch the job is skipped.
+  - Neither condition holds against a person who may push a branch: that person can change the workflow on the branch and start it there, and on GitHub whoever has write access can read every secret of the repository. A secret that must not be readable from a branch belongs in an environment that only the default branch may use, named by the job with `environment:`. The template names none, because the environment has to exist first.
 - **Azure Pipelines** (`ci/azure-pipelines.yml`): secrets live in a variable group with a branch-control check that allows the default branch only.
 - **GitLab CI** (`ci/gitlab-ci.yml`): secrets are protected variables, which GitLab gives only to jobs on protected branches.
+
+Both files compare a build of the default branch with the commit before it, since 2026-11-27. Before, they compared it with the default branch itself, so the checks that look at what changed saw nothing there. On GitLab that commit is `CI_COMMIT_BEFORE_SHA`; where GitLab knows none it gives forty zeros, and the file then gives no base. On Azure it is `HEAD~1`, which for a merge commit is `main` before the merge; of several commits pushed at once only the last is compared.
 
 ## Approvals are still pull-request reviews
 
 The kit reads approvals from GitHub pull-request reviews (ADP-3). Azure Pipelines and GitLab CI can run the checks and send notifications, but an approval made in Azure Repos or a GitLab merge request is not read yet (ADP-4).
 
 Mirroring (`connect mirror`) saves a person from running the record command. It writes a decision record only when a review from a person carries the gate's line for the evidence as it stands and every required role is covered. It cannot approve anything: `CK-APPROVER` and `CK-GATE-MIRROR` read the review itself.
+
+Two reviews it handles in a way of their own, since 2026-11-27. A review that approves with conditions is not mirrored: the conditions are the reviewer's to state, so a person records it, with `record --change` and one `--condition` for each. And where a reviewer also wrote the change, the record carries the single-approver exception if `kit.yml` allows it; if `kit.yml` forbids it, nothing is written and the command says why.
 
 On GitHub the mirror job is off until the repository variable `AGENTIC_MIRROR` is `true`, and it needs a token that can push and that starts workflows (a GitHub App token). A push made with the built-in token does not start workflows, so the checks would not run on the commit that adds the record.
 
@@ -71,4 +78,4 @@ A notification says, for example, "Gate G3 of 004-export is ready for review by 
 
 - A reminder cadence. Each event is announced once.
 - Approvals from Azure Repos or GitLab.
-- An MCP server that exposes the kit's state to agents. The protocol changed substantially in its 2026-07-28 revision; this should be built against a real client.
+- An MCP server that exposes the kit's state to agents: not in this slice. One was built later, on 2026-11-26, as the optional extension `agentic-mcp` (`docs/design/mcp-server.md`).

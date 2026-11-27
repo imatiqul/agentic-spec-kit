@@ -63,6 +63,7 @@ On 2026-11-27 `connect fetch` ran in GitHub Actions, in the intake job of `ci/gi
 ## Safety rules built into the transport
 
 - Only `https` leaves the repository (`http` is allowed to `localhost` for tests).
+- A redirect is followed only to the scheme, host and port the request was sent to. Any other is not followed, so no header, and no credential in one, reaches an address the configuration did not name. The adapter then sees the redirect's own status as the answer. Before 2026-11-27 every redirect was followed, with every header.
 - A busy service (429, 502, 503, 504) is retried at most three times.
 - A Jira search stops on an empty page as well as on a missing page token, so a service that keeps returning a token cannot loop the pipeline.
 - Error text is scrubbed of any secret the adapter read before it is printed.
