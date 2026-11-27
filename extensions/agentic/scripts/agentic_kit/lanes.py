@@ -380,7 +380,8 @@ def build_brief(ctx: Context, spec: str, gate: str, files: list[str] | None = No
     disputed = [line for t, ls in extra if t == "Disputed" for line in ls]
     lines += ["", "## Disputed by a verifier"] + (_cap(disputed, 8) or ["- Nothing was disputed."])
     lines += ["", "## To decide", f"Evidence: {len(files)} file(s) besides this brief:"] + _cap([f"- `{f}`" for f in files], 10)
-    lines += ["", f"Run the gate command for the exact line to paste into your review. It binds your decision to this evidence and this brief."]
+    lines += ["", "Run the gate command for the exact line to paste into the text of your review, on a line of its own; an approval "
+                  "without it records nothing. The line binds your decision to this evidence and this brief."]
     return "\n".join(lines) + "\n"
 
 

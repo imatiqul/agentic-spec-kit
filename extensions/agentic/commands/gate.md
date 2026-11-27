@@ -21,6 +21,7 @@ $ARGUMENTS
 
    The command reads the reviews of that pull request and takes the decision, the commit, the reviewer and the role from the review that carries the line. If it says that nothing was recorded, report why as it is printed, and do not fill the values in by hand.
    Add `--exception` when the reviewer also authored the change and the project allows it.
+   Where the default branch dismisses an approval when a commit is pushed, do not push the record onto the pull request that carries the review: the push dismisses that review, and `CK-APPROVER` then fails the record. Commit it after the merge, on a branch of its own. The command prints a note when it can tell.
 
 ## Rules for the agent
 

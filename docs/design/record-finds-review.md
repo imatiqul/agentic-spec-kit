@@ -5,7 +5,7 @@
 - **Assumptions:**
   1. The owner's "next" of 2026-11-26 is the go-ahead to build these two parts as `docs/phase-reports/phase-11-adoption-barriers.md` describes them.
   2. The other two parts of proposal 4 wait for him: what the gate board calls a recorded decision whose review nobody could read, and whether Lite fails or warns in that case.
-- **Unverified:** not run against GitHub. The reviews in the tests come from the file adapter. Not run on Windows.
+- **Unverified:** not run against GitHub. The reviews in the tests come from the file adapter. Not run on Windows. Added on 2026-11-27: `record --change` read a review from GitHub on the reference repository and wrote two records that the pipeline passed (`docs/design/first-gate-on-github.md`).
 
 ## Why
 

@@ -176,10 +176,11 @@ def _number(pull: dict) -> tuple:
 def ledger(ctx: Context, spec: str) -> dict:
     """The commits, branches and pull requests of one change, as they stand now (DLV-4 to DLV-7).
 
-    {"spec", "git", "note", "default_branch", "found", "cut", "commits", "branches", "more_branches", "adapter", "pulls", "unread"}:
-    `git` is false, with the reason in `note`, where git was not asked or gave no answer; `commits` are the ones
-    asked about, newest first, out of `found`, with `cut` left out; `unread` says why the pull requests could not be
-    read, when they could not. Worked out once for each spec in one run of a command."""
+    {"spec", "git", "note", "default_branch", "found", "cut", "commits", "branches", "more_branches", "adapter", "pulls", "unread",
+    "unknown"}: `git` is false, with the reason in `note`, where git was not asked or gave no answer; `commits` are the
+    ones asked about, newest first, out of `found`, with `cut` left out; `unread` says why the pull requests could not be
+    read, when they could not; `unknown` names the commits that the channel does not hold, whose pull requests were not
+    asked for (FGR-10). Worked out once for each spec in one run of a command."""
     kept = getattr(ctx, "_ledgers", None)
     if kept is None:
         kept = ctx._ledgers = {}
@@ -192,7 +193,7 @@ def _ledger(ctx: Context, spec: str) -> dict:
     recorded = recorded_branches(ctx, spec)
     name = str((ctx.kit().get("enforcement") or {}).get("adapter") or "")
     out = {"spec": spec, "git": False, "note": "", "default_branch": default_branch(ctx), "found": 0, "cut": 0, "commits": [],
-           "branches": [], "more_branches": 0, "adapter": name, "pulls": [], "unread": ""}
+           "branches": [], "more_branches": 0, "adapter": name, "pulls": [], "unread": "", "unknown": []}
     try:
         if not own_repository(ctx):
             raise KitError(f"{NOT_OWN}, so git is not asked")
@@ -208,7 +209,9 @@ def _ledger(ctx: Context, spec: str) -> dict:
     if not shas:
         return out  # nothing to ask about, so the adapter is not called
     try:
-        out["pulls"] = sorted(adapters.enforcement(ctx).pulls(shas), key=_number)
+        adapter = adapters.enforcement(ctx)
+        out["pulls"] = sorted(adapter.pulls(shas), key=_number)
+        out["unknown"] = [str(sha) for sha in getattr(adapter, "unknown", None) or []]  # commits the channel does not hold (FGR-10)
     except ValueError as exc:  # what was read is not JSON: the stand-in file, or an answer of the `gh` program
         where = f"{adapters.FileAdapter.PATH} is not valid JSON" if name == "file" else "the answer was not valid JSON"
         out["unread"] = f"{where} ({exc})"

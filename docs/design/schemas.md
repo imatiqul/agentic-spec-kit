@@ -482,7 +482,7 @@ discussion:
 Of a comment neither the text nor the author is written anywhere.
 
 ### The page of a change (CHS-7, CHS-8) — generated
-`agentic.py changeset --spec <spec> --json` prints `{spec, title, about, sections: [{heading, lines, data}]}`. `--write` keeps the page as `specs/<spec>/changeset.md`, whose first line marks it as generated. It is never gate evidence, and nothing reads it back. The ledger of a change, `delivery.ledger(ctx, spec)`, is `{spec, git, note, default_branch, found, cut, commits, branches, more_branches, adapter, pulls, unread}`; the evidence pack keeps it under `delivery`.
+`agentic.py changeset --spec <spec> --json` prints `{spec, title, about, sections: [{heading, lines, data}]}`. `--write` keeps the page as `specs/<spec>/changeset.md`, whose first line marks it as generated. It is never gate evidence, and nothing reads it back. The ledger of a change, `delivery.ledger(ctx, spec)`, is `{spec, git, note, default_branch, found, cut, commits, branches, more_branches, adapter, pulls, unread, unknown}`, where `unknown` names the commits that the channel does not hold, whose pull requests were not asked for (FGR-10); the evidence pack keeps it under `delivery`.
 
 ### The file adapter's stand-in file
 `.specify/agentic/_adapter/reviews.json` is for tests and the demo, and proves nothing about what GitHub holds. Two things may now be in it.
@@ -490,7 +490,7 @@ Of a comment neither the text nor the author is written anywhere.
 {"changes": {"pull/7": {"authors": [], "reviews": [], "state": "open", "head": "", "base": "", "merge_commit": "", "url": "", "commits": []}},
  "repositories": {"<owner>/<name>": {"default": "<commit id>", "commits": {"<commit id>": {"<path>": "<text of the file>"}}}}}
 ```
-`state` is `open`, `closed` or `merged`; with none, an entry that names a merge commit is merged and any other is open (DLV-3). `repositories` is what another repository holds at a commit, for a programme's child there (PRG-11).
+`state` is `open`, `closed` or `merged`; with none, an entry that names a merge commit is merged and any other is open (DLV-3). `repositories` is what another repository holds at a commit, for a programme's child there (PRG-11). A top-level `dismiss_stale_reviews_on_push`, `true` or `false`, says whether the default branch dismisses an approval when a commit is pushed; left out, the stand-in does not say (FGR-2).
 
 ### Search (SRC-3, SRC-11)
 A hit is `{path, line, text, node, tier, group}`: the text is 200 characters at most, and `group` is `touched`, `near` or `rest`. `agentic.py search --json` prints `{hits, total, limit, cut, tracked, groups, touched, near, notes}`. The search reads `nodes[].id` and `tier`, `edges[].from` and `to`, and `index[].paths` and `node` of `system-map/map.yml`, and `touches` of a spec. It writes no file.

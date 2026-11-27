@@ -5,7 +5,7 @@
 - **Assumptions:**
   1. On 2026-11-26 the owner chose this way for the live test: a workflow opens the test pull requests, so that he can approve them as himself.
   2. GitHub behaves as its documents say on 2026-11-26: the author of a pull request cannot approve it; a pull request opened with a workflow's own token has `github-actions[bot]` as its author; and the workflows on such a pull request start once a person with write access approves the run.
-- **Unverified:** all of it, on GitHub. The template has not run. Whether a review by the person who pushed the branch counts depends on the repository's own rules as well: a rule that asks for approval of the most recent push by someone else would not accept it. The live test is what shows it.
+- **Unverified:** all of it, on GitHub. The template has not run. Whether a review by the person who pushed the branch counts depends on the repository's own rules as well: a rule that asks for approval of the most recent push by someone else would not accept it. The live test is what shows it. Added on 2026-11-27: the template ran on the reference repository and opened two pull requests as `github-actions[bot]`; the owner, who pushed the branches, approved one of them, and the records of that review passed the pipeline. The rule that asks for approval of the most recent push by someone else was not met, and the owner merged with the administrators' bypass (`docs/design/first-gate-on-github.md`).
 
 ## Why
 

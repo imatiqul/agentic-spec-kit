@@ -6,8 +6,11 @@ Enforcement adapter interface (GOV-6 to GOV-8, ADP-3):
     reviews(change) -> list[Review]    reviews on a change, e.g. change = "pull/12"
     authors(change) -> set[str]        accounts that authored the commits in the change
     setup_report() -> list[dict]       [{"item", "status": pass|fail|not-checkable, "detail"}]
+    stale_approvals_dismissed() -> bool | None   does the default branch dismiss an approval when a commit is pushed?
+                                       None where that cannot be told (FGR-2)
     pulls(commits) -> list[dict]       pull requests that hold one of the commits (DLV-1): [{"change": "pull/<n>",
-                                       "state": open|closed|merged, "head", "base", "merge_commit": sha or "", "url"}]
+                                       "state": open|closed|merged, "head", "base", "merge_commit": sha or "", "url"}].
+                                       A commit that the channel does not know is skipped, and its id kept in `unknown` (FGR-10)
     commit_at(repo, ref) -> str        the full id of a commit of a repository, named as owner/name; raises where the
                                        repository or the commit cannot be read (PRG-11)
     file_at(repo, ref, path) -> str | None             the text of a file at that commit; None where it holds no such file
@@ -43,6 +46,7 @@ class Review:
 
 
 PULL_STATES = ("open", "closed", "merged")  # what `pulls` says of a pull request (DLV-1)
+UNKNOWN_COMMIT = "No commit found for SHA"  # GitHub's words, with HTTP 422, for a commit it does not hold (FGR-10)
 
 
 REPO_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9_.-]+")  # another repository, as owner/name (PRG-8)
@@ -140,6 +144,11 @@ class FileAdapter:
         return self.data.get("setup") or [{"item": "enforcement adapter", "status": "fail",
                                            "detail": "the file adapter is for tests only; no approval is bound to an identity"}]
 
+    def stale_approvals_dismissed(self) -> bool | None:
+        """What the stand-in says of the default branch's rule on a push (FGR-2); None where it says nothing."""
+        said = self.data.get("dismiss_stale_reviews_on_push")
+        return said if isinstance(said, bool) else None
+
 
 class GitHubAdapter:
     """GitHub pull request reviews as the trust anchor, read through the `gh` CLI.
@@ -224,11 +233,19 @@ class GitHubAdapter:
     def pulls(self, commits: list[str]) -> list[dict]:
         """The pull requests GitHub lists for each of these commits, each once (DLV-2). One request for each commit.
 
-        Never run against GitHub: the form of a response is taken from its REST documentation. A request that fails
-        is raised, as for the other calls. Before a merge `merge_commit_sha` names a test merge, so it is not passed on."""
+        Run against GitHub on 2026-11-27, on the reference repository. A commit that GitHub does not know, as one that only
+        a local branch holds, is skipped and its id kept in `unknown` (FGR-10); any other failure is raised, as for the
+        other calls. Before a merge `merge_commit_sha` names a test merge, so it is not passed on."""
         found: dict[str, dict] = {}
+        self.unknown = []
         for sha in commits:
-            rows = self._run(f"repos/{self._repo()}/commits/{sha}/pulls") or []
+            try:
+                rows = self._run(f"repos/{self._repo()}/commits/{sha}/pulls") or []
+            except KitError as exc:
+                if UNKNOWN_COMMIT in str(exc):
+                    self.unknown.append(sha)
+                    continue
+                raise
             if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
                 raise KitError(f"gh api repos/{self._repo()}/commits/{sha}/pulls did not give a list of pull requests")
             for row in rows:
@@ -279,12 +296,24 @@ class GitHubAdapter:
 
     def _rules(self) -> list[dict] | None:
         """The rules GitHub applies to the default branch through rulesets. Whoever can read the repository may ask.
-        None where they cannot be read (LIV-1)."""
+        None where they cannot be read (LIV-1), with the reason kept in `rules_unread`."""
+        self.rules_unread = ""
         try:
             rows = self._run(f"repos/{self._repo()}/rules/branches/{self.branch}")
-        except KitError:
+        except KitError as exc:
+            self.rules_unread = str(exc)
             return None
-        return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else None
+        if not isinstance(rows, list):
+            self.rules_unread = "GitHub's answer was not a list of rules"
+            return None
+        return [row for row in rows if isinstance(row, dict)]
+
+    def _rules_unknown(self, rules: list[dict] | None) -> str:
+        """Why the rules might hold what was not read (FGR-15): empty where they were read, or where GitHub answered that
+        there is nothing to read (404), so that branch protection alone decides, as it did before rulesets (LIV-1)."""
+        if rules is not None or "HTTP 404" in getattr(self, "rules_unread", ""):
+            return ""
+        return f"the rules of the branch could not be read: {self.rules_unread}"
 
     def _protection(self) -> tuple[dict | None, str]:
         """Branch protection: what GitHub answers; {} where the branch has none; None, and why, where it has some that this
@@ -303,32 +332,42 @@ class GitHubAdapter:
             return None, why
         return ({}, "") if (branch.get("protection") or {}).get("enabled") is False else (None, why)
 
-    def _bypass(self, rules: list[dict]) -> tuple[list[str] | None, str]:
-        """Who may bypass the rulesets that ask for a review: the kinds of actor, and the rulesets' names. None where
-        GitHub does not say, which is so for a ruleset of an organization and for an answer without the list (LIV-3)."""
-        kinds, names = [], []
+    def _bypass(self, rules: list[dict]) -> list[tuple[str, list[str] | None, str]]:
+        """Who may bypass each ruleset whose rule asks for at least one approval (LIV-3, FGR-14): (its name, the kinds
+        of actor it lists, why that is not known). The kinds are None where GitHub does not say, which is so for a
+        ruleset of an organization and for an answer without the list."""
+        out, seen = [], set()
         for row in rules:
-            if row.get("type") != "pull_request":
+            parameters = row.get("parameters") or {}
+            if row.get("type") != "pull_request" or int(parameters.get("required_approving_review_count") or 0) < 1:
                 continue
+            rid = row.get("ruleset_id")
+            if rid in seen:
+                continue
+            seen.add(rid)
             if row.get("ruleset_source_type") not in (None, "Repository"):
-                return None, f"ruleset {row.get('ruleset_id')} belongs to an organization"
+                out.append((str(rid), None, f"ruleset {rid} belongs to an organization"))
+                continue
             try:
-                ruleset = self._run(f"repos/{self._repo()}/rulesets/{row.get('ruleset_id')}") or {}
+                ruleset = self._run(f"repos/{self._repo()}/rulesets/{rid}") or {}
             except KitError as exc:
-                return None, str(exc)
+                out.append((str(rid), None, str(exc)))
+                continue
+            name = str(ruleset.get("name") or rid)
             actors = ruleset.get("bypass_actors")
             if not isinstance(actors, list):
-                return None, f"GitHub did not say who may bypass ruleset {ruleset.get('name') or row.get('ruleset_id')}"
-            names.append(str(ruleset.get("name") or row.get("ruleset_id")))
-            kinds += [str(a.get("actor_type")) for a in actors if isinstance(a, dict)]
-        return sorted(set(kinds)), ", ".join(names)
+                out.append((name, None, f"GitHub did not say who may bypass ruleset {name}"))
+                continue
+            out.append((name, sorted({str(a.get("actor_type")) for a in actors if isinstance(a, dict)}), ""))
+        return out
 
     def setup_report(self) -> list[dict]:
         rules, (prot, why) = self._rules(), self._protection()
         if rules is None and prot is None:
             return [{"item": "branch protection", "status": "not-checkable", "detail": why}]
         unread = f"branch protection is on and could not be read: {why}" if prot is None else ""
-        asked = next(((row.get("parameters") or {}) for row in rules or [] if row.get("type") == "pull_request"), {})
+        unruled = self._rules_unknown(rules)  # FGR-15
+        asked = [(row.get("parameters") or {}) for row in rules or [] if row.get("type") == "pull_request"]  # every rule (FGR-13)
         reviews = (prot or {}).get("required_pull_request_reviews") or {}
         status_checks = (prot or {}).get("required_status_checks") or {}
         contexts = [str(c) for c in status_checks.get("contexts") or []]
@@ -338,29 +377,41 @@ class GitHubAdapter:
         contexts = sorted(set(contexts))
 
         def item(name: str, passes: bool, detail: str) -> dict:
-            if passes or not unread:
+            unknown = "; ".join(w for w in (unread, unruled) if w)
+            if passes or not unknown:
                 return {"item": name, "status": "pass" if passes else "fail", "detail": detail}
-            return {"item": name, "status": "not-checkable", "detail": unread}
+            return {"item": name, "status": "not-checkable", "detail": unknown}
 
-        by_rule = int(asked.get("required_approving_review_count") or 0)
+        by_rule = max((int(a.get("required_approving_review_count") or 0) for a in asked), default=0)
         by_protection = int(reviews.get("required_approving_review_count") or 0)
+        owners = any(a.get("require_code_owner_review") for a in asked) or bool(reviews.get("require_code_owner_reviews"))
         out = [item("pull request reviews required", max(by_rule, by_protection) >= 1, f"required approvals: {max(by_rule, by_protection)}"),
-               item("code owner review required", bool(asked.get("require_code_owner_review") or reviews.get("require_code_owner_reviews")), ""),
+               item("code owner review required", owners, ""),
                item("agentic-checks is a required status check", any("agentic" in c for c in contexts), ", ".join(contexts))]
         name = "administrators are not exempt"
         if by_protection >= 1 and (prot.get("enforce_admins") or {}).get("enabled"):
             out.append({"item": name, "status": "pass", "detail": ""})
         elif by_rule >= 1:
-            kinds, said = self._bypass(rules or [])
-            if kinds is None:
-                out.append({"item": name, "status": "not-checkable", "detail": said})
-            elif not kinds:
+            rows = self._bypass(rules or [])
+            if any(kinds == [] for _, kinds, _ in rows):  # one ruleset nobody may bypass is enough (FGR-14)
                 out.append({"item": name, "status": "pass", "detail": ""})
+            elif any(kinds is None for _, kinds, _ in rows):
+                out.append({"item": name, "status": "not-checkable", "detail": "; ".join(said for _, kinds, said in rows if kinds is None)})
             else:
-                out.append(item(name, False, f"ruleset {said} may be bypassed by: {', '.join(kinds)}"))
+                out.append(item(name, False, "; ".join(f"ruleset {rs} may be bypassed by: {', '.join(kinds)}" for rs, kinds, _ in rows)))
         else:
             out.append(item(name, False, ""))
         return out
+
+    def stale_approvals_dismissed(self) -> bool | None:
+        """Does the default branch dismiss an approval when a commit is pushed (FGR-2)? Yes where a rule of the branch or
+        its protection says so; no where both were read and neither says so; None otherwise."""
+        rules, (prot, _) = self._rules(), self._protection()
+        said = [bool((row.get("parameters") or {}).get("dismiss_stale_reviews_on_push")) for row in rules or [] if row.get("type") == "pull_request"]
+        said.append(bool(((prot or {}).get("required_pull_request_reviews") or {}).get("dismiss_stale_reviews")))
+        if any(said):
+            return True
+        return None if self._rules_unknown(rules) or prot is None else False
 
 
 def enforcement(ctx: Context):

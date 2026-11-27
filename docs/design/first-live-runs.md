@@ -7,7 +7,7 @@
   1. The owner said on 2026-11-26 that each failure of the live test is reported as it is and fixed on a local branch of the kit, which he pushes.
   2. A repository may protect its default branch with rulesets, with branch protection, or with both. Where either asks for a review, a review is asked for.
   3. Inside GitHub Actions the built-in token acts as `github-actions[bot]`. GitHub's documents say so.
-- **Unverified:** nothing here has run on GitHub when this is written. The answers of GitHub in the tests are copied in shape from what `imatiqul/azure-ai-cloud-healthcare` answered on 2026-11-27, with invented names. Whether the built-in token may read a ruleset's list of bypass actors is not known; LIV-3 says what happens where it may not. `install.ps1` is changed and has not been run here: this machine has no PowerShell
+- **Unverified:** nothing here has run on GitHub when this is written. The answers of GitHub in the tests are copied in shape from what `imatiqul/azure-ai-cloud-healthcare` answered on 2026-11-27, with invented names. Whether the built-in token may read a ruleset's list of bypass actors is not known; LIV-3 says what happens where it may not. `install.ps1` is changed and has not been run here: this machine has no PowerShell Added later on 2026-11-27: the tests of these changes passed on GitHub in the kit's pull request 6, on Linux and on Windows, and the reference repository's checks ran with them from its pull request 86 on. There the built-in token was not told who may bypass a ruleset (`docs/limits.md`, "Found by the first gate on GitHub").
 
 ## What happened
 

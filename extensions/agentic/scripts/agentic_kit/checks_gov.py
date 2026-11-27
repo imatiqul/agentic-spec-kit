@@ -245,8 +245,8 @@ def ck_enforce_setup(ctx: Context, res: Result) -> None:
                 f"{KIT_DIR}/roles.yml")
     for row in adapter.setup_report():
         text = f"{row['item']}" + (f": {row['detail']}" if row.get("detail") else "")
-        if row["status"] == "fail":
-            problem(text)
+        if row["status"] == "fail":  # an item names what is required, so a failure says that it is not met (FGR-5)
+            problem(text if soft else f"not met: {text}")
         elif row["status"] == "not-checkable":
             res.notes.append(f"not checkable: {text}")
 

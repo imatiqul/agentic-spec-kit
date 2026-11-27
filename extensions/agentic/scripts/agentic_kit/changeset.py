@@ -389,11 +389,16 @@ def _delivery(ctx: Context, spec: str) -> Section:
                      + (f", merge commit `{p['merge_commit'][:12]}`" if p["merge_commit"] else "") + (f". {p['url']}" if p["url"] else ""))
         if p["state"] == "open":
             waiting.append(f"Pull request {p['change']} is open")
+    unknown = led.get("unknown") or []
+    if unknown:  # FGR-10: the others are read all the same
+        shown = ", ".join(f"`{sha[:12]}`" for sha in unknown[:5]) + (f" and {len(unknown) - 5} more" if len(unknown) > 5 else "")
+        lines.append(f"- {source} does not hold {len(unknown)} of the {asked} commit(s), so their pull requests were not asked for: {shown}. "
+                     "A commit that only a local branch holds is one such")
     if led["unread"]:
         why = led["unread"].rstrip(".")
         lines.append(f"- The pull requests could not be read: {why}")
         waiting.append(f"The pull requests could not be read: {why}")
-    elif asked and not led["pulls"]:
+    elif asked and not led["pulls"] and len(unknown) < asked:
         lines.append(f"- No pull request holds any of these commits, as far as {source} says")
     if asked and led["adapter"] == "file" and not led["unread"]:
         lines.append("- The pull requests are read from a stand-in file (the file adapter). That proves nothing about what GitHub holds")

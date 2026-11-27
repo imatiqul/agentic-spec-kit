@@ -23,6 +23,15 @@
 #   in a `workflow_run` job unless `allow-unsafe-pr-checkout: true` is set on the step. To notify for forks, read
 #   https://gh.io/securely-using-pull_request_target first, then set that input on the `head` checkout of the notify
 #   job and take the last part of its condition out. Leave the mirror job as it is: it pushes to this repository.
+#
+# Pull requests that a bot opened (seen on GitHub on 2026-11-27):
+#   GitHub starts no `workflow_run` after a run of agentic-checks whose actor is the workflow's own bot, whether a person
+#   approved that run or not. So notify and mirror do not run for a pull request that agentic-open-pull-request opened.
+#
+# Where the default branch dismisses an approval when a commit is pushed:
+#   the mirror job pushes its records onto the pull request's branch, and that push dismisses the review they cite;
+#   CK-APPROVER then fails them. With the kit as it is, leave AGENTIC_MIRROR unset in such a repository and record after
+#   the merge, on a branch of its own, with `agentic.py record --change pull/<n>`.
 name: agentic-connect
 on:
   workflow_run:

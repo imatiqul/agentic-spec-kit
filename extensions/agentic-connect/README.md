@@ -35,3 +35,13 @@ The adapters for Jira, Azure DevOps and ClickUp and the notification channels ha
 The GitHub adapter and the file for GitHub Actions ran for the first time on 2026-11-27, on the reference repository: `connect fetch` read one issue, one Project and the issue's comments, the intake job opened a pull request with the record, and the notify job wrote its summary. The mirror job has not run, and no note has been posted on a live issue. `docs/adapters/trackers.md` says which token reads what on GitHub.
 
 Gate approvals are read from GitHub pull-request reviews only. The kit runs in Azure Pipelines and GitLab CI, but approvals made in Azure Repos or GitLab merge requests are not read yet.
+
+## Seen on GitHub, 2026-11-27
+
+What GitHub did with the workflow on the reference repository, which the kit cannot change:
+
+- **No run for a pull request that the bot opened.** GitHub starts no `workflow_run` after a run of `agentic-checks` whose actor is the workflow's own bot, whether a person approved that run or not. Two of two such runs started none; each of the eleven runs that the owner caused started one within five seconds. So notify and mirror do not see a pull request that `agentic-open-pull-request` opened. GitHub's page on triggering a workflow says that events the workflow's own token causes start no new run, and names the exceptions; `workflow_run` is not among them.
+- **The cache write is refused after a run on a pull request.** In the notify job GitHub answered "token has no writable scopes" when the job tried to keep its ledger after a run on a pull request, and kept it after a run on a push. So the ledger of what was sent is kept from runs on a push.
+- **Approve the held run before the pull request is merged.** GitHub holds the checks of a pull request that a bot opened until a person clicks "Approve workflows to run". Merged first, the held run ends as "failure", with no jobs.
+- **The pipeline's own token is not told who may bypass a ruleset**, so `CK-ENFORCE-SETUP` notes that it cannot check whether administrators are exempt.
+- **The mirror job and a repository that dismisses stale approvals.** The job pushes its records onto the pull request's branch. Where the default branch dismisses an approval when a commit is pushed, that push dismisses the review the records cite, and `CK-APPROVER` fails them. In such a repository leave `AGENTIC_MIRROR` unset and record after the merge, on a branch of its own, with `agentic.py record --change pull/<n>`. `docs/design/first-gate-on-github.md` has what was seen.
