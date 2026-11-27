@@ -85,7 +85,7 @@ Added on 2026-11-27: with the test corrected, the same pipeline passed on pull r
 
 ## What was not run
 
-- Anything against GitHub, when this was written. `pulls`, the three methods that read another repository, the comments of an issue, and the workflow that opens a pull request had met only answers written by hand from GitHub's documents. Since 2026-11-27 the comments of one issue have been read on GitHub; the last section says what else has run there.
+- Anything against GitHub, when this was written. `pulls`, the three methods that read another repository, the comments of an issue, and the workflow that opens a pull request had met only answers written by hand from GitHub's documents. Since 2026-11-27 the comments of one issue, `pulls` and the workflow that opens a pull request have run on GitHub; the last section says what else has run there. The three methods that read another repository have not.
 - Anything against Jira or Azure DevOps.
 - The MCP server with a coding agent such as Claude Code, GitHub Copilot or Cursor.
 - Any of the new commands by a coding agent, and a hand-off by one that writes a decision log.
@@ -129,6 +129,15 @@ Added on 2026-11-27: the test began on 2026-11-26, and its first three stages ar
 - **The installation.** The kit's seven extensions and three workflows went into the reference repository as one pull request, which the owner merged. The kit's checks ran on that pull request and on `main`, and the notify job after them: the first runs of the kit's workflows on GitHub.
 - **The fetch.** Started by hand in Actions, `connect fetch` read the issue by its label, the same issue as an item of the Project, and its two comments, and the job opened a pull request with the intake record as the workflow's own account. Of this phase's features that is the digest of a discussion (CNV-6 to CNV-9), read from a live service for the first time.
 
-Not done as of 2026-11-27: a change branch whose pull request the workflow opens, a gate approved in a review, and the page, the search and the MCP server on the result. No decision log, no page of a change and no programme has met GitHub.
+Not done when this part was added: a change branch whose pull request the workflow opens, a gate approved in a review, and the page, the search and the MCP server on the result. No decision log, no page of a change and no programme had met GitHub then. The part added after it says what changed.
 
 Two things came of those stages that this report did not foresee. The installation and the runs showed ten faults and gaps in the kit, among them that two checks could not see what they judge with a pipeline's own token (`docs/design/first-live-runs.md`). And GitHub Copilot reviewed the pull request of the installation, as that repository's rules ask: thirteen findings in the kit's code, of which twelve held when checked (`docs/design/first-outside-review.md`). Both sets are fixed, and `docs/limits.md` has what was wrong and what was left.
+
+Added later on 2026-11-27: stages 3a to 5 are done, and stage 6 in part.
+
+- **The fixes reached GitHub.** The owner merged them into the kit as pull request 6; its jobs passed on Linux and on Windows, where 771 unit tests passed and 3 were skipped. The reference repository took the fixed kit in a second setup pull request.
+- **Where the change came from.** The spec of the change, spec 020 of the reference repository, got its origin: the intake record of the issue, a summary of the conversation that the owner confirmed, and an entry in its decision log that he decided, in his words from the issue.
+- **The first gate on GitHub.** The workflow that opens a pull request opened one as `github-actions[bot]`. The owner approved its held checks, then G1 and G2 of spec 020 in a review that carried the two lines `gate` printed. `record --change` read that review from GitHub and wrote the records. Pushed onto the same pull request, the records made GitHub dismiss the review, because that repository dismisses an approval on a push. The owner approved again and merged, the records were written again after the merge on a branch of their own, and on that pull request the pipeline passed `CK-APPROVER` and `CK-GATE-MIRROR` for both. Phase 11 found that one person with one account could not pass a gate on GitHub; this is how one did.
+- **The page, the search and the MCP server on the result.** `changeset` read the change's four pull requests from GitHub; `search` put the one hit in the nodes the spec touches first; the MCP server answered the official MCP client against a checkout of that repository.
+
+What those stages showed is in `docs/design/first-gate-on-github.md` (FGR-1 to FGR-15), fixed except for one decision that is the owner's: how the kit records a gate where approvals are dismissed on a push. Not done: a programme with a child in a second repository. No coding agent has used any of it.
