@@ -13,8 +13,11 @@ on:
     branches: [main]
 permissions:
   contents: read
+# A run of a pull request is grouped by the pull request's number. GitHub gives a run that begins after its pull request
+# was merged the base branch as github.ref; grouped by the ref, such a run cancelled the run of the push to main on
+# 2026-11-27 (docs/design/first-gate-on-github.md, FGR-4).
 concurrency:
-  group: tests-${{ github.ref }}
+  group: tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   tests:
