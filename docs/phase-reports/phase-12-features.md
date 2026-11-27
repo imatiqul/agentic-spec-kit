@@ -3,7 +3,7 @@
 - **Phase and date:** Phase 12 (features); 2026-11-26. Not a phase of the original plan, which ends at 10
 - **What this is:** what the owner asked for, what the kit had and lacked, what was built, how it was reviewed and merged, what was run, and what is his to decide
 - **Assumptions:**
-  1. On 2026-11-26 the owner brought a public post about another spec-driven tool, called Intent, whose unit of work is a "changeset". He asked which of its features the kit lacks and for a plan, and then asked for the features to be built in parallel and tested on the reference project with GitHub. This report covers the build. The test on GitHub has not started.
+  1. On 2026-11-26 the owner brought a public post about another spec-driven tool, called Intent, whose unit of work is a "changeset". He asked which of its features the kit lacks and for a plan, and then asked for the features to be built in parallel and tested on the reference project with GitHub. This report covers the build. The test on GitHub had not started when it was written; its last section says where that test stands.
   2. Nothing of that tool was installed or used. What is said of it comes from the post, in my words.
   3. Questions the owner did not answer were decided as recommended. Each such decision is listed in its feature's spec as his to change, and the ones that matter most are at the end of this report.
 - **Unverified:** nothing of Phase 12 has read GitHub, a tracker or a chat service. No coding agent has used any of it. When this was written, none of it had run on Windows: the pull request that brings it is its first run there. (Added later on 2026-11-26: that run happened; see the end of "What was run".)
@@ -81,9 +81,11 @@ Added later on 2026-11-26, after the owner had pushed and merged this as pull re
 - Windows Server 2025, Python 3.12.10, git 2.56.1, Spec Kit 1.4.3: of 747 unit tests 743 passed, 3 were skipped and 1 failed; the self-test passed on 107 fixtures, and the golden tasks and the demo passed.
 - The one failure was the test of AC-012 of the MCP server, and the fault was the test's: on that runner one path was longer than a work item's id may be, the server refused it for its length, and the test waited for the words of another refusal. `docs/release-notes.md` says how the test changed. That change had not run on Windows when this was added.
 
+Added on 2026-11-27: with the test corrected, the same pipeline passed on pull request #5 and on `main` at `c08eb5b` (runs 45914255887 and 45914573007). On Windows 744 unit tests passed and 3 were skipped, of 747; the self-test passed on 107 fixtures, and the golden tasks and the demo passed.
+
 ## What was not run
 
-- Anything against GitHub. `pulls`, the three methods that read another repository, the comments of an issue, and the workflow that opens a pull request have met only answers written by hand from GitHub's documents.
+- Anything against GitHub, when this was written. `pulls`, the three methods that read another repository, the comments of an issue, and the workflow that opens a pull request had met only answers written by hand from GitHub's documents. Since 2026-11-27 the comments of one issue have been read on GitHub; the last section says what else has run there.
 - Anything against Jira or Azure DevOps.
 - The MCP server with a coding agent such as Claude Code, GitHub Copilot or Cursor.
 - Any of the new commands by a coding agent, and a hand-off by one that writes a decision log.
@@ -119,4 +121,14 @@ Each spec ends with its own list. These are the ones I would look at first.
 
 ## The test on GitHub
 
-The owner asked for the features to be proven on the reference project with a GitHub repository, issues, a Project and Actions. That has not started. Its plan is in the project's notes, in stages: an issue with its discussion, a pull request that installs the kit into the reference repository, a fetch in Actions, a change branch whose pull request the workflow opens, a first real gate approved by the owner in a review, and then the page, the search and the MCP server on the result. Nothing is created on GitHub before the owner has seen and approved what would be created. Its results, whatever they are, go into `docs/limits.md`.
+The owner asked for the features to be proven on the reference project with a GitHub repository, issues, a Project and Actions. That had not started when this report was written. Its plan is in the project's notes, in stages: an issue with its discussion, a pull request that installs the kit into the reference repository, a fetch in Actions, a change branch whose pull request the workflow opens, a first real gate approved by the owner in a review, and then the page, the search and the MCP server on the result. Nothing is created on GitHub before the owner has seen and approved what would be created. Its results, whatever they are, go into `docs/limits.md`.
+
+Added on 2026-11-27: the test began on 2026-11-26, and its first three stages are done.
+
+- **The issue**, with two comments, in a Project of the owner's account.
+- **The installation.** The kit's seven extensions and three workflows went into the reference repository as one pull request, which the owner merged. The kit's checks ran on that pull request and on `main`, and the notify job after them: the first runs of the kit's workflows on GitHub.
+- **The fetch.** Started by hand in Actions, `connect fetch` read the issue by its label, the same issue as an item of the Project, and its two comments, and the job opened a pull request with the intake record as the workflow's own account. Of this phase's features that is the digest of a discussion (CNV-6 to CNV-9), read from a live service for the first time.
+
+Not done as of 2026-11-27: a change branch whose pull request the workflow opens, a gate approved in a review, and the page, the search and the MCP server on the result. No decision log, no page of a change and no programme has met GitHub.
+
+Two things came of those stages that this report did not foresee. The installation and the runs showed ten faults and gaps in the kit, among them that two checks could not see what they judge with a pipeline's own token (`docs/design/first-live-runs.md`). And GitHub Copilot reviewed the pull request of the installation, as that repository's rules ask: thirteen findings in the kit's code, of which twelve held when checked (`docs/design/first-outside-review.md`). Both sets are fixed, and `docs/limits.md` has what was wrong and what was left.
