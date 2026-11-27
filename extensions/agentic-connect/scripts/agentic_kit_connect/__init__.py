@@ -144,6 +144,9 @@ def cmd_connect(args) -> int:
         deliveries = []
         if args.notify or a == "notify":
             deliveries = notify.deliver(ctx, cfg, events, transport, env, Path(args.ledger) if args.ledger else None, SMTP, args.pr_url or "")
+            if args.ledger:  # a pipeline keeps this file between runs; with nothing sent there would be nothing to keep (LIV-8)
+                Path(args.ledger).parent.mkdir(parents=True, exist_ok=True)
+                Path(args.ledger).touch()
         text = pipeline.summary(ctx, results, events, deliveries, (cfg.get("notify") or {}).get("templates"))
         if args.summary:
             with open(args.summary, "a", encoding="utf-8", newline="\n") as fh:

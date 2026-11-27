@@ -5,10 +5,10 @@ The kit's checks read approvals from pull request reviews. They can only be trus
 ## Required settings (GitHub)
 | Setting | Why | Checked by |
 |---|---|---|
-| Branch protection on the default branch: require a pull request, at least one approval | Without it, anyone with push rights can merge with no review | doctor (needs a token that can read branch protection) |
+| A ruleset or branch protection on the default branch: require a pull request, at least one approval | Without it, anyone with push rights can merge with no review | doctor. Since 2026-11-27 it reads the rules of the branch, which any credential that can read the repository may ask. Branch protection itself only an administrator's credential can read |
 | Require review from code owners | Changes to roles, waivers and the constitution need the owner's review | doctor |
 | `agentic-checks` as a required status check | Otherwise a failing check does not block a merge | doctor |
-| Do not allow administrators to bypass | An administrator's token would defeat every rule | doctor |
+| Do not allow administrators to bypass: no bypass actor on the ruleset that asks for the review, or "Do not allow bypassing" in branch protection | An administrator's token would defeat every rule | doctor |
 | A CODEOWNERS file covering `.specify/` | Protects `roles.yml`, `kit.yml`, the constitution map, waivers and the constitution | CK-ENFORCE-SETUP (local) |
 | The agent's token is not an approver | An approver's credential in the agent's hands defeats identity binding | CK-ENFORCE-SETUP compares the token's account with `roles.yml` |
 | The agent's token cannot approve reviews, merge, or bypass protection | Same reason | Not checked in slice 0.1; see limits |

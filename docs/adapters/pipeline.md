@@ -3,7 +3,7 @@
 - **Phase and date:** slice 0.6, 2026-11-22
 - **Requirement IDs covered:** PIP-1 to PIP-7, NTF-1 to NTF-6, ADP-20
 - **Assumptions:** the pipeline has Python 3.11 or later, PyYAML and git, and a full clone (not a shallow one)
-- **Unverified:** none of the three shipped pipeline files has been run by its CI system
+- **Unverified:** the files for Azure Pipelines and GitLab CI have not been run by their CI systems. The file for GitHub Actions ran for the first time on 2026-11-27, on the reference repository: its notify job after `agentic-checks`, and its intake job when a person started it. Its mirror job has not run
 
 ## The contract, for any CI/CD system
 

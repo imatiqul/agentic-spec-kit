@@ -117,6 +117,21 @@ Seven features and a workflow template. Each has a spec under `docs/design/`, wr
 - The README of `extensions/agentic-mcp` no longer says that nothing has run on Windows. It says what has: the kit's own tests, on a runner hosted by GitHub, and no person's machine.
 - Not shown yet: the changed test on Windows. On Linux it passed with temporary folders of three lengths, one of them as long as the Windows runner's, and it failed, as it should, with the rule about paths switched off and with the bound on length switched off. The run of the pull request that brings this change is its first run on Windows.
 
+## Changed on 2026-11-27, after the first runs on GitHub
+`docs/design/first-live-runs.md` (LIV-1 to LIV-11) has what was seen; `docs/limits.md` has what ran.
+- The kit's workflows ran on GitHub for the first time, in the reference repository: `agentic-checks` on a pull request and on a push to `main`, the notify job, and the intake job, in which `connect fetch` read a live issue and a live Project. All of them did what they are for. What follows is what they showed on the way.
+- The GitHub adapter reads the rules of the default branch through `repos/{repo}/rules/branches/{branch}`, which a credential that can only read may ask, and reads who may bypass the ruleset that asks for the review. Before, it asked for branch protection alone, which only an administrator may read, so in a pipeline and on a repository that uses rulesets `CK-ENFORCE-SETUP` could check nothing and said so in a note. Where GitHub refuses the protection, the adapter asks the branch whether it has any.
+- A pipeline's own token has no user, and GitHub refuses it the question who it is. The adapter no longer fails on that: inside GitHub Actions the credential is `github-actions[bot]`, and `CK-CRED` runs. Before, it was a check that could not run in every pipeline.
+- `CK-PIPELINE-SECRETS` no longer reads a YAML comment after a reference to the secret store as a literal value.
+- The `check-failed` event says "failed", "could not run" or "failed or could not run", whichever it counts, and "and N more" where it names 12 of more. A template of your own for that event may use `{status}` for those words.
+- `agentic-checks.yml` pins checkout 7.0.1 and setup-python 7.1.0, as the connect workflow does. GitHub warned that the older two ran on a Node they were not made for. A project that installed the workflow before keeps the older pins until the file is copied again from `.specify/extensions/agentic/ci/agentic-checks.yml`.
+- `connect notify --ledger` leaves the ledger file in place when nothing was sent, so a pipeline's cache step has something to keep.
+- Both install scripts write `.specify/extensions/.gitignore` for compiled Python where there is none, and end with a note where Spec Kit was never set up in the project. `install.ps1` was changed without a PowerShell at hand; the Windows job of the pull request is its first run.
+- `docs/install.md` says what to look at before `.specify/` is committed, and `docs/adapters/trackers.md` says which token reads a GitHub Project: for one owned by a user account, a classic token with `read:project`.
+- For a project that already has the kit: on a repository whose default branch is protected by a ruleset, `CK-ENFORCE-SETUP` and `CK-CRED` now see the rules, and may fail where they passed with a note. Nothing else changes.
+- **Counts.** 107 checks, as before. 752 unit tests; 742 before. On Linux with Spec Kit installed, 749 passed and 3 were skipped. Each of the ten new tests fails on the kit as it was at `43f672e`.
+- Not run: any of these changes on GitHub.
+
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

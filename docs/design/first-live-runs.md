@@ -40,7 +40,7 @@ On 2026-11-26 the kit was installed into HealthQCopilot for its pipeline, and in
 | LIV-8 | `connect notify --ledger <file>` leaves that file in place when it ends, also when nothing was sent. |
 | LIV-9 | Both install scripts write `.specify/extensions/.gitignore` with one rule, for compiled Python, when no such file is there. They leave an existing one alone. |
 | LIV-10 | Both install scripts end with a plain note when Spec Kit was never set up in the project (no `.specify/init-options.json`, the file `CK-UPSTREAM-PIN` reads): the kit's code is installed, no coding agent has its commands, and `CK-UPSTREAM-PIN` cannot run until `specify init` has run. The exit code stays 0. |
-| LIV-11 | `docs/install.md` says what to look at before `.specify/` is committed: the two lock files, and the folder paths in Spec Kit's list of workflows. `docs/adapters/trackers.md` says which kind of credential each tracker needs, and that a GitHub Project owned by a user account needs a classic token with the scope `read:project`. `docs/limits.md` records what these runs showed. |
+| LIV-11 | `docs/install.md` says what to look at before `.specify/` is committed: the two lock files, and the folder paths in Spec Kit's list of workflows. `docs/adapters/trackers.md` says which kind of token reads a GitHub Project, and that one owned by a user account needs a classic token with the scope `read:project`. `docs/limits.md` records what these runs showed. |
 
 ## Acceptance criteria
 

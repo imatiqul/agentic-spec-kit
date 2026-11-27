@@ -547,6 +547,7 @@ def test_github_adapter_parses_recorded_responses():
         "repos/o/r/branches/main/protection": {
             "required_pull_request_reviews": {"required_approving_review_count": 1, "require_code_owner_reviews": False},
             "required_status_checks": {"contexts": ["agentic-checks"]}, "enforce_admins": {"enabled": True}},
+        "repos/o/r/rules/branches/main": [],   # no ruleset applies to the branch: protection alone decides
     }
     gh = adapters.GitHubAdapter("o/r", "main", runner=lambda path: canned[path])
     assert gh.agent_identity() == "kit-agent"
