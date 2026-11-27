@@ -60,4 +60,4 @@ On 2026-11-26 the kit was installed into HealthQCopilot for its pipeline, and in
 - It does not make the kit read who may bypass a ruleset where GitHub does not say. The item is then `not-checkable`, and `CK-ENFORCE-SETUP` notes it.
 - It does not change `CK-UPSTREAM-PIN`: a project without Spec Kit's own setup still cannot say which Spec Kit it has.
 - It does not remove the path from Spec Kit's list of workflows. That file is Spec Kit's; the kit says where to look.
-- It does not change the kit's own pipeline file, `.github/workflows/tests.yml`, which pins the same two older releases. That file goes to the owner as a patch of its own.
+- It does not change the kit's own pipeline file, `.github/workflows/tests.yml`, which pinned the same two older releases. That is a commit of its own, made on 2026-11-27.
