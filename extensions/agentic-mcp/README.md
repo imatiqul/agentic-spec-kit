@@ -70,6 +70,8 @@ Standard output carries protocol messages and nothing else. What the kit or a pr
 
 ## Not verified
 
-No MCP client has been run against this server: not Claude Code, not GitHub Copilot, not Cursor. Nothing here has run on Windows.
+No MCP client has been run against this server: not Claude Code, not GitHub Copilot, not Cursor. On Windows only the kit's own tests have started it, on a runner hosted by GitHub; no person has run it on a Windows machine.
 
-What has run, on Linux, on Python 3.11 to 3.13: the tests in `tests/test_mcp.py`, which start the server and speak the protocol to it line by line; and the client of the official `mcp` package for Python, by hand and in one test that is skipped where the package is not installed. Version 2.3.0 of that client opened the server both ways, listed the tools and called them. Version 1.30.0 did the same with the handshake, the one way it has. Python 3.10 was not at hand.
+What has run: the tests in `tests/test_mcp.py`, which start the server and speak the protocol to it line by line, on Linux on Python 3.10 to 3.13; and the client of the official `mcp` package for Python, by hand on Linux and in one test that is skipped where the package is not installed. Version 2.3.0 of that client opened the server both ways, listed the tools and called them. Version 1.30.0 did the same with the handshake, the one way it has.
+
+On Windows the tests ran first on 2026-11-26, on Python 3.12, in the kit's own pipeline. Of the 33, 32 passed. The one that failed was at fault itself and has been changed since: it took a refusal for a value's length for a missing refusal. The test with the official client was among the 32, because pip installs `mcp` 2.3.0 together with Spec Kit 1.4.3. `docs/release-notes.md` says what each run on Windows showed.
