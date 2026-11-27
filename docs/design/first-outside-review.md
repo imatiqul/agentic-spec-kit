@@ -7,7 +7,7 @@
   1. The owner said on 2026-11-26 that each failure of the live test is reported as it is and fixed on a local branch of the kit, which he pushes.
   2. A review by a program is a reader's findings and nothing more. Each finding was checked against the kit's code before anything changed. One of the thirteen was not taken, and the reason is given.
   3. On GitHub, whoever may push a branch may run a workflow on it and read the repository's secrets there. A secret held by an environment is read only by a job that names the environment, and an environment can be limited to chosen branches. GitHub's documents say both (sources 2 and 5).
-- **Unverified:** nothing here has run on GitHub. That the pinned `actions/checkout` refuses a fork's commit in a `workflow_run` job was read in its source and not tried. The files for GitLab CI and Azure Pipelines are changed and have still not been run by those systems
+- **Unverified:** nothing here has run on GitHub. That the pinned `actions/checkout` refuses a fork's commit in a `workflow_run` job was read in its source and not tried. The files for GitLab CI and Azure Pipelines are changed and have still not been run by those systems Added later on 2026-11-27: the tests of these changes passed on GitHub in the kit's pull request 6, on Linux and on Windows, and the reference repository's checks ran with them from its pull request 86 on.
 
 ## What happened
 

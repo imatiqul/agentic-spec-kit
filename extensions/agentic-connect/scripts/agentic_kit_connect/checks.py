@@ -146,15 +146,16 @@ def ck_notify_content(ctx: Context, res: Result) -> None:
             res.fail(f"the template for {event} is longer than 200 characters; it is a headline, not a message body", CONNECT)
 
 
-def _without_comment(value: str) -> str:
-    """The value of a line without the YAML comment after it. A # inside quotes belongs to the value (LIV-5)."""
+def _without_comment(value: str, leading: bool = True) -> str:
+    """The value of a line without the comment after it. A # inside quotes belongs to the value (LIV-5). A # that
+    begins the value starts a comment where `leading` is true; in a shell assignment `NAME=#x` it is not (FGR-12)."""
     quote = ""
     for at, char in enumerate(value):
         if quote:
             quote = "" if char == quote else quote
         elif char in "'\"":
             quote = char
-        elif char == "#" and (at == 0 or value[at - 1] in " \t"):
+        elif char == "#" and ((at == 0 and leading) or (at > 0 and value[at - 1] in " \t")):
             return value[:at].rstrip()
     return value
 
@@ -186,9 +187,12 @@ def ck_pipeline_secrets(ctx: Context, res: Result) -> None:
         for what in shapes_in(text):
             res.fail(f"the pipeline contains {what}; it belongs in the secret store", rel)
         for n, line in enumerate(text.splitlines(), 1):
-            m = re.match(r"^\s*-?\s*([A-Z][A-Z0-9_]*)\s*[:=]\s*(.*?)\s*$", line)
-            if m and m.group(1) in names and not _REFERENCE.match(_without_comment(m.group(2)).strip("'\"")):
-                res.fail(f"{m.group(1)} is given a literal value; reference the secret store instead", f"{rel}:{n}")
+            m = re.match(r"^\s*-?\s*([A-Z][A-Z0-9_]*)\s*([:=])(\s*)(.*?)\s*$", line)
+            if m and m.group(1) in names:
+                # right after `=`, with no space between, a # belongs to the value, as the shell reads it (FGR-12)
+                value = _without_comment(m.group(4), leading=m.group(2) == ":" or bool(m.group(3)))
+                if not _REFERENCE.match(value.strip("'\"")):
+                    res.fail(f"{m.group(1)} is given a literal value; reference the secret store instead", f"{rel}:{n}")
         if not rel.startswith(".github/workflows/"):
             continue
         try:

@@ -132,7 +132,7 @@ Seven features and a workflow template. Each has a spec under `docs/design/`, wr
 - `docs/install.md` says what to look at before `.specify/` is committed, and `docs/adapters/trackers.md` says which token reads a GitHub Project: for one owned by a user account, a classic token with `read:project`.
 - For a project that already has the kit: on a repository whose default branch is protected by a ruleset, `CK-ENFORCE-SETUP` and `CK-CRED` now see the rules, and may fail where they passed with a note. Nothing else changes.
 - **Counts.** 107 checks, as before. 752 unit tests; 742 before. On Linux with Spec Kit installed, 749 passed and 3 were skipped. Each of the ten new tests fails on the kit as it was at `43f672e`.
-- Not run: any of these changes on GitHub.
+- Not run when this was written: any of these changes on GitHub. Since then their tests passed on GitHub, on Linux and on Windows, in the kit's pull request 6, and the reference repository's checks have run with them (see "Changed on 2026-11-27, after the first gate on GitHub").
 
 ## Changed on 2026-11-27, after the first review from outside
 `docs/design/first-outside-review.md` (REV-1 to REV-12) has the thirteen findings of GitHub Copilot's review of the pull request that installed the kit into the reference repository, and what was found when each was checked. Twelve hold.
@@ -147,7 +147,22 @@ Seven features and a workflow template. Each has a spec under `docs/design/`, wr
 - `docs/adapters/pipeline.md` no longer lists an MCP server as not built.
 - Not taken: that mirroring should accept one role in Lite. `docs/limits.md` says why, and what else was left.
 - **Counts.** 107 checks, as before. 768 unit tests; 752 before. On Linux with Spec Kit installed, 765 passed and 3 were skipped. Of the 16 new tests, 15 fail on the kit as it was; the one that passes there says that the rule for `uvx` and `pipx` has not changed. Two older tests of the transport's retry now replace the transport's own call that opens a connection, and no longer the standard library's.
-- Not run: any of this on GitHub. The review's threads on that pull request are not answered.
+- Not run when this was written: any of this on GitHub. Since then its tests passed on GitHub, on Linux and on Windows, in the kit's pull request 6, and the reference repository's checks have run with it. The review's threads on that pull request are not answered.
+
+## Changed on 2026-11-27, after the first gate on GitHub
+`docs/design/first-gate-on-github.md` (FGR-1 to FGR-15) has what the test on the reference repository showed when a gate passed there for the first time: the owner approved two gates of a spec in a review on a pull request that `agentic-open-pull-request` opened, and the pipeline passed the records.
+- **Where the record goes.** Where the default branch dismisses an approval when a commit is pushed, a record pushed onto the reviewed pull request dismisses the review it cites, and `CK-APPROVER` fails the record. `docs/install.md`, the gate command and the connect workflow now say so, and say what worked: the record committed after the merge, on a branch of its own. `record --change` prints a note where the channel says that approvals are dismissed on a push and the pull request is open. Whether the kit should record that way from now on is the owner's decision, and nothing else changes until then.
+- **The adapter interface** gets `stale_approvals_dismissed()`. A project that wrote an adapter of its own needs nothing: where the method is missing, `record` says nothing.
+- **`CK-ENFORCE-SETUP`** says "not met:" before an item that fails, outside Lite. It reads every rule of the branch that asks for a pull request, where it read the first; one ruleset that asks for an approval and lists no bypass actor now makes "administrators are not exempt" pass; and where GitHub refuses the rules of the branch, an item that branch protection does not meet is not checkable, where it failed. The last three came from GitHub Copilot's review of the pull request that brought the fixed kit into the reference repository.
+- **`CK-PIPELINE-SECRETS`** no longer takes a `#` right after `=` for a comment, so `NAME=#…` with a literal value fails. Also from that review.
+- **`gate` and the brief** say that the line goes into the text of the review, and that an approval without it records nothing. The brief stays as long as it was.
+- **`CK-DUPLICATE`** says, once, that its scores are weighted by every requirement, spec and intake record in the repository, so that a new one can move a pair across the threshold. What it finds is unchanged.
+- **`changeset`** skips a commit that GitHub does not hold, names it, and lists the pull requests of the others. Before, one such commit left the page with none. The ledger has a new field, `unknown`.
+- **The kit's own `tests.yml`** groups a pull request's runs by its number, so that a run that begins after the merge no longer cancels the run of the push to `main`.
+- **Documents:** `extensions/agentic-connect/README.md` and `docs/limits.md` say what GitHub did with the connect workflow: no run after a run whose actor is the bot, the cache refused after a run on a pull request, and a held run ended as "failure" when its pull request was merged first. The MCP server's README says how `gh` keeps its credential for `checks_run`. The documents that said the fixes of 2026-11-27 had not run on GitHub or on Windows say where they ran.
+- Not done: a report of which failures a change brings and which its base already has.
+- **Counts.** 107 checks, as before. 782 unit tests; 768 before. On Linux with Spec Kit installed, 779 passed and 3 were skipped. Each of the 14 new tests fails on the kit as it was at `ce58712`.
+- Not run: any of these changes on GitHub or on Windows.
 
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.

@@ -199,6 +199,7 @@ def cmd_gate(args) -> int:
         print(f"Roles that must approve: {', '.join(info['required_roles'])}")
         print("\nTo approve, a person holding the role submits an approving review containing this line:\n")
         print(f"  {info['paste']}\n")
+        print("The line goes into the text of the review, on a line of its own. An approval without it records nothing.")
         print("To reject, request changes with `reject` in place of `approve`.")
         if info["uncommitted"]:
             print("\nNot committed:")
@@ -330,7 +331,29 @@ def cmd_record(args) -> int:
     path.write_text(yaml.safe_dump(record, sort_keys=False), encoding="utf-8", newline="\n")
     print(f"wrote {path.relative_to(ctx.src.root).as_posix()}")
     print("This is a mirror. CK-APPROVER and CK-GATE-MIRROR decide whether the review behind it is valid.")
+    if getattr(args, "change", None):
+        _dismissal_note(ctx, args.change, args.commit, [a["review_ref"] for a in approvals])
     return 0
+
+
+def _dismissal_note(ctx: Context, change: str, commit: str, refs: list[str]) -> None:
+    """Say so where a commit pushed onto the pull request would dismiss the review that the record cites (FGR-2).
+
+    Only where both can be told: the default branch's rules dismiss an approval on a push, and the pull request is open."""
+    try:
+        adapter = adapters.enforcement(ctx)
+        ask = getattr(adapter, "stale_approvals_dismissed", None)
+        if ask is None or ask() is not True:
+            return
+        states = {p["change"]: p["state"] for p in adapter.pulls([commit])}
+    except (KitError, OSError, ValueError):
+        return
+    if states.get(change) != "open":
+        return
+    reviews = ", ".join(sorted({ref.split("#review-", 1)[-1] for ref in refs}))
+    print(f"note: {change} is open, and the rules of the default branch dismiss an approval when a commit is pushed. "
+          f"Pushed onto {change}, this record would dismiss review {reviews}, which it cites, and CK-APPROVER would then fail it. "
+          "With the kit as it is, commit the record after the merge, on a branch of its own.")
 
 
 from . import decision_log  # noqa: E402  (here, with its command: registers CK-DECISION-LOG, its fixtures and its two views)

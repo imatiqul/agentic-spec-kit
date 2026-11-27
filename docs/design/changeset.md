@@ -6,7 +6,7 @@
   1. The owner said on 2026-11-26 to build the features of `phase-12-changeset-gap-analysis`. This document covers its proposals 1 and 4.
   2. That report advised that the first real gate on a live repository come before proposal 4, because proposal 4 reads GitHub. The go-ahead came without it. So the GitHub half of this document is code that no live repository has answered.
   3. A reader of the page is a reviewer at a gate, an engineer who picks the change up, or an agent at the start of a session. All three read; none of them types into the page.
-- **Unverified:** nothing here has read GitHub. The pull requests in the tests come from the file adapter, and what the GitHub adapter makes of a response is tried only on responses written by hand from GitHub's REST documentation, as read on 2026-11-26. Nothing here has run on Windows.
+- **Unverified:** nothing here has read GitHub. The pull requests in the tests come from the file adapter, and what the GitHub adapter makes of a response is tried only on responses written by hand from GitHub's REST documentation, as read on 2026-11-26. Nothing here has run on Windows. Added on 2026-11-27: the page read the pull requests of a change from GitHub on the reference repository, and showed none where one commit was unknown to GitHub, which FGR-10 changes (`docs/design/first-gate-on-github.md`).
 
 ## Why
 

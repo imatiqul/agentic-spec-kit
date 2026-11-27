@@ -100,15 +100,25 @@ def describe(c: dict) -> str:
     return f"{c['target']} ({c['kind']}, {score}{shared})"
 
 
+#: Said once when a score is shown (FGR-8): the weights come from the whole corpus, so a pair can move without changing.
+RELATIVE = ("a score is weighted by every requirement, spec and intake record in the repository, so a new one can move a pair "
+            "across the threshold ({:.2f}) although neither of the two changed")
+
+
 @check("CK-DUPLICATE", ("INT-5", "INT-6"), "before a spec's first gate, a Product Owner has decided every likely duplicate of it")
 def ck_duplicate(ctx: Context, res: Result) -> None:
+    scored = False
     for spec in open_specs(ctx):
         rel = f"specs/{spec}/{ORIGIN}"
         decided = {}
         for d in origin(ctx, spec).get("dispositions") or []:
             if isinstance(d, dict) and d.get("target"):
                 decided[str(d["target"])] = d
-        for c in spec_candidates(ctx, spec):
+        found = spec_candidates(ctx, spec)
+        if not scored and any(isinstance(c.get("score"), (int, float)) for c in found):
+            res.notes.append(RELATIVE.format(threshold(ctx)))
+            scored = True
+        for c in found:
             d = decided.get(c["target"])
             if d is None:
                 res.fail(f"{describe(c)} looks like this requirement and nobody has decided whether it is. Record a disposition in {ORIGIN}: "
