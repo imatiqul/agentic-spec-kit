@@ -142,11 +142,11 @@ def test_a_busy_service_is_retried_a_bounded_number_of_times(monkeypatch):
         if len(calls) < 3:
             raise urllib.error.HTTPError(req.full_url, 503, "busy", {}, io.BytesIO(b""))
         return Ok()
-    monkeypatch.setattr(transport.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(transport, "_open", urlopen)
     resp = transport.Http(sleep=waits.append).request("GET", "https://example.com/x")
     assert resp.status == 200 and len(calls) == 3 and waits == [1, 2]
     calls.clear()
-    monkeypatch.setattr(transport.urllib.request, "urlopen", lambda req, timeout: (_ for _ in ()).throw(urllib.error.HTTPError(req.full_url, 404, "no", {}, io.BytesIO(b""))))
+    monkeypatch.setattr(transport, "_open", lambda req, timeout: (_ for _ in ()).throw(urllib.error.HTTPError(req.full_url, 404, "no", {}, io.BytesIO(b""))))
     assert transport.Http(sleep=waits.append).request("GET", "https://example.com/x").status == 404
 
 

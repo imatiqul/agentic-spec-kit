@@ -21,8 +21,16 @@ specify extension add --dev "$kit/extensions/agentic-team" --force
 specify preset add --dev "$kit/presets/agentic-$profile"
 specify workflow step add agentic-gate --dev "$kit/steps/agentic-gate" --force
 for wf in agentic-sdd agentic-sdd-team agentic-sdd-sequential; do specify workflow add --dev "$kit/workflows/$wf"; done
+# Python compiles the kit's code where it runs. Those files are per machine and do not belong in the repository (LIV-9).
+[ -e .specify/extensions/.gitignore ] || printf '%s\n' "# Python compiles the kit's code where it runs. The compiled files are per machine and are not kept." '__pycache__/' > .specify/extensions/.gitignore
 echo
 echo "Installed. Next:"
 echo "  python .specify/extensions/agentic/scripts/agentic.py init --profile $profile --repository <owner/name>${pack:+ --pack $pack}"
 echo "  python .specify/extensions/agentic/scripts/agentic.py team init --runtimes <claude,copilot,sequential>"
 echo "  python .specify/extensions/agentic/scripts/agentic.py doctor"
+if [ ! -f .specify/init-options.json ]; then  # LIV-10
+  echo
+  echo "Note: Spec Kit was never set up in this project (there is no .specify/init-options.json)."
+  echo "  The kit's code is installed and its checks run. No coding agent has the kit's commands,"
+  echo "  and CK-UPSTREAM-PIN cannot run, until 'specify init' has run here."
+fi

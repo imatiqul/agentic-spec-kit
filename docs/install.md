@@ -30,6 +30,14 @@ For Standard and Regulated the script also installs `agentic-system` (the system
 
 With a coding agent, the skill `agentic-spec-kit-install` in this repository's `.claude/skills/` does this section and the next two with you. Claude Code and GitHub Copilot both read that folder.
 
+**Before you commit `.specify/`**, look at three things the install leaves there. Seen on 2026-11-26, when the kit was installed into a repository with a pipeline for the first time.
+
+- Python compiles the kit's code where it runs, into `__pycache__` folders. Since 2026-11-27 the install scripts write `.specify/extensions/.gitignore`, which keeps those under `.specify/extensions/` out of git. An ignore file that is already there is left alone. The `agentic-gate` step under `.specify/workflows/steps/` is compiled too, and nothing ignores that folder: Spec Kit's own `.specify/.gitignore` does not, and `specify init --here --force` writes that file again over what you added.
+- Spec Kit leaves two empty lock files, `.specify/.step-install.lock` and `.specify/.workflow-install.lock`. They belong to the machine and not to the repository.
+- Spec Kit writes the folder each workflow was installed from into `.specify/workflows/workflow-registry.json`, and the install script installs from a folder of yours. So that file holds a path of the machine that ran the install. In a public repository, change the path or leave the file out.
+
+**A repository that Spec Kit never set up.** The script asks only whether `.specify/` exists. Where `specify init` has never run, it still copies the kit's code, and the kit's checks run from there, which is enough for a pipeline. No coding agent gets the kit's commands, and `CK-UPSTREAM-PIN` cannot run, because the file that names the Spec Kit version is written by `specify init`. Since 2026-11-27 the script ends with a note that says so.
+
 Bundles are in `bundles/` but cannot be installed yet. Spec Kit 1.4.3 resolves a bundle's components only through catalogs, and this kit has not published one.
 
 ## 2. Configure

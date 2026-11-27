@@ -13,7 +13,7 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 | CK-PROFILE | `kit.yml` is missing or invalid, or names an unknown profile or pack | GOV-13, GOV-14 | L, CI | `kit.yml` with `profile: strict` |
 | CK-ROLES | `roles.yml` is invalid; a gate's required role has nobody; an artifact has no accountable role. Also prints the separation-of-duties report | GOV-1 to GOV-3 | L, CI | A gate role with no person |
 | CK-UPSTREAM-PIN | Installed Spec Kit differs from the pinned version, or `NOTICE.md` lacks the pin | ADP-1 | L, CI | Pin `1.4.3`, installed `1.3.0` |
-| CK-ENFORCE-SETUP | Branch protection, CODEOWNERS coverage or the agent token's permissions are wrong. Items that cannot be read are reported as not-checkable | GOV-8, ADP-3 | L (doctor), CI | CODEOWNERS missing `roles.yml` |
+| CK-ENFORCE-SETUP | The rules of the default branch (rulesets and branch protection, LIV-1 to LIV-3), CODEOWNERS coverage or the agent token's permissions are wrong. Items that cannot be read are reported as not-checkable | GOV-8, ADP-3 | L (doctor), CI | CODEOWNERS missing `roles.yml` |
 | CK-TIER | A spec has no declared tier or an unknown one | GOV-9 | L, CI | Spec without `tier_declared` |
 | CK-CONSTITUTION | A principle names neither a check nor a judging gate; a named check does not exist | GOV-11 | L, CI | Principle with `enforcement: machine` and no checks |
 | CK-GATE-RECORD | A gate was passed without a decision record: a plan, a task list or work on the tasks is ahead of a gate, or work is on the default branch and its implementation or verification gate has no approving record (see "What CK-GATE-RECORD asks for", below); a record is malformed, names an unknown commit, or its evidence hash does not match the files at that commit | GOV-4, GOV-5, AGT-5 | L, CI | Record whose hash differs from its files |
@@ -71,7 +71,7 @@ Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: *
 | CK-REWORK-LIMIT | A work item exceeds two rework rounds without an escalation record | AGT-6 | L, CI | Three rounds, no escalation |
 | CK-BUDGET | A run exceeds its step or time budget without stopping | AGT-7 | L | Run log past its limit |
 | CK-AUTHOR-NEQ-VERIFIER | The same agent identity authored and reviewed or verified an artifact, or a work item was returned or accepted by a reviewer its record does not name | AGT-9 | L, CI | Same id in both roles |
-| CK-CRED | The token available to agents can approve, merge, bypass protection, publish or deploy | AGT-11 | L (doctor), CI | Token with admin permission |
+| CK-CRED | The token available to agents can approve, merge, bypass protection, publish or deploy. In a pipeline that is the pipeline's own token, which has no user: in GitHub Actions it is judged as `github-actions[bot]` (LIV-4) | AGT-11 | L (doctor), CI | Token with admin permission |
 | CK-GOLDEN | A golden task fails in parallel or sequential mode, or a seeded defect is not caught | AGT-8, AGT-13, ADP-12 | CI | Seeded missing tenant filter passes review |
 
 ## Order in CI
@@ -209,7 +209,7 @@ Detail the summaries leave out:
 
 Detail the summaries leave out:
 - CK-CONTEXT fails when an agent is at work with no context pack, the pack was edited by hand, a source changed since it was built, or it draws on a sealed change. Since 2026-11-26 it looks for the pack's mark where the pack's own text begins, after the list of sources: it used to look in the first 1,200 characters, and a pack with ten sources had its mark past them and was taken for an edited one. Since that day a pack is also stale when the spec's decision log comes to hold an entry that touches its task.
-- CK-TOOL-ALLOWLIST fails when an MCP server is configured that is not on the allowlist, is launched differently from what was reviewed, is not pinned, or holds a stored credential; or a setting trusts every server. The allowlist is read from the base branch.
+- CK-TOOL-ALLOWLIST fails when an MCP server is configured that is not on the allowlist, is launched differently from what was reviewed, is not pinned, or holds a stored credential; or a setting trusts every server. The allowlist is read from the base branch. Where the base branch has none yet, the one a change brings counts only for servers the base branch already configures in the same way: a server and the allowlist that approves it cannot arrive together (REV-5). For `npx`, `bunx` and `pnpx` a pinned version has three numbers; `@1` and `@1.2` are ranges (REV-6).
 - CK-RUN-RECORD reads the `agent.<action>` entries of the audit log. A step whose tools were not reported by the runtime is recorded as `declared`, taken from the agent spec, and says so.
 - CK-ROUTING requires a routing policy at Regulated only. Where a policy exists at Standard it is enforced. Model and cost are what the runtime reported (see `docs/limits.md`).
 - CK-GOLDEN-BASELINE compares the last golden results with a baseline a named person in `roles.yml` accepted through a review. Once a baseline is on the base branch it is read from there, so a change cannot lower the bar it is judged by. A task, seeded defect or planted instruction that was good in the baseline and is not now fails the check; a new one that fails does not, until it is in a baseline. Where the project has a routing policy, the results must also have been produced under the policy the change proposes: a change of model with results from before it fails, as a change to an agent spec already does under CK-GOLDEN.
@@ -234,7 +234,7 @@ Detail the summaries leave out:
 | CK-INFRA-CHANGE | An infrastructure change states its impact, passes policy checks and fits a stated budget | CHG-16 | Standard, Regulated |
 | CK-METRIC-PROVENANCE | Every figure shown to users or in reports traces to a recorded evaluation or telemetry source. It reads the files `metric_claims.scan` names: percentages in prose, and in code or data also a number given to a name that says what it measures | QLT-19 | Standard, Regulated |
 | CK-OPS-READINESS | A release states its operational readiness: objectives, telemetry, alerts, dashboards, runbooks | QLT-20 | Standard, Regulated |
-| CK-POST-RELEASE | Criteria that can only be checked in production are checked after release, and the result closes the trace | CHG-21 | Standard, Regulated |
+| CK-POST-RELEASE | Criteria that can only be checked in production are checked after release, and the result closes the trace. A check dated after today, or before the release, fails (REV-7) | CHG-21 | Standard, Regulated |
 | CK-PRIVACY-IMPACT | A spec that touches protected data states purpose, minimum fields, lineage, retention and access | QLT-6 | Standard, Regulated |
 | CK-PROGRESSIVE | A high-risk change is rolled out in stages with signals that halt it and a rollback trigger | CHG-19 | Standard, Regulated |
 | CK-SECURITY-EVIDENCE | G5 was approved with secret, dependency and static scans, and an authorization matrix where an endpoint changed | QLT-5 | Standard, Regulated |

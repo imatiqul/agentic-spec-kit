@@ -3,7 +3,7 @@
 - **Phase and date:** slice 0.6, 2026-11-22
 - **Requirement IDs covered:** ADP-17, ADP-18, ADP-19, INT-1, INT-2, NTF-2, NTF-4, NTF-5; and since 2026-11-26 CNV-6 to CNV-9 of `docs/design/conversation.md`
 - **Assumptions:** each vendor's API behaves as its published reference says
-- **Unverified:** no adapter has been run against the live service. Every one is tested against recorded responses only (`tests/test_connect.py`).
+- **Unverified:** the adapters for Jira, Azure DevOps and ClickUp, and every notification channel, have not been run against the live service. They are tested against recorded responses only (`tests/test_connect.py`). The GitHub adapter read a live repository for the first time on 2026-11-27; see "The first read of a live service". It has posted no note on a live issue
 
 ## What an adapter does
 
@@ -43,9 +43,27 @@ Added on 2026-11-26, and read from each vendor on that day: GitHub's and Azure D
 
 The note that the kit posts is among the comments it reads back. It is left out by its form: it begins with `agentic-spec-kit: ` and ends with `(ref agentic:<key>)`.
 
+## Which token reads GitHub
+
+From GitHub's documents, read on 2026-11-26 and 2026-11-27; the next section says what was tried. For the other trackers this document says how the adapter signs in, and not which rights the credential needs: that was not checked.
+
+| Source | Token |
+|---|---|
+| A Project owned by a user account | A classic token with the scope `read:project`. A fine-grained token cannot read such a Project: GitHub lists that among the things fine-grained tokens cannot do |
+| A Project owned by an organization | A classic token with `read:project`, or a fine-grained token with the organization's permission to read Projects |
+
+A pipeline's own token (`github.token` in GitHub Actions) belongs to the repository it runs in and reads no Project. That is why a source names a secret of its own. `read:project` is for reading: to post a note on an issue a token needs more, and the kit posts none unless a channel of type `work-item` is configured.
+
+The issue of the run below is in a public repository, which GitHub lets any token read. For a private repository the token also needs the right to read its issues; that was not tried.
+
+## The first read of a live service
+
+On 2026-11-27 `connect fetch` ran in GitHub Actions, in the intake job of `ci/github-actions.yml`, on the reference repository. Its one source named a label and a Project owned by a user account. It read one open issue with that label, the same issue as an item of the Project, and the issue's two comments, with a classic token that the repository's owner made for it; the kit never saw the token. The log says "1 item(s) from 1 source(s); 1 new". The intake record holds the title, the body, the link, and for the discussion a count of 2 and a hash. Not tried there: more than one page of anything, a draft item of a Project, a Project of an organization, a private repository, and a note posted on an issue.
+
 ## Safety rules built into the transport
 
 - Only `https` leaves the repository (`http` is allowed to `localhost` for tests).
+- A redirect is followed only to the scheme, host and port the request was sent to. Any other is not followed, so no header, and no credential in one, reaches an address the configuration did not name. The adapter then sees the redirect's own status as the answer. Before 2026-11-27 every redirect was followed, with every header.
 - A busy service (429, 502, 503, 504) is retried at most three times.
 - A Jira search stops on an empty page as well as on a missing page token, so a service that keeps returning a token cannot loop the pipeline.
 - Error text is scrubbed of any secret the adapter read before it is printed.

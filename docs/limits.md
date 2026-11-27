@@ -128,14 +128,62 @@ Seven features were added in Phase 12. Each has a spec under `docs/design/` with
 - **The search finds words in the files git tracks.** It builds no index, reads no other commit and no submodule, and has not been timed on a real large repository. With `--kind all`, which is the default, the records under `.specify/` are searched too, and by the order of paths they come first among the hits outside the nodes a spec touches. `--kind code` leaves them out.
 - **A programme's page copies only fixed words from another repository**: a tier, the gates with a decision record at the pinned commit, and each decision. Whether the reviews behind those records count is for that repository's own checks. A parent's gate does not wait for its children.
 - **The workflow that opens a pull request needs a repository setting that does more.** "Allow GitHub Actions to create and approve pull requests" is one switch for both. With it on, a workflow whose job may write pull requests can approve one. The kit's gate never counts such an approval: `CK-APPROVER` refuses a review by an account that is not a person's, and by the pipeline's own. A branch rule that only counts approvals may count it; that was not tried. A second account, or a GitHub App, opens a pull request without the switch.
-- **As of 2026-11-26 none of this has read GitHub, a tracker or a chat service**, and none of it had run on Windows when it was written: every answer of GitHub in its tests was written by hand from GitHub's documents. The MCP server has been spoken to by its tests and by the official `mcp` client for Python (2.3.0 and 1.30.0), and by no coding agent.
-- **On Windows the features of 2026-11-26 have been run by the kit's tests only**, first on that day, on a runner hosted by GitHub: 743 unit tests passed and one failed, for a fault of that test (`docs/release-notes.md` has the run). No person has run one of the new commands, or the MCP server, on a Windows machine.
+- **As of 2026-11-26 none of this has read GitHub, a tracker or a chat service**, and none of it had run on Windows when it was written: every answer of GitHub in its tests was written by hand from GitHub's documents. The MCP server has been spoken to by its tests and by the official `mcp` client for Python (2.3.0 and 1.30.0), and by no coding agent. Since 2026-11-27 `connect fetch` has read one issue, one Project and the issue's comments on GitHub; nothing else of these features has read GitHub.
+- **On Windows the features of 2026-11-26 have been run by the kit's tests only**, first on that day, on a runner hosted by GitHub: 743 unit tests passed and one failed, for a fault of that test (`docs/release-notes.md` has the run). With the test corrected, the job passed on 2026-11-27, on pull request 5 and on `main` at `c08eb5b`: 744 passed and 3 were skipped. No person has run one of the new commands, or the MCP server, on a Windows machine.
+
+## Found by the first runs on GitHub, 2026-11-27
+
+On 2026-11-26 the kit was installed into the reference repository, `imatiqul/azure-ai-cloud-healthcare`, for its pipeline: seven extensions under `.specify/extensions/` and three workflows. In the minutes around midnight UTC on 2026-11-27 they ran on GitHub for the first time. `docs/design/first-live-runs.md` has what was seen and what changed (LIV-1 to LIV-11).
+
+What ran, once each unless said otherwise:
+
+- **`agentic-checks`**, on a pull request and on the push to `main`, under a minute each: the self-test passed on 107 fixtures, and the checks reported 83 passed, 21 failed and 2 not run. The 21 fail on that repository's own files. Both runs ended red, and nothing was held by it: no rule of that repository requires the check.
+- **The notify job of `agentic-connect`**, after the run on `main`: it passed and wrote the check results and the gate board into the run's summary. No channel was configured, so nothing was sent.
+- **The intake job of `agentic-connect`**, started by hand: `connect fetch` read one issue, one Project of a user account and the issue's two comments, wrote one intake record, pushed a branch and opened a pull request as `github-actions[bot]`. GitHub then held `agentic-checks` on that pull request for a person to approve the run.
+
+What those runs showed, and what was changed on 2026-11-27. None of the changes has run on GitHub:
+
+- **The credential check could not run in the pipeline.** GitHub refuses a pipeline's own token the question who it is. The adapter now takes that refusal for what it is: the token of an app's installation, with no user, named `github-actions[bot]` inside GitHub Actions. `CK-CRED` then judges the permissions GitHub reports for it.
+- **The setup check passed without having read the branch's rules.** It asked for branch protection, which only an administrator may read, and noted "not checkable". The adapter now asks `repos/{repo}/rules/branches/{branch}` first, which any credential that can read the repository may ask, and so reads a repository that uses rulesets. Who may bypass a ruleset it reads from the ruleset itself; whether a pipeline's token is told that was not tried, and where it is not, the item is "not checkable" as before.
+- **On the reference repository the setup check will fail once this is installed there**, and rightly: `agentic-checks` is not a required check, and an administrator may bypass the ruleset that asks for the review.
+- **"not checkable" is still a note and not a failure.** A repository whose rules cannot be read at all passes `CK-ENFORCE-SETUP` with that note. Read the notes.
+- **The notify summary counted checks that could not run as failed**, and named 12 of 23 without saying so. It now says "failed or could not run" and "and 11 more".
+- **`CK-PIPELINE-SECRETS` read a YAML comment as part of a value** and failed a line that references the secret store. Fixed.
+- **The install leaves files that do not belong in a repository**, and ran without a word on a repository that Spec Kit never set up. `docs/install.md` says what to look at before a commit; the scripts now write one ignore file and end with a note.
+- **A pipeline that opens pull requests makes branches.** Each intake run that finds something pushes one, and a repository that forbids deleting branches keeps every one of them.
+
+Not run on GitHub as of 2026-11-27: the workflow that opens a pull request for a branch, the mirror job, a review that carries a gate's line, `record --change`, the pull requests of a change read by `changeset`, and a programme's child in another repository.
+
+## Found by the first review from outside, 2026-11-27
+
+The reference repository asks for a review by GitHub Copilot on every pull request. Its review of the pull request that installed the kit there arrived six minutes after the merge: 13 findings in the kit's code and templates. Each was checked against the code. Twelve hold, and `docs/design/first-outside-review.md` has all thirteen, with what was changed (REV-1 to REV-12). No person outside this project has reviewed the kit.
+
+What was wrong until 2026-11-27, most serious first:
+
+- **A redirect took the credential with it.** The transport followed any redirect and sent the `Authorization` header to the address it named, on another host and over plain `http` too. Tried on one machine with two servers: the second received the header. Now a redirect is followed only to the scheme, host and port that were asked.
+- **A pull request could bring the addresses that the secrets were sent to**, in one case: a repository that has the connect workflow on its default branch and no `connect.yml` there. The notify job, which holds every secret the workflow names, then read the `connect.yml` of the pull request. Now nothing is sent with a file that is not on the base branch. On the reference repository the two were merged together, so the case did not arise there.
+- **A pull request could add an MCP server and approve it itself**, where the base branch had no allowlist yet. AGT-20 says it cannot. Now the allowlist a change brings counts only for servers the base branch already has.
+- **`server@1` passed as a pinned version.** For `npx`, `bunx` and `pnpx` that is a range. Now three numbers are asked for.
+- **A production check dated next year, or before the release, satisfied `CK-POST-RELEASE`.** Now both fail.
+- **The mirror job wrote records that the checks then failed**: for a review that approves with conditions, and for a reviewer who also wrote the change. The first is now left to a person; the second is recorded with the single-approver exception where the project allows it.
+- **The template said that a run started by hand is on the default branch.** A person chooses the branch. The intake job now runs on the default branch only, and the file says what that is worth: nothing against a person who may push a branch and change the workflow there. An environment limited to the default branch is what keeps a secret from a branch, and the template sets none up.
+- **The notify and mirror jobs would have failed on a pull request from a fork**, because the pinned `actions/checkout` refuses a fork's commit in such a job. They now skip it. So a pull request from a fork is checked and is neither notified nor mirrored.
+- **On GitLab and Azure a build of the default branch was compared with itself**, so the checks that look at what changed saw nothing there. Neither file has been run by its CI system, before or after.
+- **Two files told agents the wrong thing**: the Independent Verifier was pointed at the input list of G6 at every gate, and in Lite the orchestrator's table left the plan and the tasks without an author.
+
+What was left as it is:
+
+- **Mirroring asks for every role of a gate, also in Lite.** PIP-6 says so, and the connect extension is not installed with Lite. A project that installs it there by hand, and wants the mirror job, records such a gate with `record --change`.
+- **`kit.yml`, `roles.yml`, the domain packs, the glossary, the capability index and the waiver baseline are still read from the change where the base branch has none.** That is the change that installs the kit, and it has to be checked against something. Those files send nothing. Whoever reviews that one change is the control; `CODEOWNERS` should name that person.
+- **A review by a bot leaves a run of `agentic-checks` waiting.** The workflow runs again on every review, so that a gate's line is judged at once, and GitHub holds a run that a bot started until a person approves it. Copilot's review did that. Such a run can be left: the approval checks read reviews by people only.
+
+None of the changes has run on GitHub, and the review's own threads on that pull request are not answered.
 
 ## Never run
 
 As of 2026-11-22 none of the following has happened, so everything that depends on it is unproven:
 
-- a pull request, a review or branch protection on a live GitHub repository;
+- a gate approved by a review on a live GitHub repository. Since 2026-11-27 the kit's checks, its notify job and its intake job have run in GitHub Actions on the reference repository, and the rules of its default branch were read there once by hand (see "Found by the first runs on GitHub"). No review that carries a gate's line has been read on GitHub yet;
 - a coding-agent runtime (Claude Code, GitHub Copilot) loading the rendered agent files, the path guard on that runtime's events, or the allowlist against real tool servers. One model has worked one change through the sequential mode, with a context pack for each task and a separate session for each of the two reviewing agents (`docs/phase-reports/phase-7-c4-walkthrough.md`); that is the only use by a model so far;
 - Claude Code or GitHub Copilot running two of the three skills in `.claude/skills/`, `agentic-spec-kit-install` and `agentic-spec-kit-review`, or the commands the install adds to a project (added 2026-11-23). The third, `agentic-spec-kit-try`, was run by the owner in Claude Code and in GitHub Copilot on 2026-11-23, in his clone on Windows. Since that run the tour skill has gained a last step, the demo (2026-11-26), and the install skill a few lines (2026-11-25). No coding agent has run either skill as it is now, and the added lines were not checked with the reference validator. The agent that wrote the skills saw neither session, and what they printed is not on record. It has his word, and bytecode left in that clone, which shows that the kit's CLI ran there under Python 3.12 for Windows that evening. That GitHub Copilot reads `.claude/skills/` was taken from GitHub's documentation; his session, in a clone that keeps the skills nowhere else, is the only trial of it. The three skills were checked with the reference validator of the Agent Skills specification and every command they name was run by hand. On Spec Kit 1.4.3 the install was seen to write the commands to `.claude/skills/` for the `claude` integration and to `.github/skills/` for the `copilot` integration;
 - any tracker, chat or mail adapter against its live service;
