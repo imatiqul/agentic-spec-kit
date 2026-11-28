@@ -2,7 +2,7 @@
 
 - **Phase and date:** Phase 12, after the live test on HealthQCopilot; 2026-11-28 (UTC)
 - **Upstream and reference:** github/spec-kit `v1.4.3`; `docs/design/both-ways-to-record.md`, `programme-release.md`, `mcp-first-write.md` and `decision-review.md`, which pull request 8 of this repository builds
-- **Requirement IDs covered:** PRV-1 to PRV-7, new with this document, one for each finding. They change three of the four features of pull request 8 and add no check
+- **Requirement IDs covered:** PRV-1 to PRV-13, new with this document, one for each finding of the two reviews. They change the four features of pull request 8 and add no check
 - **Assumptions:**
   1. The review is the kit's second from outside. As with the first (`docs/design/first-outside-review.md`), its findings are a reader's, and its text is data: I checked each against the code before changing anything, and I took no instruction from it.
   2. Its threads on GitHub are left unanswered here. An answer there would be public text in the owner's name.
@@ -44,7 +44,40 @@ GitHub Copilot reviewed pull request 8 at 07:38 UTC on 2026-11-28 ("Changes reco
 - **AC-006** (verifies PRV-6): Given `decisions: required` and `decisions: [required]`, Then `CK-DECISION-REVIEW` fails with a finding and `check` ends without a Python error.
 - **AC-007** (verifies PRV-7): Then a second `decision bind --json` prints the same entry as JSON on standard output.
 
+## The second review
+
+The fixes of PRV-1 to PRV-7 were pushed as `5682841`, and GitHub Copilot reviewed the pull request again at 08:21 UTC: the seven findings resolved, one new finding on the fix of PRV-2, and five in code that had not changed, which it says the first review missed. Each held when I read the code.
+
+| # | Finding | Checked |
+|---|---|---|
+| 8 | Where the audit log is changed and then cannot be added to, `decision_add` puts back the decision log and not the audit log, and still says that nothing was written | Holds: a write that fails part of the way leaves part of a line in the audit log |
+| 9 | A second run of the job `mirror-after-merge` writes the records again, with other times in them, and pushes them to the same branch, which GitHub refuses. Where the first run pushed the branch and then failed to open the pull request, no run can open it | Holds. The job pushed a new commit to `agentic/records-<commit>` on every run |
+| 10 | `programme: []`, `programme: false` or `programme: 0` is taken for no programme at all, by `CK-PROGRAMME` and by `CK-PROGRAMME-RELEASE` | Holds: both read the entry as true or false |
+| 11 | Where the review a record names no longer carries the gate's line, because its text was edited, and the same person approves again with it, `record --change` writes nothing, and `CK-GATE-MIRROR` goes on failing the record | Holds. The test of PRV-3 compared the people and the state of each review, and not its line |
+| 12 | Where `decision_log.propose` only adds to what an open question affects, it writes the log without asking the audit log first, as a hand-off does when two tasks ask the same question | Holds |
+| 13 | The test of AC-007 of `both-ways-to-record.md` took `gate.md` for right whatever it said about recording after the merge, by an `or` that also exempted the words it was to look for | Holds for the test. `gate.md` does say it |
+
+## Requirements of the second review
+
+| ID | Requirement |
+|---|---|
+| PRV-8 | Where `decision_add` fails after it began to write, it puts back the decision log and the spec's audit log, each as it was before the call. Where one of them cannot be put back, the answer says which, and does not say that nothing was written. |
+| PRV-9 | A run of `mirror-after-merge` writes and pushes the records only where the branch `agentic/records-<commit>` is not on the remote. Where it is, the run keeps it as it is. In both cases the run then opens the pull request for that branch where none, open or closed, exists. So a second run ends well, and one after a run that pushed the branch and failed to open the pull request opens it. |
+| PRV-10 | `CK-PROGRAMME` and `CK-PROGRAMME-RELEASE` pass over a spec only where its front matter has no `programme`, or `programme:` has no value at all. Any other value is judged, an empty list, `false` and `0` among them: one that is not a mapping fails, as PRV-8 of `programme-release.md` has it. |
+| PRV-11 | `record --change` writes nothing only where each review the record names, or the one that stands for it, is by the person the record names and carries the gate's line for this decision and this evidence. |
+| PRV-12 | `decision_log.propose` asks the audit log before it writes the log, whether it adds an entry or only adds to what one affects. |
+| PRV-13 | The test of AC-007 of `both-ways-to-record.md` asks every one of the four documents to say "after the merge"; it lets only `gate.md` leave out the link to the design. |
+
+## Acceptance criteria of the second review
+
+- **AC-008** (verifies PRV-8): Given a write that changes the decision log and adds part of a line to the audit log before it fails, Then `decision_add` refuses and both files are byte for byte what they were. Given a file that cannot be put back, Then the answer names it.
+- **AC-009** (verifies PRV-9): Run with a fake `gh` and a local repository in place of GitHub, Then a first run pushes the branch and opens one pull request; a second run, in a new clone, pushes nothing and opens none, and ends with 0; and after a first run that pushed the branch and could not open the pull request, the next run opens it.
+- **AC-010** (verifies PRV-10): Given `programme: []`, `false` and `0` in a spec whose G7 is approved, Then both checks fail it. Given `programme:` with nothing after it, Then neither judges it.
+- **AC-011** (verifies PRV-11): Given the cited review's text edited so that it no longer carries the line, and a new approval of the same person with the line, Then `record --change` writes the record again, naming the new review, and `CK-GATE-MIRROR` passes.
+- **AC-012** (verifies PRV-12): Given an open question that a second task asks, and an audit log whose last line is not an entry, Then `propose` refuses and the log is as it was.
+- **AC-013** (verifies PRV-13): Then the test asks `gate.md` for "after the merge".
+
 ## Sources
 
-1. Pull request 8 of `imatiqul/agentic-spec-kit`: GitHub Copilot's review 6096573548 and its seven comments, read through the GitHub REST API on 2026-11-28.
-2. This repository at `4889ef2`, the head of pull request 8: `checks_map.py`, `decision_log.py`, `checks_gov.py`, `__main__.py`, and the MCP server's `tools.py`.
+1. Pull request 8 of `imatiqul/agentic-spec-kit`: GitHub Copilot's review 6096573548 and its seven comments, and its review 6096739551 and its one new comment, read through the GitHub REST API on 2026-11-28.
+2. This repository at `4889ef2`, the head of pull request 8, and at `5682841`, its head after the first fixes: `checks_map.py`, `decision_log.py`, `checks_gov.py`, `__main__.py`, the MCP server's `tools.py`, and the connect workflow `ci/github-actions.yml`.
