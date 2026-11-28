@@ -475,11 +475,11 @@ def test_routes_decide_where_an_event_goes():
 def test_run_reports_and_exits_with_the_check_result(sample, tmp_path_factory, seams):
     connect.TRANSPORT, connect.ENV = Recorded(), {}
     out_file = tmp_path_factory.mktemp("out") / "summary.md"
-    code, out = cli(sample, "connect", "run", "--summary", str(out_file))
+    code, out = cli(sample, "connect", "run", "--summary", str(out_file), "--today", selftest.TODAY)  # the sample's day: its dates are fixed
     assert code == 0 and "0 failed, 0 not run" in out and "| 001-demo | approved | approved | approved | approved | approved | open | later |" in out
     assert "Gate G6 of 001-demo needs qa" in out and out_file.read_text(encoding="utf-8").startswith("# agentic-spec-kit")
     edit(sample, f"specs/{SPEC}/plan.md", "One function", "Two functions")
-    code, out = cli(sample, "connect", "run", "--json")
+    code, out = cli(sample, "connect", "run", "--json", "--today", selftest.TODAY)
     data = json.loads(out)
     assert code == 1 and data["ok"] is False and data["events"][0]["type"] == "check-failed"
 
@@ -505,7 +505,8 @@ def test_run_with_notify_uses_the_configured_channels(sample, tmp_path_factory, 
     connect.ENV, connect.SMTP = ENV, FakeSMTP
     FakeSMTP.sent = []
     ledger = tmp_path_factory.mktemp("state") / "sent.txt"
-    code, out = cli(sample, "connect", "run", "--notify", "--ledger", str(ledger), "--pr-url", "https://github.com/example/demo/pull/7")
+    code, out = cli(sample, "connect", "run", "--notify", "--ledger", str(ledger), "--pr-url", "https://github.com/example/demo/pull/7",
+                    "--today", selftest.TODAY)  # on the sample's day its emergency is due within the window, and not overdue
     assert code == 0 and "gate-ready to chat: sent" in out and "gate-ready to origin: 1 posted" in out and "deadline to mail: sent" in out
     assert connect.TRANSPORT.script == [] and len(ledger.read_text(encoding="utf-8").splitlines()) == 4
 

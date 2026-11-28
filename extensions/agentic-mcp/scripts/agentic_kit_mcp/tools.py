@@ -348,6 +348,8 @@ def decision_add(project: Project, args: dict, propose: Callable, screen: Callab
     from agentic_kit import decision_log
     ctx = project.context()
     spec = project.spec(ctx, args["spec"])
+    for rel in (f"specs/{spec}/spec.md", f"specs/{spec}/tasks.md", f"{KIT_DIR}/decisions/{spec}/{decision_log.GATE}.yml"):
+        project.inside(rel)  # what the tool reads to judge a question lies in the project too (MCP-18)
     question = args["question"]
     if any(ord(char) < 32 or ord(char) == 127 for char in question):
         raise Refused("`question` is refused: it holds a control character, such as a line break. A question is one line.")

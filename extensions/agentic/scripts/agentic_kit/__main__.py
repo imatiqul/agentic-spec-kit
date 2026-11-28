@@ -313,6 +313,15 @@ def cmd_record(args) -> int:
             print("--approval must be reviewer:role:pull/<n>#review-<id>", file=sys.stderr)
             return 2
         approvals.append({"reviewer": reviewer, "role": role, "review_ref": ref})
+    path = ctx.src.root / KIT_DIR / "decisions" / args.spec / f"{args.gate}.yml"
+    try:  # an earlier decision of the gate is kept in the new record: one that cannot be read is not overwritten
+        old = yaml.safe_load(path.read_text(encoding="utf-8")) or {} if path.is_file() else None
+    except yaml.YAMLError:
+        old = []
+    if old is not None and not isinstance(old, dict):
+        print(f"{path.relative_to(ctx.src.root).as_posix()} is there and is not a record the kit can read, so the decision it held "
+              "could not be kept. Mend it, or remove it, and record again.\nNothing was recorded.", file=sys.stderr)
+        return 2
     entry = audit_append(ctx.src.root, args.spec, {"type": "kit", "id": "record"}, "gate.decision",
                          spec=args.spec, gate=args.gate, decision=args.decision, commit=args.commit, evidence=digest)
     record = {"schema": "agentic-decision/1", "spec": args.spec, "gate": args.gate, "decision": args.decision,
@@ -325,11 +334,10 @@ def cmd_record(args) -> int:
         record["constitution_version"] = (ctx.src.yaml(CONSTITUTION_EVIDENCE[1]) or {}).get("version")
     if args.condition:
         record["conditions"] = args.condition
-    path = ctx.src.root / KIT_DIR / "decisions" / args.spec / f"{args.gate}.yml"
-    if path.is_file():  # a gate decided again (an amendment re-opened it): keep what the earlier decision was
-        old = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if old is not None:  # a gate decided again (an amendment re-opened it): keep what the earlier decision was
+        evidence = old.get("evidence") if isinstance(old.get("evidence"), dict) else {}
         record["superseded"] = list(old.get("superseded") or []) + [{
-            "decision": old.get("decision"), "commit": old.get("commit"), "hash": (old.get("evidence") or {}).get("hash"),
+            "decision": old.get("decision"), "commit": old.get("commit"), "hash": evidence.get("hash"),
             "approvals": old.get("approvals") or []}]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(record, sort_keys=False), encoding="utf-8", newline="\n")
@@ -346,14 +354,20 @@ def _recorded_already(ctx: Context, spec: str, gate: str, decision: str, digest:
     path = ctx.src.root / KIT_DIR / "decisions" / spec / f"{gate}.yml"
     if not path.is_file():
         return ""
-    old = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if old.get("decision") != decision or (old.get("evidence") or {}).get("hash") != digest or not old.get("approvals"):
+    try:
+        old = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError:  # a record that cannot be read is written anew; CK-GATE-RECORD says what was wrong with it
+        return ""
+    evidence = old.get("evidence") if isinstance(old, dict) else None
+    approvals = old.get("approvals") if isinstance(old, dict) else None
+    if (not isinstance(evidence, dict) or not isinstance(approvals, list) or not approvals or old.get("decision") != decision
+            or evidence.get("hash") != digest or not all(isinstance(ap, dict) for ap in approvals)):
         return ""
     from .checks_gov import _review, standing_review
     adapter = adapters.enforcement(ctx)
     wanted = "CHANGES_REQUESTED" if decision == "reject" else "APPROVED"
     said = []
-    for ap in old.get("approvals") or []:
+    for ap in approvals:
         change, review = _review(adapter, ap.get("review_ref"))
         review, stood = standing_review(ctx, adapter, change, review, old)
         if review is None or review.state != wanted:

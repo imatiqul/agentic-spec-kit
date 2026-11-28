@@ -172,6 +172,19 @@ def test_AC_004_a_call_that_adds_changes_the_two_logs_alone_and_a_link_out_is_re
     assert failed and "a link leads it out of the project" in text, text
     assert (outside / "log.yml").read_text(encoding="utf-8") == f"schema: {decision_log.SCHEMA}\nentries: []\n"
 
+    (outside / "spec.md").write_text(SPEC_MD.replace(NOTES, "023-out"), encoding="utf-8", newline="\n")
+    (outside / "G5.yml").write_text("schema: agentic-decision/1\ngate: G5\ndecision: approve\n", encoding="utf-8", newline="\n")
+    os.symlink(outside / "spec.md", (root / "specs" / "023-out").mkdir() or root / "specs" / "023-out" / "spec.md")
+    (root / core.KIT_DIR / "decisions" / NOTES).mkdir(parents=True, exist_ok=True)
+    os.symlink(outside / "G5.yml", root / core.KIT_DIR / "decisions" / NOTES / "G5.yml")
+    before = tm.snapshot(root)
+    with writing(root) as client:
+        client.open()
+        for spec in ("023-out", NOTES):   # a spec file, and the record of G5, that a link leads out of the project
+            text, failed = client.call("decision_add", spec=spec, question=ASKED, affects=["FR-001"])
+            assert failed and "a link leads it out of the project" in text, (spec, text)
+    assert tm.snapshot(root) == before
+
 
 # ── what the client is told ─────────────────────────────────────────────────────
 

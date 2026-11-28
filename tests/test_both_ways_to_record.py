@@ -136,6 +136,12 @@ def test_AC_003_record_writes_nothing_where_the_gate_is_recorded_already_for_the
     written = yaml.safe_load(record.read_text(encoding="utf-8"))
     assert written["approvals"][0]["review_ref"] == f"{CHANGE}#review-4" and written["superseded"][0]["approvals"][0]["review_ref"] == f"{CHANGE}#review-2"
 
+    record.write_text("approvals: [a record, cut short\n", encoding="utf-8", newline="\n")   # a record that is not YAML
+    before = (record.read_bytes(), audit.read_bytes())
+    code, text = tcs.kit(root, "record", "--spec", SPEC, "--gate", GATE, "--change", CHANGE)
+    assert code == 2 and "is not a record the kit can read" in text and "Nothing was recorded." in text, text
+    assert (record.read_bytes(), audit.read_bytes()) == before, "neither the record nor the audit log is touched"
+
 
 # ── BWR-4: the note names both ways ─────────────────────────────────────────────
 
