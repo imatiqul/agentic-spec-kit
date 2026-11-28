@@ -108,7 +108,7 @@ Added on 2026-11-27: with the test corrected, the same pipeline passed on pull r
 
 Each spec ends with its own list. These are the ones I would look at first.
 
-1. **The decision log is evidence of G5, and a decision's owner is claimed, not proven.** The kit cannot tell who typed `decision decide`. The person who approves G5 is shown every entry. The other way is to bind a decision to a review, as a gate decision is bound.
+1. **A decision of the log can be bound to a review.** Changed on 2026-11-28, at the owner's word. Until then a decision's owner was claimed, not proven: the kit cannot tell who typed `decision decide`, and the person who approves G5 is shown every entry. Now the owner can approve a pull-request review with the decision's line, `decision bind` names that review in the entry, and `CK-DECISION-REVIEW` asks the channel who wrote it (`docs/design/decision-review.md`). Binding is optional unless `kit.yml` asks for it, and G5 still approves the log.
 2. **`report all` and the evidence pack now ask GitHub.** The other way is to show pull requests only on the page of one change.
 3. **Every fetch reads the comments of every item.** One request more for each item, with no setting to turn it off.
 4. **The MCP protocol is written by hand**, so that PyYAML stays the kit's only dependency. The server speaks the four revisions with a handshake and the one of 2026-07-28, which has none. The other way is the official library, as a dependency of that one extension.

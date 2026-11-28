@@ -262,5 +262,6 @@ The two are registered under requirement IDs of `docs/prompts/spec/`, because th
 | Check | Fails when | Enforces | Profiles |
 |---|---|---|---|
 | CK-PROGRAMME-RELEASE | A parent's G7 is approved while a child has not passed its own gates: in this repository, a gate the child needs has no approving record; in another repository, the pinned commit holds no approving record of the last gate that repository's profile asks for, or cannot be read | MAP-14, GOV-4 | Standard, Regulated |
+| CK-DECISION-REVIEW | A decided entry of a decision log names a review that is not in the channel, is not by the entry's owner from a person's account that `roles.yml` lists, is not an approval, or does not carry the decision's line for the outcome as it stands; a review is named in another form, or by an entry that is not decided; or `kit.yml` asks for every decision to be bound and one is not | GOV-6 | All |
 
-It is registered under requirement IDs of `docs/prompts/spec/`, for the reason given above. Its own requirements are PRR-1 to PRR-8 in `programme-release.md`. PRR-8 also changed `CK-PROGRAMME`, which now fails, where it stopped, on a `programme` entry of the wrong shape.
+They are registered under requirement IDs of `docs/prompts/spec/`, for the reason given above. Their own requirements are PRR-1 to PRR-8 in `programme-release.md` and DRV-1 to DRV-8 in `decision-review.md`. PRR-8 also changed `CK-PROGRAMME`, which now fails, where it stopped, on a `programme` entry of the wrong shape.

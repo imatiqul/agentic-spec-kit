@@ -40,6 +40,8 @@ $A report changesets                          # one line for each change
 $A decision add --spec <spec> --title "<the question>"       # a question for the change's decision log
 $A decision decide --spec <spec> --id D-001 --outcome "<what was decided>" --owner <person>
 $A decision list --spec <spec>                # what was decided inside the change, and what is still open
+$A decision line --spec <spec> --id D-001     # the line the owner of a decision puts into an approving review
+$A decision bind --spec <spec> --id D-001 --change pull/<n>   # name in the entry the review that approves it
 $A search "<text>" --spec <spec>              # text in the files git tracks; each hit names its map node, a spec's nodes first
 $A init --profile <profile> --open-pr-workflow   # also writes a workflow that opens a pull request as the workflow's own account
 ```

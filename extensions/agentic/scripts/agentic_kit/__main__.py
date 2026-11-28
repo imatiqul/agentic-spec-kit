@@ -734,13 +734,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--approval", action="append", help="reviewer:role:pull/<n>#review-<id>; with --decision and --commit, in place of --change")
     sp.add_argument("--condition", action="append"); sp.add_argument("--exception", action="store_true")
     sp.add_argument("--file", action="append"); sp.set_defaults(fn=cmd_record)
-    sp = sub.add_parser("decision", help="the decision log of a change: add a question, record what a person decided, list; "
-                                         "writing an entry approves nothing"); common(sp)
-    sp.add_argument("action", choices=["add", "decide", "supersede", "list"]); sp.add_argument("--spec", required=True)
+    sp = sub.add_parser("decision", help="the decision log of a change: add a question, record what a person decided, list; print "
+                                         "a decision's line and bind it to the review that approves it; writing an entry approves nothing"); common(sp)
+    sp.add_argument("action", choices=["add", "decide", "supersede", "list", "line", "bind"]); sp.add_argument("--spec", required=True)
     sp.add_argument("--title", help="with add: the question")
     sp.add_argument("--by", help="with add: who asks; an id that roles.yml does not list as a person makes the entry a proposal. "
                                  "With supersede: the id of the entry that replaces this one")
-    sp.add_argument("--id", help="with decide and supersede: the entry, as D-001")
+    sp.add_argument("--id", help="with decide, supersede, line and bind: the entry, as D-001")
+    sp.add_argument("--change", help="with bind: the pull request on which the owner approved the decision, as pull/7")
     sp.add_argument("--outcome", help="with decide: what was decided"); sp.add_argument("--owner", help="with decide: the person who decided, as roles.yml lists them")
     sp.add_argument("--why", help="with decide: the reason"); sp.add_argument("--on", help="with decide: the day, as 2026-11-26 (default: today)")
     sp.add_argument("--affects", action="append", help="with add and decide: FR-001, T003, node:<map node id> or adr:<file>; repeat for several")

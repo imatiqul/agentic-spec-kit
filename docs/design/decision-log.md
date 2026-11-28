@@ -99,7 +99,7 @@ Five things in this document changed on 2026-11-26 after the tests first ran, an
 
 ## What it will not do
 
-- Decide anything, or know who decided. `decide` writes what it is told. The kit cannot tell who typed a command, so nothing stops an agent from typing `decision decide`: the rules every agent is given forbid it, and the person at G5 reads the log.
+- Decide anything, or know who decided. `decide` writes what it is told. The kit cannot tell who typed a command, so nothing stops an agent from typing `decision decide`: the rules every agent is given forbid it, and the person at G5 reads the log. Since 2026-11-28 a decided entry can be bound to a review (`docs/design/decision-review.md`): its owner approves a pull-request review with the line that `decision line` prints, `decision bind` names that review in the entry, and `CK-DECISION-REVIEW` asks the channel who wrote it. That proves who approved the outcome, and still not who typed `decide`.
 - Replace the records under `docs/adr`. An entry can point at one with `adr:<file>`. The check does not follow that pointer, nor a `node:` one.
 - Show on the gate board that a log was added after G5 was approved. The board reads the files a decision lists. `gate` shows the changed evidence, and `CK-DECISION-LOG` fails (DEC-14).
 - Fail a check when a decided entry is changed after G5 was approved. The hash changes and G5 is open again, on the board and in `gate`, as for any other evidence of G5.
