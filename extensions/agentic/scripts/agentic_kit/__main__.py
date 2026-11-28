@@ -295,6 +295,10 @@ def cmd_record(args) -> int:
             print(f"{found}\nNothing was recorded.", file=sys.stderr)
             return 2
         args.decision, args.commit, args.approval = found
+        held = _recorded_already(ctx, args.spec, args.gate, args.decision, digest)
+        if held:
+            print(held)
+            return 0
     elif not (args.decision and args.commit and args.approval):
         print("give --change pull/<n>, or all three of --decision, --commit and --approval", file=sys.stderr)
         return 2
@@ -336,6 +340,29 @@ def cmd_record(args) -> int:
     return 0
 
 
+def _recorded_already(ctx: Context, spec: str, gate: str, decision: str, digest: str) -> str:
+    """What to say where the gate already has a record for this decision and this evidence, and each review it names still
+    bears it out, as it is or through a later review that stands for it (BWR-3). Empty where a record has to be written."""
+    path = ctx.src.root / KIT_DIR / "decisions" / spec / f"{gate}.yml"
+    if not path.is_file():
+        return ""
+    old = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if old.get("decision") != decision or (old.get("evidence") or {}).get("hash") != digest or not old.get("approvals"):
+        return ""
+    from .checks_gov import _review, standing_review
+    adapter = adapters.enforcement(ctx)
+    wanted = "CHANGES_REQUESTED" if decision == "reject" else "APPROVED"
+    said = []
+    for ap in old.get("approvals") or []:
+        change, review = _review(adapter, ap.get("review_ref"))
+        review, stood = standing_review(ctx, adapter, change, review, old)
+        if review is None or review.state != wanted:
+            return ""
+        said.append(f"review {review.id}" + (f" (for review {str(ap.get('review_ref')).split('#review-', 1)[-1]}, which was dismissed)" if stood else ""))
+    return (f"{gate} of {spec} is recorded already for this evidence ({path.relative_to(ctx.src.root).as_posix()}), and "
+            f"{', '.join(dict.fromkeys(said))} bear{'s' if len(set(said)) == 1 else ''} it out. Nothing was written.")
+
+
 def _dismissal_note(ctx: Context, change: str, commit: str, refs: list[str]) -> None:
     """Say so where a commit pushed onto the pull request would dismiss the review that the record cites (FGR-2).
 
@@ -352,8 +379,9 @@ def _dismissal_note(ctx: Context, change: str, commit: str, refs: list[str]) -> 
         return
     reviews = ", ".join(sorted({ref.split("#review-", 1)[-1] for ref in refs}))
     print(f"note: {change} is open, and the rules of the default branch dismiss an approval when a commit is pushed. "
-          f"Pushed onto {change}, this record would dismiss review {reviews}, which it cites, and CK-APPROVER would then fail it. "
-          "With the kit as it is, commit the record after the merge, on a branch of its own.")
+          f"Pushed onto {change}, this record would dismiss review {reviews}, which it cites. Either push it and have the reviewer "
+          "approve again with the same line, which the checks accept in place of the dismissed review; or commit the record after "
+          "the merge, on a branch of its own.")
 
 
 from . import decision_log  # noqa: E402  (here, with its command: registers CK-DECISION-LOG, its fixtures and its two views)

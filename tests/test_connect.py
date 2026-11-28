@@ -676,7 +676,7 @@ def test_the_shipped_pipelines_follow_the_kits_own_rules(sample):
     r = run(sample, "CK-PIN")
     assert r.ok, msgs(r)
     flow = yaml.safe_load((ci / "github-actions.yml").read_text(encoding="utf-8"))
-    assert set(flow["jobs"]) == {"notify", "mirror", "intake"}
+    assert set(flow["jobs"]) == {"notify", "mirror", "mirror-after-merge", "intake"}  # the fourth since BWR-6
     triggers = flow.get("on", flow.get(True))
     assert set(triggers) == {"workflow_run", "schedule", "workflow_dispatch"}, "nothing that holds a secret runs on a pull request"
     core_flow = (ROOT / "extensions" / "agentic" / "ci" / "agentic-checks.yml").read_text(encoding="utf-8")

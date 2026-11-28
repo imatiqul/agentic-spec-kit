@@ -144,10 +144,28 @@ def cmd_connect(args) -> int:
             print(f"{e.type:20} {notify.title(e, (cfg.get('notify') or {}).get('templates'))}")
         return 0
     if a == "mirror":
-        if not args.change or not args.commit:
-            print("--change pull/<n> and --commit <sha> are required", file=sys.stderr)
+        change = args.change
+        if args.merged:  # after the merge: the pull request merged as this commit (BWR-5)
+            if args.change or args.commit:
+                print("give --merged <commit> alone, or --change pull/<n> with --commit if you like", file=sys.stderr)
+                return 2
+            try:
+                change = pipeline.merged_change(ctx, args.merged)
+            except (core.KitError, OSError, ValueError) as exc:
+                print(f"the pull request merged as {args.merged} could not be read: {exc}", file=sys.stderr)
+                return 2
+            if change is None:
+                if not args.json:
+                    print(f"no pull request was merged as {args.merged}: nothing to mirror")
+                else:
+                    print("[]")
+                return 0
+            if not args.json:
+                print(f"{args.merged[:12]} merged {change}")
+        elif not change:
+            print("--change pull/<n> is required, or --merged <commit> after the merge", file=sys.stderr)
             return 2
-        rows = pipeline.mirror(ctx, args.change, args.commit, write=args.write)
+        rows = pipeline.mirror(ctx, change, args.commit, write=args.write)
         if args.json:
             print(json.dumps(rows, indent=2))
         for r in rows:
@@ -205,6 +223,8 @@ def _cli(sub, common_args) -> None:
     sp.add_argument("--commit", help="the commit this run is about")
     sp.add_argument("--pr-url", help="the pull request to link to")
     sp.add_argument("--change", help="pull/<n>, for mirror")
+    sp.add_argument("--merged", help="for mirror after the merge: the commit a pull request was merged as; the pull request and the "
+                                     "reviewed commit are found from it")
     sp.add_argument("--write", action="store_true")
     sp.add_argument("--today")
     sp.add_argument("--changed-files")
