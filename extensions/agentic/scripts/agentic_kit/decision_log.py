@@ -396,9 +396,8 @@ def propose(ctx: Context, spec: str, questions, by: str, affects=(), actor: dict
             if entry.get("state") in UNDECIDED and _more(entry, refs):
                 changed = True
         held.append(entry)
-    if new:
+    if changed:  # also where it only adds to what a question affects: a hand-off adds to the audit log next (PRV-12)
         _audit_ready(ctx, spec)
-    if changed:
         write(ctx, spec, doc)
     for entry in new:
         audit_append(ctx.src.root, spec, actor or {"type": "kit", "id": "decision"}, "decision-log.add", spec=spec, entry=entry["id"],

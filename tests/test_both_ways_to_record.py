@@ -242,4 +242,4 @@ def test_AC_007_the_documents_name_both_ways():
     for rel in ("docs/install.md", "extensions/agentic/commands/gate.md", "extensions/agentic-connect/README.md", "docs/limits.md"):
         text = " ".join((ROOT / rel).read_text(encoding="utf-8").split())
         assert re.search(r"approves? again with the same line", text), rel
-        assert "after the merge" in text and "both-ways-to-record.md" in text or rel.endswith("gate.md"), rel
+        assert "after the merge" in text and ("both-ways-to-record.md" in text or rel.endswith("gate.md")), rel

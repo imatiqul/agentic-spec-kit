@@ -153,4 +153,4 @@ On 2026-11-28 the owner gave his word on four decisions: the open question of th
 
 The two checks make 109. On the way, `CK-PROGRAMME` was found to stop the whole check run with a Python error on a child entry that is a plain word; it now fails that entry (PRR-8). `docs/release-notes.md` says what ran.
 
-The owner pushed the branch as pull request 8, and its three jobs passed on Linux and on Windows. GitHub Copilot then reviewed it: seven findings, each of which held when I read the code, and each fixed with a test of its own (`docs/design/pull-request-8-review.md`, PRV-1 to PRV-7). The review's threads on GitHub are not answered.
+The owner pushed the branch as pull request 8, and its three jobs passed on Linux and on Windows. GitHub Copilot then reviewed it: seven findings, each of which held when I read the code, and each fixed with a test of its own (`docs/design/pull-request-8-review.md`, PRV-1 to PRV-7). Its second review, of those fixes, found six more, which held and are fixed in the same way (PRV-8 to PRV-13). The reviews' threads on GitHub are not answered.

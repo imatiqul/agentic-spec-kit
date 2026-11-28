@@ -422,7 +422,7 @@ def ck_programme(ctx: Context, res: Result) -> None:
     smap = load_map(ctx)
     for spec in ctx.specs():
         prog = spec_front(ctx, spec).get("programme")
-        if not prog:
+        if prog is None:  # no programme. An empty list, false or 0 is a value, and is judged (PRV-10)
             continue
         rel = f"specs/{spec}/spec.md"
         if not isinstance(prog, dict):  # PRR-8: what the front matter holds is judged, never trusted to have a shape
@@ -479,7 +479,7 @@ def ck_programme_release(ctx: Context, res: Result) -> None:
                 if str(rec.get("gate")) == "G7" and rec.get("decision") in PASSING}
     for spec in ctx.specs():
         prog = spec_front(ctx, spec).get("programme") if spec in released else None
-        if not prog:
+        if prog is None:  # an empty list, false or 0 is a value, and is judged (PRV-10)
             continue
         rel, head = released[spec], f"the release of {spec} (G7) is approved while"
         raw = prog.get("children") if isinstance(prog, dict) else None

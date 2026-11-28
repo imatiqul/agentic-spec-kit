@@ -379,7 +379,8 @@ def _recorded_already(ctx: Context, spec: str, gate: str, decision: str, digest:
     for ap in approvals:
         change, review = _review(adapter, ap.get("review_ref"))
         review, stood = standing_review(ctx, adapter, change, review, old)
-        if review is None or review.state != wanted:
+        if review is None or review.state != wanted or review.reviewer.lower() != str(ap.get("reviewer") or "").lower() \
+                or (gate, decision, digest) not in parse_approval_lines(review.body):  # its text may have been edited (PRV-11)
             return ""
         said.append(f"review {review.id}" + (f" (for review {str(ap.get('review_ref')).split('#review-', 1)[-1]}, which was dismissed)" if stood else ""))
     return (f"{gate} of {spec} is recorded already for this evidence ({path.relative_to(ctx.src.root).as_posix()}), and "

@@ -374,21 +374,45 @@ def decision_add(project: Project, args: dict, propose: Callable, screen: Callab
     if held is not None:  # nothing is written, and no entry is changed (MCW-3)
         return records({"spec": spec, "path": rel, "added": False, "entry": held,
                         "note": f"The log holds this question already, as {held['id']} ({held['state']}). Nothing was written."})
-    path = project.root / rel
-    before = path.read_bytes() if path.is_file() else None
+    kept = {name: _bytes(project.root / name) for name in (rel, f"{KIT_DIR}/audit/{spec}.jsonl")}
     try:
         entry = propose(ctx, spec, [asked], WRITER, affects=refs, actor={"type": "agent", "id": WRITER})[0]
-    except Exception as wrong:  # whatever failed, the log is left as it was before the call (PRV-2)
-        now = path.read_bytes() if path.is_file() else None
-        if now != before:
-            if before is None:
-                path.unlink()
-            else:
-                path.write_bytes(before)
+    except Exception as wrong:  # whatever failed, both logs are left as they were before the call (PRV-2, PRV-8)
+        stuck = _put_back(project.root, kept)
+        if stuck:
+            raise Refused(f"the call failed ({type(wrong).__name__}: {wrong}). "
+                          + " ".join(f"{name} could not be put back as it was before the call ({why}), so it may hold part of the change."
+                                     for name, why in stuck)
+                          + " CK-DECISION-LOG and CK-AUDIT-CHAIN say what is wrong.") from None
         if isinstance(wrong, KitError):
             raise  # the kit's own words: asked before anything was written
         raise Refused(f"nothing was written: the audit log could not be added to ({type(wrong).__name__}: {wrong})") from None
     return records({"spec": spec, "path": rel, "added": True, "entry": entry, "note": PROPOSAL})
+
+
+def _bytes(path: Path) -> bytes | None:
+    """What a file holds, or None where there is no file."""
+    try:
+        return path.read_bytes() if path.is_file() else None
+    except OSError:
+        return None
+
+
+def _put_back(root: Path, kept: dict[str, bytes | None]) -> list[tuple[str, str]]:
+    """Put each file back as it was, and give (name, why) for each that could not be (PRV-8)."""
+    stuck = []
+    for name, before in kept.items():
+        path = root / name
+        if _bytes(path) == before and (before is not None or not path.exists()):
+            continue
+        try:
+            if before is None:
+                path.unlink()
+            else:
+                path.write_bytes(before)
+        except OSError as wrong:
+            stuck.append((name, f"{type(wrong).__name__}: {wrong}"))
+    return stuck
 
 
 # ── the list ────────────────────────────────────────────────────────────────────

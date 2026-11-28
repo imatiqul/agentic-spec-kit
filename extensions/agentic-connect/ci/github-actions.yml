@@ -171,15 +171,24 @@ jobs:
       - run: pip install pyyaml==6.0.2
       - name: Mirror the reviews of the merged pull request, on a branch of their own
         run: |
-          python .specify/extensions/agentic/scripts/agentic.py connect mirror --merged "$MERGED" --base-ref "origin/$BASE" --write
-          if [ -z "$(git status --porcelain .specify/agentic/decisions .specify/agentic/audit)" ]; then echo "nothing to record"; exit 0; fi
           RECORDS="agentic/records-${MERGED:0:12}"
-          git config user.name "agentic-spec-kit"
-          git config user.email "agentic-spec-kit@users.noreply.github.com"
-          git switch -c "$RECORDS"
-          git add .specify/agentic/decisions .specify/agentic/audit
-          git commit -m "Record gate decisions mirrored after the merge of ${MERGED:0:12}"
-          git push origin "HEAD:refs/heads/$RECORDS"
+          # A second run (PRV-9) keeps the branch an earlier run pushed: the records on it may have been read already.
+          if git ls-remote --exit-code --heads origin "$RECORDS" > /dev/null; then
+            echo "$RECORDS is on the remote already, from an earlier run: its records are kept as they are"
+          else
+            python .specify/extensions/agentic/scripts/agentic.py connect mirror --merged "$MERGED" --base-ref "origin/$BASE" --write
+            if [ -z "$(git status --porcelain .specify/agentic/decisions .specify/agentic/audit)" ]; then echo "nothing to record"; exit 0; fi
+            git config user.name "agentic-spec-kit"
+            git config user.email "agentic-spec-kit@users.noreply.github.com"
+            git switch -c "$RECORDS"
+            git add .specify/agentic/decisions .specify/agentic/audit
+            git commit -m "Record gate decisions mirrored after the merge of ${MERGED:0:12}"
+            git push origin "HEAD:refs/heads/$RECORDS"
+          fi
+          # One pull request for the branch, opened by whichever run gets this far first; open or closed, one is enough.
+          if [ -n "$(gh pr list --head "$RECORDS" --state all --json number --jq '.[].number')" ]; then
+            echo "a pull request for $RECORDS exists already"; exit 0
+          fi
           gh pr create --base "$BASE" --head "$RECORDS" \
             --title "Gate decisions mirrored after the merge of ${MERGED:0:12}" \
             --body "Decision records mirrored by agentic-spec-kit from the reviews of the pull request merged as ${MERGED}. They approve nothing: the reviews do, and the checks read them again. Approve the run of the checks, then merge with a merge commit."
