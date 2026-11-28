@@ -140,4 +140,15 @@ Added later on 2026-11-27: stages 3a to 5 are done, and stage 6 in part.
 - **The first gate on GitHub.** The workflow that opens a pull request opened one as `github-actions[bot]`. The owner approved its held checks, then G1 and G2 of spec 020 in a review that carried the two lines `gate` printed. `record --change` read that review from GitHub and wrote the records. Pushed onto the same pull request, the records made GitHub dismiss the review, because that repository dismisses an approval on a push. The owner approved again and merged, the records were written again after the merge on a branch of their own, and on that pull request the pipeline passed `CK-APPROVER` and `CK-GATE-MIRROR` for both. Phase 11 found that one person with one account could not pass a gate on GitHub; this is how one did.
 - **The page, the search and the MCP server on the result.** `changeset` read the change's four pull requests from GitHub; `search` put the one hit in the nodes the spec touches first; the MCP server answered the official MCP client against a checkout of that repository.
 
-What those stages showed is in `docs/design/first-gate-on-github.md` (FGR-1 to FGR-15), fixed except for one decision that is the owner's: how the kit records a gate where approvals are dismissed on a push. Not done: a programme with a child in a second repository. No coding agent has used any of it.
+What those stages showed is in `docs/design/first-gate-on-github.md` (FGR-1 to FGR-15), fixed except for one decision that is the owner's: how the kit records a gate where approvals are dismissed on a push. On 2026-11-28 he answered it: both ways, which `docs/design/both-ways-to-record.md` builds. Not done: a programme with a child in a second repository. No coding agent has used any of it.
+
+## Added on 2026-11-28
+
+On 2026-11-28 the owner gave his word on four decisions: the open question of the first gate on GitHub ("both can be accepted"), and decisions 1, 5 and 6 above, each taken the other way. Four features came of it. Each has its spec in `docs/design/`, committed before its code, and one test for each of its acceptance criteria, which fails on the kit as it was and passes now:
+
+- `both-ways-to-record.md` (BWR-1 to BWR-8): a gate recorded either way where approvals are dismissed on a push. Seven tests.
+- `programme-release.md` (PRR-1 to PRR-8): a programme's release waits for its children, with the check `CK-PROGRAMME-RELEASE`. Seven tests.
+- `mcp-first-write.md` (MCW-1 to MCW-8): the MCP server's first tool that writes, `decision_add`, listed only where the server is started with `--allow-write decision-log`. Eight tests.
+- `decision-review.md` (DRV-1 to DRV-8): a decision of the log bound to a review, with the check `CK-DECISION-REVIEW`. Seven tests.
+
+The two checks make 109. On the way, `CK-PROGRAMME` was found to stop the whole check run with a Python error on a child entry that is a plain word; it now fails that entry (PRR-8). `docs/release-notes.md` says what ran. None of it has run on GitHub or on Windows.

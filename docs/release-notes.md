@@ -164,6 +164,17 @@ Seven features and a workflow template. Each has a spec under `docs/design/`, wr
 - **Counts.** 107 checks, as before. 782 unit tests; 768 before. On Linux with Spec Kit installed, 779 passed and 3 were skipped. Each of the 14 new tests fails on the kit as it was at `ce58712`.
 - Not run: any of these changes on GitHub or on Windows.
 
+## Added on 2026-11-28, at the owner's word on four decisions
+On 2026-11-28 the owner answered the open question of the first gate on GitHub, "both can be accepted", and took the other way on three of Phase 12's decisions that were his to change: 1, 5 and 6. Each feature has its spec in `docs/design/`, committed before its code.
+- **Both ways to record a gate where approvals are dismissed on a push** (`both-ways-to-record.md`, BWR-1 to BWR-8). On the pull request: where the review a record names was dismissed, `CK-APPROVER` and `CK-GATE-MIRROR` take the first later review by the same person, with the same line for the same evidence, in its place, and `record --change` writes nothing a second time. After the merge: `connect mirror --merged <commit>`, and a new job of the connect workflow, `mirror-after-merge`, which the repository variable `AGENTIC_MIRROR` chooses.
+- **A programme's release waits for its children** (`programme-release.md`, PRR-1 to PRR-8). `CK-PROGRAMME-RELEASE` fails where a parent's G7 is approved and a child has not passed its own gates; a child in another repository is read at its pin, and one that cannot be read holds the release. `CK-PROGRAMME` now fails, where it stopped the whole check run with a Python error, on a `programme` entry of the wrong shape.
+- **The MCP server's first tool that writes** (`mcp-first-write.md`, MCW-1 to MCW-8). Started with `--allow-write decision-log`, the server lists `decision_add`, which adds a question to a spec's decision log as a proposal and decides nothing. Without the option it is what it was.
+- **A decision of the log bound to a review** (`decision-review.md`, DRV-1 to DRV-8). An entry may name a review. `decision line` prints a decision's line, `decision bind` names the review in which the owner approved it, and `CK-DECISION-REVIEW` asks the channel who wrote that review. Binding is optional unless `kit.yml` says `decisions: {bind_to_review: required}`.
+- **Documents.** `docs/limits.md` gets a section, "Changed on 2026-11-28". Its list of what never ran no longer says that no pipeline file of the kit has run in its CI system: the one for GitHub Actions has, on the reference repository. The Phase 12 report marks decisions 1, 5 and 6 as taken the other way, and the open question of `first-gate-on-github.md` is marked as answered.
+- **For a project that has the kit**, nothing changes until it asks. An entry of a decision log now has the field `review` in `decision list --json` and wherever the log is read, `None` where there is none. A parent spec whose G7 is approved is now held to its children.
+- **Counts.** 109 checks, each with a passing and a failing fixture; 107 before. 811 unit tests; 782 before. On Linux with Spec Kit installed, 807 passed and 4 were skipped. Each of the 29 new tests fails on the kit as it was at `4b9dd65`.
+- Not run: any of these changes on GitHub or on Windows.
+
 ## Installing
 `bash scripts/install.sh <project> <lite|standard|regulated>` installs `agentic` and `agentic-team` for every profile, and the other four for Standard and Regulated. Lite is unchanged by slices 0.2 to 0.6.
 

@@ -3,7 +3,7 @@
 - **Phase and date:** Phase 2 (design), 2026-11-21
 - **Requirement IDs covered:** see the "Enforces" column; full mapping in `requirement-map.md`
 - **Assumptions:** every check runs from the repo root with no network, except the approval checks, which make one adapter call
-- **Unverified:** none of these checks existed when this catalogue was written. As of 2026-11-22 all 105 exist, each with a passing and a failing fixture (`agentic.py selftest`); what has and has not been run is in the phase reports. Phase 12 added two on 2026-11-26, listed at the end of this file, which makes 107
+- **Unverified:** none of these checks existed when this catalogue was written. As of 2026-11-22 all 105 exist, each with a passing and a failing fixture (`agentic.py selftest`); what has and has not been run is in the phase reports. Phase 12 added two on 2026-11-26, listed at the end of this file, which makes 107; two more came on 2026-11-28, listed after them, which makes 109
 
 Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: **L** local command, **A** agent runtime event where supported, **CI** continuous integration. CI is authoritative. Checks for slices 0.4 to 0.6 were built after this catalogue was written and are listed at the end of this file.
 
