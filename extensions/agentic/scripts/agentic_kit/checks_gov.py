@@ -667,6 +667,7 @@ def ck_gate_mirror(ctx: Context, res: Result) -> None:
     adapter = adapters.enforcement(ctx)
     need_hash = (ctx.kit().get("gates") or {}).get("require_evidence_hash", ctx.profile != "lite")
     recorded: set[tuple[str, str, str]] = set()
+    stated: set[tuple[str, str, str, str, str]] = set()  # (change, person, gate, decision, hash) a record holds an approval for (PRV-4)
     changes: set[str] = set()
     for rel, rec in decisions(ctx):
         gate, decision = str(rec.get("gate")), str(rec.get("decision"))
@@ -675,6 +676,7 @@ def ck_gate_mirror(ctx: Context, res: Result) -> None:
             change, review = _review(adapter, ap.get("review_ref"))
             if change:
                 changes.add(change)
+                stated.add((change, str(ap.get("reviewer") or "").lower(), gate, decision, digest))
             if review is None:
                 continue  # CK-APPROVER reports missing reviews
             lines = parse_approval_lines(review.body)
@@ -689,13 +691,17 @@ def ck_gate_mirror(ctx: Context, res: Result) -> None:
         for earlier in rec.get("superseded") or []:  # reviews behind a decision that was later made again are accounted for
             for ap in earlier.get("approvals") or []:
                 change, review = _review(adapter, ap.get("review_ref"))
+                if change:
+                    stated.add((change, str(ap.get("reviewer") or "").lower(), gate, str(earlier.get("decision")), str(earlier.get("hash") or "")))
                 if review is not None:
                     recorded.add((change, review.id, gate))
     for change in sorted(changes):
         for review in adapter.reviews(change):
             for gate, decision, digest in parse_approval_lines(review.body):
-                if (change, review.id, gate) not in recorded:
-                    res.fail(f"{change}#review-{review.id} states a decision for {gate} that no decision record mirrors")
+                # mirrored: named by a record, or the same person's line on the same pull request that a record holds (PRV-4)
+                if (change, review.id, gate) in recorded or (change, review.reviewer.lower(), gate, decision, digest) in stated:
+                    continue
+                res.fail(f"{change}#review-{review.id} states a decision for {gate} that no decision record mirrors")
 
 
 # ── CK-WAIVER ───────────────────────────────────────────────────────────────────

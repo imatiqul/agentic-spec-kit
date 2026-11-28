@@ -486,6 +486,11 @@ def ck_programme_release(ctx: Context, res: Result) -> None:
         if not isinstance(prog, dict) or (raw is not None and not isinstance(raw, list)):
             res.fail(f"{head} its programme entry names no children that can be read, so it cannot be shown to wait for them", rel)
             continue
+        contract, order = prog.get("contract"), prog.get("rollout")
+        if contract is not None and not isinstance(contract, str):  # no release passes over an entry of the wrong shape (PRV-1)
+            res.fail(f"{head} its shared contract is not a name", rel)
+        if order is not None and not isinstance(order, list):
+            res.fail(f"{head} its rollout order is not a list", rel)
         for child in raw or []:
             held = _held(ctx, child)
             if held:

@@ -236,6 +236,7 @@ def test_AC_006_the_documents_say_the_release_waits(tmp_path):
 
 def test_AC_007_the_programme_check_fails_where_it_stopped_and_the_release_is_not_passed_over_it(sample):
     record(sample, PARENT, "G7")
+    passed(sample, FIRST)  # so that the release check fails for the entry alone (PRV-1)
     cases = [({"children": "a word"}, "the children of the programme are not a list"),
              ({"children": ["a word"], "contract": "contract-demo-openapi", "rollout": []},
               "an entry under children is not a mapping with the key spec"),

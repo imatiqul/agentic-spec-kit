@@ -151,4 +151,6 @@ On 2026-11-28 the owner gave his word on four decisions: the open question of th
 - `mcp-first-write.md` (MCW-1 to MCW-8): the MCP server's first tool that writes, `decision_add`, listed only where the server is started with `--allow-write decision-log`. Eight tests.
 - `decision-review.md` (DRV-1 to DRV-8): a decision of the log bound to a review, with the check `CK-DECISION-REVIEW`. Seven tests.
 
-The two checks make 109. On the way, `CK-PROGRAMME` was found to stop the whole check run with a Python error on a child entry that is a plain word; it now fails that entry (PRR-8). `docs/release-notes.md` says what ran. None of it has run on GitHub or on Windows.
+The two checks make 109. On the way, `CK-PROGRAMME` was found to stop the whole check run with a Python error on a child entry that is a plain word; it now fails that entry (PRR-8). `docs/release-notes.md` says what ran.
+
+The owner pushed the branch as pull request 8, and its three jobs passed on Linux and on Windows. GitHub Copilot then reviewed it: seven findings, each of which held when I read the code, and each fixed with a test of its own (`docs/design/pull-request-8-review.md`, PRV-1 to PRV-7). The review's threads on GitHub are not answered.

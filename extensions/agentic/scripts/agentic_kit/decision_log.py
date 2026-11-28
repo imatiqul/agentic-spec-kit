@@ -48,7 +48,7 @@ TAKES = {"add": {"title", "by", "affects", "source"}, "decide": {"id", "outcome"
          "supersede": {"id", "by"}, "list": set(), "line": {"id"}, "bind": {"id", "change"}}
 REVIEW = re.compile(r"pull/[1-9][0-9]*#review-\S+")  # how an entry names a review, as a gate record does
 BINDING = ("optional", "required")  # what kit.yml may say under decisions.bind_to_review (DRV-5)
-_LINE = re.compile(r"^[ \t]*decision[ \t]+(\S+)[ \t]+(D-[0-9]{3,})[ \t]+(sha256:[0-9a-f]{64})[ \t]*$", re.M)
+_LINE = re.compile(r"^[ \t]*decision[ \t]+(\S+)[ \t]+(D-[0-9]{3,})[ \t]+(sha256:[0-9a-f]{64})[ \t]*\r?$", re.M)  # \r: a review's text may have Windows line ends (PRV-5)
 
 
 def log_path(spec: str) -> str:
@@ -325,7 +325,28 @@ def _refs(ctx: Context, spec: str, affects) -> list[str]:
     return list(dict.fromkeys(refs))
 
 
+def _audit_ready(ctx: Context, spec: str) -> None:
+    """Raise where the spec's audit log cannot take one more entry: its last line is not an entry the kit can read (PRV-2).
+    Asked before the log is written, so that the log never changes without its line in the audit log."""
+    rel = f"{KIT_DIR}/audit/{spec}.jsonl"
+    path = ctx.src.root / rel
+    if not path.exists():
+        return
+    if not path.is_file():
+        raise KitError(f"{rel} is not a file, so nothing can be added to the audit log")
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        return
+    try:
+        last = json.loads(lines[-1])
+        int(last["seq"]), str(last["hash"])
+    except (ValueError, KeyError, TypeError):
+        raise KitError(f"{rel} ends in a line that is not an entry of the audit log, so nothing can be added to it. "
+                       "CK-AUDIT-CHAIN says what is wrong") from None
+
+
 def _written(ctx: Context, spec: str, doc: dict, action: str, entry: dict, actor: dict | None, **fields) -> dict:
+    _audit_ready(ctx, spec)
     write(ctx, spec, doc)
     audit_append(ctx.src.root, spec, actor or {"type": "kit", "id": "decision"}, f"decision-log.{action}", spec=spec,
                  entry=entry.get("id"), state=entry.get("state"), outputs=[log_path(spec)], **fields)
@@ -375,6 +396,8 @@ def propose(ctx: Context, spec: str, questions, by: str, affects=(), actor: dict
             if entry.get("state") in UNDECIDED and _more(entry, refs):
                 changed = True
         held.append(entry)
+    if new:
+        _audit_ready(ctx, spec)
     if changed:
         write(ctx, spec, doc)
     for entry in new:
@@ -509,7 +532,12 @@ def bind(ctx: Context, spec: str, entry_id: str, change: str, actor: dict | None
 @check("CK-DECISION-REVIEW", ("GOV-6",),
        "a decision that names a review was approved there by its owner, for the outcome the log holds")
 def ck_decision_review(ctx: Context, res: Result) -> None:
-    rule = (ctx.kit().get("decisions") or {}).get("bind_to_review", "optional")
+    settings = ctx.kit().get("decisions")
+    if settings is not None and not isinstance(settings, dict):  # a finding, and the other checks run (PRV-6)
+        res.fail("decisions in kit.yml is not a mapping; it is written as decisions: {bind_to_review: optional} or "
+                 "{bind_to_review: required}", f"{KIT_DIR}/kit.yml")
+        return
+    rule = (settings or {}).get("bind_to_review", "optional")
     if rule not in BINDING:
         res.fail(f"decisions.bind_to_review is {rule!r}; it is optional or required", f"{KIT_DIR}/kit.yml")
         return
@@ -690,8 +718,10 @@ def command(ctx: Context, args) -> int:
             said = f"{entry['id']} is recorded as decided by {entry['owner']} on {entry['decided_on']}: {one_line(entry['outcome'])}"
         elif action == "bind":
             entry, wrote = bind(ctx, spec, args.id or "", args.change or "")
-            if not wrote:
-                print(f"{entry['id']} names {entry['review']} already. Nothing was written.")
+            if not wrote:  # with --json the entry alone goes to standard output, whether or not anything was written (PRV-7)
+                if args.json:
+                    print(json.dumps(entry, indent=2))
+                print(f"{entry['id']} names {entry['review']} already. Nothing was written.", file=sys.stderr if args.json else sys.stdout)
                 return 0
             said = f"{entry['id']} is bound to {entry['review']}, a review in which {entry['owner']} approved it"
         else:

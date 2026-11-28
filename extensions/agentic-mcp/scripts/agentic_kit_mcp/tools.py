@@ -374,7 +374,20 @@ def decision_add(project: Project, args: dict, propose: Callable, screen: Callab
     if held is not None:  # nothing is written, and no entry is changed (MCW-3)
         return records({"spec": spec, "path": rel, "added": False, "entry": held,
                         "note": f"The log holds this question already, as {held['id']} ({held['state']}). Nothing was written."})
-    entry = propose(ctx, spec, [asked], WRITER, affects=refs, actor={"type": "agent", "id": WRITER})[0]
+    path = project.root / rel
+    before = path.read_bytes() if path.is_file() else None
+    try:
+        entry = propose(ctx, spec, [asked], WRITER, affects=refs, actor={"type": "agent", "id": WRITER})[0]
+    except Exception as wrong:  # whatever failed, the log is left as it was before the call (PRV-2)
+        now = path.read_bytes() if path.is_file() else None
+        if now != before:
+            if before is None:
+                path.unlink()
+            else:
+                path.write_bytes(before)
+        if isinstance(wrong, KitError):
+            raise  # the kit's own words: asked before anything was written
+        raise Refused(f"nothing was written: the audit log could not be added to ({type(wrong).__name__}: {wrong})") from None
     return records({"spec": spec, "path": rel, "added": True, "entry": entry, "note": PROPOSAL})
 
 

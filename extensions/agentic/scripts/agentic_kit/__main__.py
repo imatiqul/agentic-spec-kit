@@ -295,7 +295,7 @@ def cmd_record(args) -> int:
             print(f"{found}\nNothing was recorded.", file=sys.stderr)
             return 2
         args.decision, args.commit, args.approval = found
-        held = _recorded_already(ctx, args.spec, args.gate, args.decision, digest)
+        held = _recorded_already(ctx, args.spec, args.gate, args.decision, digest, args.approval, bool(args.exception), args.condition)
         if held:
             print(held)
             return 0
@@ -348,9 +348,12 @@ def cmd_record(args) -> int:
     return 0
 
 
-def _recorded_already(ctx: Context, spec: str, gate: str, decision: str, digest: str) -> str:
-    """What to say where the gate already has a record for this decision and this evidence, and each review it names still
-    bears it out, as it is or through a later review that stands for it (BWR-3). Empty where a record has to be written."""
+def _recorded_already(ctx: Context, spec: str, gate: str, decision: str, digest: str, wanted: list[str] | None = None,
+                      exception: bool = False, conditions: list[str] | None = None) -> str:
+    """What to say where the gate already has a record for this decision and this evidence, with the same exception, the
+    same conditions and the same people in the same roles as `wanted` (who:role:ref), and each review it names still bears
+    it out, as it is or through a later review that stands for it (BWR-3, PRV-3). Empty where a record has to be written.
+    Which of a person's equivalent reviews the record names is not compared."""
     path = ctx.src.root / KIT_DIR / "decisions" / spec / f"{gate}.yml"
     if not path.is_file():
         return ""
@@ -362,6 +365,12 @@ def _recorded_already(ctx: Context, spec: str, gate: str, decision: str, digest:
     approvals = old.get("approvals") if isinstance(old, dict) else None
     if (not isinstance(evidence, dict) or not isinstance(approvals, list) or not approvals or old.get("decision") != decision
             or evidence.get("hash") != digest or not all(isinstance(ap, dict) for ap in approvals)):
+        return ""
+    if bool(old.get("single_approver_exception")) != bool(exception) or \
+            [str(c) for c in old.get("conditions") or []] != [str(c) for c in conditions or []]:
+        return ""
+    people = {(str(item).split(":", 2)[0].lower(), (str(item).split(":", 2) + ["", ""])[1]) for item in wanted or []}
+    if people != {(str(ap.get("reviewer") or "").lower(), str(ap.get("role") or "")) for ap in approvals}:
         return ""
     from .checks_gov import _review, standing_review
     adapter = adapters.enforcement(ctx)
