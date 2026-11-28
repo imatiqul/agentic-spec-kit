@@ -28,10 +28,17 @@
 #   GitHub starts no `workflow_run` after a run of agentic-checks whose actor is the workflow's own bot, whether a person
 #   approved that run or not. So notify and mirror do not run for a pull request that agentic-open-pull-request opened.
 #
-# Where the default branch dismisses an approval when a commit is pushed:
-#   the mirror job pushes its records onto the pull request's branch, and that push dismisses the review they cite;
-#   CK-APPROVER then fails them. With the kit as it is, leave AGENTIC_MIRROR unset in such a repository and record after
-#   the merge, on a branch of its own, with `agentic.py record --change pull/<n>`.
+# Mirroring reviews into decision records: the repository variable AGENTIC_MIRROR chooses the way (BWR-6, BWR-7).
+#   unset          no job mirrors. A person records with `agentic.py record --change pull/<n>`.
+#   true           the job `mirror` pushes the records onto the reviewed pull request. Where the default branch
+#                  dismisses an approval when a commit is pushed, that push dismisses the review the records cite: each
+#                  reviewer then approves again with the same line, and the checks accept that approval in its place.
+#   after-merge    the job `mirror-after-merge` runs after the checks of the push that a merge makes, mirrors the reviews
+#                  of the merged pull request, and opens a pull request with the records, on a branch of its own. Until
+#                  that one is merged the gate shows as open. The workflow's own bot opens it, so GitHub holds its checks
+#                  until a person approves them, and this workflow does not run for it.
+#   Where approvals are dismissed on a push, choose `after-merge`, or `true` with a second approval: the dismissed
+#   review is not counted either way, and `record --change` after the merge, on a branch of its own, does it by hand.
 name: agentic-connect
 on:
   workflow_run:
@@ -136,6 +143,55 @@ jobs:
           git add .specify/agentic/decisions .specify/agentic/audit
           git commit -m "Record gate decisions mirrored from pull-request reviews"
           git push origin "HEAD:refs/heads/$HEAD_BRANCH"
+
+  mirror-after-merge:
+    # After the merge (BWR-6): the push to the default branch that a person's merge makes. The kit runs from that
+    # commit of the default branch, which is merged and so trusted, and finds the merged pull request from it.
+    if: >-
+      github.event_name == 'workflow_run' && vars.AGENTIC_MIRROR == 'after-merge'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_branch == github.event.repository.default_branch
+      && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BASE: ${{ github.event.repository.default_branch }}
+      MERGED: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0   # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml==6.0.2
+      - name: Mirror the reviews of the merged pull request, on a branch of their own
+        run: |
+          RECORDS="agentic/records-${MERGED:0:12}"
+          # A second run (PRV-9) keeps the branch an earlier run pushed: the records on it may have been read already.
+          if git ls-remote --exit-code --heads origin "$RECORDS" > /dev/null; then
+            echo "$RECORDS is on the remote already, from an earlier run: its records are kept as they are"
+          else
+            python .specify/extensions/agentic/scripts/agentic.py connect mirror --merged "$MERGED" --base-ref "origin/$BASE" --write
+            if [ -z "$(git status --porcelain .specify/agentic/decisions .specify/agentic/audit)" ]; then echo "nothing to record"; exit 0; fi
+            git config user.name "agentic-spec-kit"
+            git config user.email "agentic-spec-kit@users.noreply.github.com"
+            git switch -c "$RECORDS"
+            git add .specify/agentic/decisions .specify/agentic/audit
+            git commit -m "Record gate decisions mirrored after the merge of ${MERGED:0:12}"
+            git push origin "HEAD:refs/heads/$RECORDS"
+          fi
+          # One pull request for the branch, opened by whichever run gets this far first; open or closed, one is enough.
+          if [ -n "$(gh pr list --head "$RECORDS" --state all --json number --jq '.[].number')" ]; then
+            echo "a pull request for $RECORDS exists already"; exit 0
+          fi
+          gh pr create --base "$BASE" --head "$RECORDS" \
+            --title "Gate decisions mirrored after the merge of ${MERGED:0:12}" \
+            --body "Decision records mirrored by agentic-spec-kit from the reviews of the pull request merged as ${MERGED}. They approve nothing: the reviews do, and the checks read them again. Approve the run of the checks, then merge with a merge commit."
 
   intake:
     # A schedule runs on the default branch and nowhere else. A person chooses the branch: on any other, the job is skipped.

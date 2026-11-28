@@ -240,10 +240,20 @@ def fixtures() -> dict:
                                         for s in ("002-other", "003-another")] and None, {}, {}),
         "CK-PROGRAMME": ("a programme spec has no children or contract",
                          E(SPECFILE, "changes: {demo-lib: feature}\n", "changes: {demo-lib: feature}\nprogramme: {children: [], rollout: []}\n"), {}, {}),
+        "CK-PROGRAMME-RELEASE": ("a programme's release is approved and its child has passed no gate", _released_early, {}, {}),
         **change_fixtures(),
         "CK-FINDING-EVIDENCE": ("a finding cites a file that does not exist",
                                 E(f"{KIT_DIR}/findings.yml", "evidence: [src/demo/greet.py]", "evidence: [src/demo/nowhere.py]"), {}, {}),
     }
+
+
+def _released_early(root: Path) -> None:
+    """The sample's spec made a parent with one child, 002-other, which has no decision record, and its G7 approved (PRR-6)."""
+    E(SPECFILE, "changes: {demo-lib: feature}\n",
+      "changes: {demo-lib: feature}\nprogramme: {children: [{spec: 002-other}], contract: contract-demo-openapi, rollout: [002-other]}\n")(root)
+    selftest._write(root, "specs/002-other/spec.md", OTHER_SPEC.replace("touches: [demo-app]\n", f"touches: [demo-app]\nparent: {SPEC}\n"))
+    selftest._dump(root, f"{KIT_DIR}/decisions/{SPEC}/G7.yml", {"schema": "agentic-decision/1", "spec": SPEC, "gate": "G7",
+                                                                "decision": "approve", "evidence": {"hash": "sha256:0", "files": []}})
 
 
 def change_fixtures() -> dict:

@@ -68,19 +68,19 @@ The project in each criterion is a small Standard project made by the test, with
 ## What it will not do
 
 - Judge a child. It shows the gate board's word for a child in the same repository, and for a child in another repository the records that a commit holds. Whether a review behind such a record would pass is for the checks of that repository.
-- Hold a parent's gate until its children have passed theirs. Whether a programme may be released before each child is, is a rule, and this document adds none. It is listed below as a decision for the owner.
+- Hold a parent's gate until its children have passed theirs. Whether a programme may be released before each child is, is a rule, and this document adds none: the view itself still adds no rule. Since 2026-11-28 the check `CK-PROGRAMME-RELEASE` holds a parent's release, G7, until each child has passed its own gates (`docs/design/programme-release.md`). That was decision 1 below, taken the other way.
 - Move a pin, or say that a pin must be moved. It says that the pin is behind.
 - Show the pull requests of a child in another repository. The pin is one commit; what leads to it is on that repository's own page.
 - Tell an unreadable repository from one that does not exist. GitHub answers both in the same words.
 - Read a child on another host, or with another sign-in, than this project's enforcement adapter has.
 - Read a file of more than one megabyte, or a folder with more than 1,000 names, in another repository. GitHub sends no content for the first and lists no more names for the second. A spec or a record that large reads as one that could not be read.
 - Read more than one level. A child that is itself a parent is shown as a child, and its own page shows its children.
-- Fail a spec whose child names its repository in another form. `CK-PROGRAMME` accepts any text there today, and it is not changed.
+- Fail a spec whose child names its repository in another form. `CK-PROGRAMME` accepts any text there today, and it is not changed. Since 2026-11-28 a parent whose release is approved fails `CK-PROGRAMME-RELEASE` for such a child, which it cannot read.
 - Show on the page that is kept with `--write` anything else than on the printed one. A page kept in a public repository then holds the tier and the gate decisions of a child in a private one, where the sign-in could read it. No title and no name is among them (PRG-7).
 
 ## Decisions made here that are the owner's to change
 
-1. **A view, and no rule.** A parent's gate does not wait for its children. The other way would be a check that fails a parent whose release gate is approved while a child has not passed its own.
+1. **A view, and no rule.** A parent's gate does not wait for its children. The other way would be a check that fails a parent whose release gate is approved while a child has not passed its own. On 2026-11-28 the owner took the other way: `CK-PROGRAMME-RELEASE` is that check (`docs/design/programme-release.md`), and the view itself still adds no rule.
 2. **A child in another repository is named `owner/name`.** A web address or another host is not read.
 3. **Only fixed words cross from another repository** (PRG-7). So the parent's page does not show such a child's title. The other way shows more and lets a file in another repository write on this page.
 4. **"Behind" compares content, not history**: the ids git has for the child's two folders, at the pin and at the head of the default branch. A pin on a side branch whose folders differ from the default branch reads as behind as well.

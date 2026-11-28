@@ -1,7 +1,8 @@
 """A decision log for each change (DEC-1 to DEC-17, docs/design/decision-log.md).
 
 `specs/<spec>/decision-log.yml` holds the choices made inside one change that no other record holds: the question,
-who asked it and, once a person has decided, the outcome, the reason, the owner and the day.
+who asked it and, once a person has decided, the outcome, the reason, the owner and the day. A decided entry may
+name the review in which its owner approved it (DRV-1 to DRV-8, docs/design/decision-review.md).
 
 The kit cannot know who typed a command, so writing an entry approves nothing and decides nothing. The log is part
 of the evidence of G5 instead: the person who approves the implementation approves the decisions it rests on, and
@@ -12,6 +13,7 @@ Other parts of the kit read a log through `entries(ctx, spec)`. `load`, `validat
 from __future__ import annotations
 
 import datetime
+import hashlib
 import json
 import re
 import sys
@@ -20,7 +22,7 @@ from pathlib import Path
 import yaml
 
 from . import core
-from .checks_gov import IMPLEMENTATION_GATE, today
+from .checks_gov import IMPLEMENTATION_GATE, people_by_role, today
 from .checks_trace import _FR
 from .core import KIT_DIR, Context, KitError, Result, audit_append, check
 
@@ -29,7 +31,7 @@ SCHEMA = "agentic-decision-log/1"
 STATES = ("proposed", "open", "decided", "superseded")
 UNDECIDED = ("proposed", "open")
 #: The fields of an entry, in the order the commands write them.
-FIELDS = ("id", "title", "state", "outcome", "why", "owner", "decided_on", "proposed_by", "affects", "source", "superseded_by")
+FIELDS = ("id", "title", "state", "outcome", "why", "owner", "decided_on", "proposed_by", "affects", "source", "review", "superseded_by")
 GATE = IMPLEMENTATION_GATE  # the gate whose evidence the log is part of
 MARK = "NOT DECIDED"
 SHOWN = 8  # the lines the brief keeps of a section that is not its own; given more, it cuts them and says "and n more"
@@ -43,7 +45,10 @@ _TASK = re.compile(r"^\s*[-*]\s*\[[ xX]\]\s*(T[0-9]+)\b", re.M)
 _DAY = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 #: What each action of the command takes besides --spec and --json.
 TAKES = {"add": {"title", "by", "affects", "source"}, "decide": {"id", "outcome", "owner", "why", "on", "affects", "source"},
-         "supersede": {"id", "by"}, "list": set()}
+         "supersede": {"id", "by"}, "list": set(), "line": {"id"}, "bind": {"id", "change"}}
+REVIEW = re.compile(r"pull/[1-9][0-9]*#review-\S+")  # how an entry names a review, as a gate record does
+BINDING = ("optional", "required")  # what kit.yml may say under decisions.bind_to_review (DRV-5)
+_LINE = re.compile(r"^[ \t]*decision[ \t]+(\S+)[ \t]+(D-[0-9]{3,})[ \t]+(sha256:[0-9a-f]{64})[ \t]*\r?$", re.M)  # \r: a review's text may have Windows line ends (PRV-5)
 
 
 def log_path(spec: str) -> str:
@@ -320,7 +325,28 @@ def _refs(ctx: Context, spec: str, affects) -> list[str]:
     return list(dict.fromkeys(refs))
 
 
+def _audit_ready(ctx: Context, spec: str) -> None:
+    """Raise where the spec's audit log cannot take one more entry: its last line is not an entry the kit can read (PRV-2).
+    Asked before the log is written, so that the log never changes without its line in the audit log."""
+    rel = f"{KIT_DIR}/audit/{spec}.jsonl"
+    path = ctx.src.root / rel
+    if not path.exists():
+        return
+    if not path.is_file():
+        raise KitError(f"{rel} is not a file, so nothing can be added to the audit log")
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        return
+    try:
+        last = json.loads(lines[-1])
+        int(last["seq"]), str(last["hash"])
+    except (ValueError, KeyError, TypeError):
+        raise KitError(f"{rel} ends in a line that is not an entry of the audit log, so nothing can be added to it. "
+                       "CK-AUDIT-CHAIN says what is wrong") from None
+
+
 def _written(ctx: Context, spec: str, doc: dict, action: str, entry: dict, actor: dict | None, **fields) -> dict:
+    _audit_ready(ctx, spec)
     write(ctx, spec, doc)
     audit_append(ctx.src.root, spec, actor or {"type": "kit", "id": "decision"}, f"decision-log.{action}", spec=spec,
                  entry=entry.get("id"), state=entry.get("state"), outputs=[log_path(spec)], **fields)
@@ -370,7 +396,8 @@ def propose(ctx: Context, spec: str, questions, by: str, affects=(), actor: dict
             if entry.get("state") in UNDECIDED and _more(entry, refs):
                 changed = True
         held.append(entry)
-    if changed:
+    if changed:  # also where it only adds to what a question affects: a hand-off adds to the audit log next (PRV-12)
+        _audit_ready(ctx, spec)
         write(ctx, spec, doc)
     for entry in new:
         audit_append(ctx.src.root, spec, actor or {"type": "kit", "id": "decision"}, "decision-log.add", spec=spec, entry=entry["id"],
@@ -423,6 +450,134 @@ def supersede(ctx: Context, spec: str, entry_id: str, by: str, actor: dict | Non
     return _written(ctx, spec, doc, "supersede", entry, actor, by=other["id"])
 
 
+# ── DRV-1 to DRV-6: a decision bound to a review ────────────────────────────────
+
+def decision_hash(spec: str, entry: dict) -> str:
+    """What a decision's line names: the hash of the spec, the id, the question and the outcome, each as one line (DRV-2)."""
+    text = "\n".join([str(spec), one_line(entry.get("id")), one_line(entry.get("title")), one_line(entry.get("outcome"))])
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def decision_line(spec: str, entry: dict) -> str:
+    """The line the owner of a decision puts into the text of an approving review."""
+    return f"decision {spec} {one_line(entry.get('id'))} {decision_hash(spec, entry)}"
+
+
+def lines_in(body: str) -> set[tuple[str, str, str]]:
+    """The decisions' lines a review's text carries, each on a line of its own: (spec, id, hash)."""
+    return {(m.group(1), m.group(2), m.group(3)) for m in _LINE.finditer(body or "")}
+
+
+def review_problems(ctx: Context, adapter, holders: dict, spec: str, entry: dict, review, change: str) -> list[str]:
+    """What keeps a review from standing for a decided entry; nothing where it stands (DRV-4). The rules about the
+    person are those of a gate's approval: CK-APPROVER's."""
+    from .checks_gov import _approver_problems
+    out = _approver_problems(ctx, adapter, holders, review, change, str(entry.get("owner") or ""), None)
+    if review.state != "APPROVED":
+        out.append(f"the review state is {review.state or 'unknown'}, not APPROVED")
+    wanted = (spec, one_line(entry.get("id")), decision_hash(spec, entry))
+    carried = lines_in(review.body)
+    if wanted not in carried:
+        other = any(line[:2] == wanted[:2] for line in carried)
+        out.append("its text carries the line of this decision for another outcome or question: the entry was changed after the review"
+                   if other else "its text does not carry the line of this decision")
+    return out
+
+
+def _standing(ctx: Context, adapter, holders: dict, spec: str, entry: dict, change: str, cited) -> tuple:
+    """The review that counts: the one named, or, where that one was dismissed, the first later review on the same pull
+    request by the same person that stands for the entry (as BWR-1 has it for a gate). Gives (review, note)."""
+    if cited.state != "DISMISSED":
+        return cited, ""
+    reviews = adapter.reviews(change)
+    at = next((n for n, r in enumerate(reviews) if r.id == cited.id), len(reviews))
+    for later in reviews[at + 1:]:
+        if later.reviewer.lower() == cited.reviewer.lower() and not review_problems(ctx, adapter, holders, spec, entry, later, change):
+            return later, (f"review {cited.id} on {change} was dismissed; review {later.id}, later and by the same person, "
+                           "carries the line of the decision and stands for it")
+    return cited, ""
+
+
+def bind(ctx: Context, spec: str, entry_id: str, change: str, actor: dict | None = None) -> tuple[dict, bool]:
+    """Name in a decided entry the newest review on `change` that stands for it (DRV-3). Gives (the entry, whether
+    anything was written). Where no review stands for it, raises and writes nothing."""
+    from . import adapters
+    _need_spec(ctx, spec)
+    doc = load(ctx, spec)
+    entry = _find(ctx, spec, doc, entry_id)
+    if entry.get("state") != "decided":
+        raise KitError(f"{entry['id']} is {entry.get('state')}: only a decided entry is bound to a review")
+    change = str(change or "").strip()
+    if not re.fullmatch(r"pull/[1-9][0-9]*", change):
+        raise KitError("bind needs --change pull/<n>: the pull request on which the owner approved the decision")
+    normal = _normal(entry)
+    adapter = adapters.enforcement(ctx)
+    holders = people_by_role(ctx.roles())
+    mine = [r for r in adapter.reviews(change) if r.reviewer.lower() == str(normal["owner"] or "").lower()]
+    good = [r for r in mine if not review_problems(ctx, adapter, holders, spec, normal, r, change)]
+    if not good:
+        why = (f"{change} has no review by {normal['owner']}, who owns {normal['id']}" if not mine else
+               f"the newest review by {normal['owner']} on {change}, {mine[-1].id}, does not stand for {normal['id']}: "
+               + "; ".join(review_problems(ctx, adapter, holders, spec, normal, mine[-1], change)))
+        raise KitError(f"{why}.\nThe line is:\n\n  {decision_line(spec, normal)}\n\n"
+                       f"It goes, on a line of its own, into the text of a review by {normal['owner']} that approves")
+    ref = f"{change}#review-{good[-1].id}"  # reviews come in the order they were given: the newest stands
+    if entry.get("review") == ref:
+        return normal, False
+    entry["review"] = ref
+    return _written(ctx, spec, doc, "bind", entry, actor, review=ref), True
+
+
+@check("CK-DECISION-REVIEW", ("GOV-6",),
+       "a decision that names a review was approved there by its owner, for the outcome the log holds")
+def ck_decision_review(ctx: Context, res: Result) -> None:
+    settings = ctx.kit().get("decisions")
+    if settings is not None and not isinstance(settings, dict):  # a finding, and the other checks run (PRV-6)
+        res.fail("decisions in kit.yml is not a mapping; it is written as decisions: {bind_to_review: optional} or "
+                 "{bind_to_review: required}", f"{KIT_DIR}/kit.yml")
+        return
+    rule = (settings or {}).get("bind_to_review", "optional")
+    if rule not in BINDING:
+        res.fail(f"decisions.bind_to_review is {rule!r}; it is optional or required", f"{KIT_DIR}/kit.yml")
+        return
+    from . import adapters
+    from .checks_gov import _review
+    adapter = holders = None
+    for spec in ctx.specs():
+        rel = log_path(spec)
+        if not ctx.src.exists(rel):
+            continue
+        for e in entries(ctx, spec):  # a log that cannot be read gives none: CK-DECISION-LOG says what is wrong with it
+            label, ref = e["id"] or "an entry", e["review"]
+            if e["state"] == "superseded":
+                continue  # what it held no longer stands (DRV-6)
+            if e["state"] != "decided":
+                if ref:
+                    res.fail(f"{label} is {e['state']} and names a review: a review is bound to a decision", rel)
+                continue
+            if not ref:
+                if rule == "required":
+                    res.fail(f"{label} is decided and names no review, and kit.yml asks for one (decisions.bind_to_review: required). "
+                             f"Its owner approves a review with the line that `decision line --spec {spec} --id {label}` prints, "
+                             "and `decision bind` names it", rel)
+                continue
+            if not REVIEW.fullmatch(ref):
+                res.fail(f"{label} names the review {ref!r}, which is not of the form pull/<n>#review-<id>", rel)
+                continue
+            if adapter is None:
+                adapter, holders = adapters.enforcement(ctx), people_by_role(ctx.roles())
+            change, review = _review(adapter, ref)
+            if review is None:
+                res.fail(f"{label} names review {ref}, which is not in the enforcement channel", rel)
+                continue
+            review, note = _standing(ctx, adapter, holders, spec, e, change, review)
+            if note:
+                res.notes.append(f"{rel}: {note}")
+            problems = review_problems(ctx, adapter, holders, spec, e, review, change)
+            if problems:
+                res.fail(f"{label} names review {ref}, which does not stand for it: {'; '.join(problems)}", rel)
+
+
 # ── views ───────────────────────────────────────────────────────────────────────
 
 def _order(found: list[dict]) -> list[dict]:
@@ -449,7 +604,8 @@ def line(e: dict, full: bool = False) -> str:
     e = flat(e, 0 if full else 110)
     title, eid = e["title"] or "(no title)", f"`{e['id'] or '?'}`"
     if e["state"] == "decided":
-        text = f"- {eid} decided by {e['owner'] or 'nobody named'} on {e['decided_on'] or 'no day given'}: {title} **Outcome:** {e['outcome']}"
+        bound = f", in review {e['review']}" if e["review"] else ""
+        text = f"- {eid} decided by {e['owner'] or 'nobody named'} on {e['decided_on'] or 'no day given'}{bound}: {title} **Outcome:** {e['outcome']}"
         if full and e["why"]:
             text += f" **Why:** {e['why']}"
     elif e["state"] == "superseded":
@@ -530,6 +686,18 @@ def command(ctx: Context, args) -> int:
         extra = sorted(given - TAKES[action])
         if extra:
             raise KitError(f"`{action}` does not take --{extra[0]}")
+        if action == "line":
+            _need_spec(ctx, spec)
+            entry = _normal(_find(ctx, spec, load(ctx, spec), args.id))
+            if entry["state"] != "decided":
+                raise KitError(f"{entry['id']} is {entry['state']}: only a decided entry has a line. A person decides it first, with decide")
+            if args.json:
+                print(json.dumps({"spec": spec, "id": entry["id"], "owner": entry["owner"], "line": decision_line(spec, entry)}, indent=2))
+            else:
+                print(f"The line of {entry['id']} of {spec}, which {entry['owner']} decided:\n\n  {decision_line(spec, entry)}\n\n"
+                      f"{entry['owner']} puts it, on a line of its own, into the text of a pull-request review that approves. Then:\n"
+                      f"  agentic.py decision bind --spec {spec} --id {entry['id']} --change pull/<n>")
+            return 0
         if action == "list":
             _need_spec(ctx, spec)
             if load(ctx, spec) is None and not args.json:
@@ -547,11 +715,19 @@ def command(ctx: Context, args) -> int:
             entry = decide(ctx, spec, args.id or "", args.outcome or "", args.owner or "", why=args.why or "", on=args.on,
                            affects=args.affects, source=args.source or "")
             said = f"{entry['id']} is recorded as decided by {entry['owner']} on {entry['decided_on']}: {one_line(entry['outcome'])}"
+        elif action == "bind":
+            entry, wrote = bind(ctx, spec, args.id or "", args.change or "")
+            if not wrote:  # with --json the entry alone goes to standard output, whether or not anything was written (PRV-7)
+                if args.json:
+                    print(json.dumps(entry, indent=2))
+                print(f"{entry['id']} names {entry['review']} already. Nothing was written.", file=sys.stderr if args.json else sys.stdout)
+                return 0
+            said = f"{entry['id']} is bound to {entry['review']}, a review in which {entry['owner']} approved it"
         else:
             entry = supersede(ctx, spec, args.id or "", args.by or "")
             said = f"{entry['id']} is superseded by {entry['superseded_by']}"
     except KitError as exc:
-        print(str(exc) if action == "list" else f"{exc}\nNothing was written.", file=sys.stderr)
+        print(str(exc) if action in ("list", "line") else f"{exc}\nNothing was written.", file=sys.stderr)
         return 2
     out = sys.stderr if args.json else sys.stdout  # with --json the entry alone goes to standard output
     if args.json:
@@ -594,8 +770,17 @@ def _late_proposal(root: Path) -> None:
     selftest._write(root, log_path(selftest.SPEC), render(doc))
 
 
+def _bound_without_the_line(root: Path) -> None:
+    """D-002 names review 1 of the sample: alice's approval of G1, which carries the gate's line and no decision's (DRV-7)."""
+    from . import selftest
+    doc = sample_log()
+    doc["entries"][1]["review"] = "pull/1#review-1"
+    selftest._write(root, log_path(selftest.SPEC), render(doc))
+
+
 def fixtures() -> dict:
-    return {"CK-DECISION-LOG": ("an entry of the decision log is still proposed after the implementation gate was approved", _late_proposal, {}, {})}
+    return {"CK-DECISION-LOG": ("an entry of the decision log is still proposed after the implementation gate was approved", _late_proposal, {}, {}),
+            "CK-DECISION-REVIEW": ("a decision names a review whose text carries no decision's line", _bound_without_the_line, {}, {})}
 
 
 def _register() -> None:

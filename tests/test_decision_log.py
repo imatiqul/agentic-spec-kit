@@ -140,7 +140,7 @@ def test_AC_001_a_question_is_added_decided_and_listed(tmp_path):
     assert json.loads(printed) == decision_log.entries(ctx(root), SPEC) == [
         {"id": "D-001", "title": QUESTION, "state": "decided", "outcome": "Yes, letter for letter.", "why": "A name is the person's own.",
          "owner": demo.PERSON, "decided_on": "2026-11-26", "proposed_by": None, "affects": ["FR-001", "T001"], "source": "pull/1",
-         "superseded_by": None}]
+         "review": None, "superseded_by": None}]
     assert run(root).ok
     # the next entry gets the next id, and a decision with no --on is of today
     before = datetime.date.today()
@@ -590,7 +590,7 @@ def test_AC_022_a_question_at_hand_off_becomes_one_proposed_entry_and_is_not_add
     assert handed["state"] == "in-review" and handed["handoff"]["open_questions"] == ["Is an empty note kept,\n  or is it dropped?"]
     assert "_questions" not in handed, "what the command says is not kept in the work item"
     assert notes(root) == [{"id": "D-001", "title": ASKED, "state": "proposed", "outcome": None, "why": None, "owner": None, "decided_on": None,
-                            "proposed_by": IMPL, "affects": ["T001"], "source": None, "superseded_by": None}]
+                            "proposed_by": IMPL, "affects": ["T001"], "source": None, "review": None, "superseded_by": None}]
     assert core.run_check(CHECK, ctx(root)).ok
     log = [json.loads(row) for row in (root / core.KIT_DIR / "audit" / f"{CHANGE_SPEC}.jsonl").read_text(encoding="utf-8").splitlines()]
     assert [row["action"] for row in log][-2:] == ["decision-log.add", "work.in-review"]

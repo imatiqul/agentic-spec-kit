@@ -556,6 +556,35 @@ def _review(adapter, ref: str):
     return change, None
 
 
+def standing_review(ctx: Context, adapter, change: str, cited, rec: dict) -> tuple:
+    """The review that counts for one approval of a record: the one the record names, or, where that one is dismissed,
+    the first later review on the same change by the same person, in the state the decision asks for, whose text
+    carries the same line for the same evidence (BWR-1, BWR-2). Gives (review, note); the note says which stands for
+    which, and is empty where the cited review counts as it is or nothing stands for it."""
+    if cited is None or cited.state != "DISMISSED":
+        return cited, ""
+    gate, decision = str(rec.get("gate")), str(rec.get("decision"))
+    evidence = rec.get("evidence") if isinstance(rec.get("evidence"), dict) else {}
+    digest = str(evidence.get("hash") or "")
+    wanted = "CHANGES_REQUESTED" if decision == "reject" else "APPROVED"
+    reviews = adapter.reviews(change)
+    later = [r for r in reviews[next((n for n, r in enumerate(reviews) if r.id == cited.id), len(reviews)) + 1:]]
+    for r in later:
+        if r.reviewer.lower() != cited.reviewer.lower() or r.account_type != "User" or r.state != wanted:
+            continue
+        if (gate, decision, digest) not in parse_approval_lines(r.body):
+            continue
+        if r.commit and _has_commit(ctx, r.commit):  # where its commit can be read, the evidence there has to be what was approved
+            files = [str(f) for f in evidence.get("files") or []]
+            try:
+                if evidence_hash(ctx.src.at(r.commit), str(rec.get("spec")), gate, files) != digest:
+                    continue
+            except KitError:
+                continue
+        return r, f"review {cited.id} on {change} was dismissed; review {r.id}, later and by the same person, carries the same line for the same evidence and stands for it"
+    return cited, ""
+
+
 def _approver_problems(ctx: Context, adapter, holders: dict, review, change: str, reviewer: str, role: str | None) -> list[str]:
     out = []
     excluded = {x.lower() for x in (adapter.agent_identity(), adapter.ci_identity()) if x}
@@ -590,12 +619,15 @@ def ck_approver(ctx: Context, res: Result) -> None:
             if review is None:
                 res.fail(f"review {ap.get('review_ref')!r} was not found in the enforcement channel", rel)
                 continue
+            review, stood = standing_review(ctx, adapter, change, review, rec)
+            if stood:
+                res.notes.append(f"{rel}: {stood}")
             problems = _approver_problems(ctx, adapter, holders, review, change, ap.get("reviewer", ""), ap.get("role"))
             if review.state != wanted_state:
                 problems.append(f"the review state is {review.state or 'unknown'}, not {wanted_state}")
             commit = _commit(rec)
-            if commit and not (review.commit.startswith(commit) or commit.startswith(review.commit)) or not review.commit:
-                problems.append("the review is on a different commit from the decision")
+            if not stood and (commit and not (review.commit.startswith(commit) or commit.startswith(review.commit)) or not review.commit):
+                problems.append("the review is on a different commit from the decision")  # one that stands in was checked by its evidence (BWR-2)
             if review.reviewer.lower() in adapter.authors(change):
                 if not allow_exception:
                     problems.append(f"{review.reviewer} authored the change and exceptions are forbidden")
@@ -635,6 +667,7 @@ def ck_gate_mirror(ctx: Context, res: Result) -> None:
     adapter = adapters.enforcement(ctx)
     need_hash = (ctx.kit().get("gates") or {}).get("require_evidence_hash", ctx.profile != "lite")
     recorded: set[tuple[str, str, str]] = set()
+    stated: set[tuple[str, str, str, str, str]] = set()  # (change, person, gate, decision, hash) a record holds an approval for (PRV-4)
     changes: set[str] = set()
     for rel, rec in decisions(ctx):
         gate, decision = str(rec.get("gate")), str(rec.get("decision"))
@@ -643,6 +676,7 @@ def ck_gate_mirror(ctx: Context, res: Result) -> None:
             change, review = _review(adapter, ap.get("review_ref"))
             if change:
                 changes.add(change)
+                stated.add((change, str(ap.get("reviewer") or "").lower(), gate, decision, digest))
             if review is None:
                 continue  # CK-APPROVER reports missing reviews
             lines = parse_approval_lines(review.body)
@@ -650,16 +684,24 @@ def ck_gate_mirror(ctx: Context, res: Result) -> None:
                 recorded.add((change, review.id, line[0]))
             if need_hash and (gate, decision, digest) not in lines:
                 res.fail(f"review {ap.get('review_ref')} does not state `gate {gate} {decision} {digest[:19]}…`", rel)
+            standing, stood = standing_review(ctx, adapter, change, review, rec)
+            if stood:  # the review that stands for a dismissed one carries this record's line, so the record mirrors it (BWR-1)
+                recorded.add((change, standing.id, gate))
+                res.notes.append(f"{rel}: {stood}")
         for earlier in rec.get("superseded") or []:  # reviews behind a decision that was later made again are accounted for
             for ap in earlier.get("approvals") or []:
                 change, review = _review(adapter, ap.get("review_ref"))
+                if change:
+                    stated.add((change, str(ap.get("reviewer") or "").lower(), gate, str(earlier.get("decision")), str(earlier.get("hash") or "")))
                 if review is not None:
                     recorded.add((change, review.id, gate))
     for change in sorted(changes):
         for review in adapter.reviews(change):
             for gate, decision, digest in parse_approval_lines(review.body):
-                if (change, review.id, gate) not in recorded:
-                    res.fail(f"{change}#review-{review.id} states a decision for {gate} that no decision record mirrors")
+                # mirrored: named by a record, or the same person's line on the same pull request that a record holds (PRV-4)
+                if (change, review.id, gate) in recorded or (change, review.reviewer.lower(), gate, decision, digest) in stated:
+                    continue
+                res.fail(f"{change}#review-{review.id} states a decision for {gate} that no decision record mirrors")
 
 
 # ── CK-WAIVER ───────────────────────────────────────────────────────────────────

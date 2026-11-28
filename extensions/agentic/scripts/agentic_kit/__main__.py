@@ -295,6 +295,10 @@ def cmd_record(args) -> int:
             print(f"{found}\nNothing was recorded.", file=sys.stderr)
             return 2
         args.decision, args.commit, args.approval = found
+        held = _recorded_already(ctx, args.spec, args.gate, args.decision, digest, args.approval, bool(args.exception), args.condition)
+        if held:
+            print(held)
+            return 0
     elif not (args.decision and args.commit and args.approval):
         print("give --change pull/<n>, or all three of --decision, --commit and --approval", file=sys.stderr)
         return 2
@@ -309,6 +313,15 @@ def cmd_record(args) -> int:
             print("--approval must be reviewer:role:pull/<n>#review-<id>", file=sys.stderr)
             return 2
         approvals.append({"reviewer": reviewer, "role": role, "review_ref": ref})
+    path = ctx.src.root / KIT_DIR / "decisions" / args.spec / f"{args.gate}.yml"
+    try:  # an earlier decision of the gate is kept in the new record: one that cannot be read is not overwritten
+        old = yaml.safe_load(path.read_text(encoding="utf-8")) or {} if path.is_file() else None
+    except yaml.YAMLError:
+        old = []
+    if old is not None and not isinstance(old, dict):
+        print(f"{path.relative_to(ctx.src.root).as_posix()} is there and is not a record the kit can read, so the decision it held "
+              "could not be kept. Mend it, or remove it, and record again.\nNothing was recorded.", file=sys.stderr)
+        return 2
     entry = audit_append(ctx.src.root, args.spec, {"type": "kit", "id": "record"}, "gate.decision",
                          spec=args.spec, gate=args.gate, decision=args.decision, commit=args.commit, evidence=digest)
     record = {"schema": "agentic-decision/1", "spec": args.spec, "gate": args.gate, "decision": args.decision,
@@ -321,11 +334,10 @@ def cmd_record(args) -> int:
         record["constitution_version"] = (ctx.src.yaml(CONSTITUTION_EVIDENCE[1]) or {}).get("version")
     if args.condition:
         record["conditions"] = args.condition
-    path = ctx.src.root / KIT_DIR / "decisions" / args.spec / f"{args.gate}.yml"
-    if path.is_file():  # a gate decided again (an amendment re-opened it): keep what the earlier decision was
-        old = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if old is not None:  # a gate decided again (an amendment re-opened it): keep what the earlier decision was
+        evidence = old.get("evidence") if isinstance(old.get("evidence"), dict) else {}
         record["superseded"] = list(old.get("superseded") or []) + [{
-            "decision": old.get("decision"), "commit": old.get("commit"), "hash": (old.get("evidence") or {}).get("hash"),
+            "decision": old.get("decision"), "commit": old.get("commit"), "hash": evidence.get("hash"),
             "approvals": old.get("approvals") or []}]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(record, sort_keys=False), encoding="utf-8", newline="\n")
@@ -334,6 +346,45 @@ def cmd_record(args) -> int:
     if getattr(args, "change", None):
         _dismissal_note(ctx, args.change, args.commit, [a["review_ref"] for a in approvals])
     return 0
+
+
+def _recorded_already(ctx: Context, spec: str, gate: str, decision: str, digest: str, wanted: list[str] | None = None,
+                      exception: bool = False, conditions: list[str] | None = None) -> str:
+    """What to say where the gate already has a record for this decision and this evidence, with the same exception, the
+    same conditions and the same people in the same roles as `wanted` (who:role:ref), and each review it names still bears
+    it out, as it is or through a later review that stands for it (BWR-3, PRV-3). Empty where a record has to be written.
+    Which of a person's equivalent reviews the record names is not compared."""
+    path = ctx.src.root / KIT_DIR / "decisions" / spec / f"{gate}.yml"
+    if not path.is_file():
+        return ""
+    try:
+        old = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError:  # a record that cannot be read is written anew; CK-GATE-RECORD says what was wrong with it
+        return ""
+    evidence = old.get("evidence") if isinstance(old, dict) else None
+    approvals = old.get("approvals") if isinstance(old, dict) else None
+    if (not isinstance(evidence, dict) or not isinstance(approvals, list) or not approvals or old.get("decision") != decision
+            or evidence.get("hash") != digest or not all(isinstance(ap, dict) for ap in approvals)):
+        return ""
+    if bool(old.get("single_approver_exception")) != bool(exception) or \
+            [str(c) for c in old.get("conditions") or []] != [str(c) for c in conditions or []]:
+        return ""
+    people = {(str(item).split(":", 2)[0].lower(), (str(item).split(":", 2) + ["", ""])[1]) for item in wanted or []}
+    if people != {(str(ap.get("reviewer") or "").lower(), str(ap.get("role") or "")) for ap in approvals}:
+        return ""
+    from .checks_gov import _review, standing_review
+    adapter = adapters.enforcement(ctx)
+    wanted = "CHANGES_REQUESTED" if decision == "reject" else "APPROVED"
+    said = []
+    for ap in approvals:
+        change, review = _review(adapter, ap.get("review_ref"))
+        review, stood = standing_review(ctx, adapter, change, review, old)
+        if review is None or review.state != wanted or review.reviewer.lower() != str(ap.get("reviewer") or "").lower() \
+                or (gate, decision, digest) not in parse_approval_lines(review.body):  # its text may have been edited (PRV-11)
+            return ""
+        said.append(f"review {review.id}" + (f" (for review {str(ap.get('review_ref')).split('#review-', 1)[-1]}, which was dismissed)" if stood else ""))
+    return (f"{gate} of {spec} is recorded already for this evidence ({path.relative_to(ctx.src.root).as_posix()}), and "
+            f"{', '.join(dict.fromkeys(said))} bear{'s' if len(set(said)) == 1 else ''} it out. Nothing was written.")
 
 
 def _dismissal_note(ctx: Context, change: str, commit: str, refs: list[str]) -> None:
@@ -352,8 +403,9 @@ def _dismissal_note(ctx: Context, change: str, commit: str, refs: list[str]) -> 
         return
     reviews = ", ".join(sorted({ref.split("#review-", 1)[-1] for ref in refs}))
     print(f"note: {change} is open, and the rules of the default branch dismiss an approval when a commit is pushed. "
-          f"Pushed onto {change}, this record would dismiss review {reviews}, which it cites, and CK-APPROVER would then fail it. "
-          "With the kit as it is, commit the record after the merge, on a branch of its own.")
+          f"Pushed onto {change}, this record would dismiss review {reviews}, which it cites. Either push it and have the reviewer "
+          "approve again with the same line, which the checks accept in place of the dismissed review; or commit the record after "
+          "the merge, on a branch of its own.")
 
 
 from . import decision_log  # noqa: E402  (here, with its command: registers CK-DECISION-LOG, its fixtures and its two views)
@@ -706,13 +758,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--approval", action="append", help="reviewer:role:pull/<n>#review-<id>; with --decision and --commit, in place of --change")
     sp.add_argument("--condition", action="append"); sp.add_argument("--exception", action="store_true")
     sp.add_argument("--file", action="append"); sp.set_defaults(fn=cmd_record)
-    sp = sub.add_parser("decision", help="the decision log of a change: add a question, record what a person decided, list; "
-                                         "writing an entry approves nothing"); common(sp)
-    sp.add_argument("action", choices=["add", "decide", "supersede", "list"]); sp.add_argument("--spec", required=True)
+    sp = sub.add_parser("decision", help="the decision log of a change: add a question, record what a person decided, list; print "
+                                         "a decision's line and bind it to the review that approves it; writing an entry approves nothing"); common(sp)
+    sp.add_argument("action", choices=["add", "decide", "supersede", "list", "line", "bind"]); sp.add_argument("--spec", required=True)
     sp.add_argument("--title", help="with add: the question")
     sp.add_argument("--by", help="with add: who asks; an id that roles.yml does not list as a person makes the entry a proposal. "
                                  "With supersede: the id of the entry that replaces this one")
-    sp.add_argument("--id", help="with decide and supersede: the entry, as D-001")
+    sp.add_argument("--id", help="with decide, supersede, line and bind: the entry, as D-001")
+    sp.add_argument("--change", help="with bind: the pull request on which the owner approved the decision, as pull/7")
     sp.add_argument("--outcome", help="with decide: what was decided"); sp.add_argument("--owner", help="with decide: the person who decided, as roles.yml lists them")
     sp.add_argument("--why", help="with decide: the reason"); sp.add_argument("--on", help="with decide: the day, as 2026-11-26 (default: today)")
     sp.add_argument("--affects", action="append", help="with add and decide: FR-001, T003, node:<map node id> or adr:<file>; repeat for several")

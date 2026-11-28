@@ -76,11 +76,11 @@ Each of Copilot's four findings holds when read against the code. None changes a
 
 ## Open question
 
-1. **How the kit records a gate decision where approvals are dismissed on a push.** One way: the record is committed after the merge, on a branch of its own, as stage 5 of the live test did, and the mirror job runs after the push to the default branch and opens the records' pull request. Until the records are merged, the gate shows as open; for a change whose plan or code needs that gate, `CK-GATE-RECORD` fails on the default branch in that time. The other: the record stays on the pull request, and `CK-APPROVER` and `CK-GATE-MIRROR` accept a later approval by the same person, with the same line, for the same evidence, in place of the review the record cites, as the owner gave at 02:27 UTC; each reviewer then approves twice. Yours to decide. Nothing in this change prejudges it: FGR-1 and FGR-2 only say what happens.
+1. **How the kit records a gate decision where approvals are dismissed on a push.** One way: the record is committed after the merge, on a branch of its own, as stage 5 of the live test did, and the mirror job runs after the push to the default branch and opens the records' pull request. Until the records are merged, the gate shows as open; for a change whose plan or code needs that gate, `CK-GATE-RECORD` fails on the default branch in that time. The other: the record stays on the pull request, and `CK-APPROVER` and `CK-GATE-MIRROR` accept a later approval by the same person, with the same line, for the same evidence, in place of the review the record cites, as the owner gave at 02:27 UTC; each reviewer then approves twice. Yours to decide. Nothing in this change prejudges it: FGR-1 and FGR-2 only say what happens. **Answered on 2026-11-28:** the owner said that both can be accepted. `docs/design/both-ways-to-record.md` (BWR-1 to BWR-8) has how the kit now takes either.
 
 ## What this does not do
 
-- It does not change how the kit records a gate, nor the mirror job. That waits for open question 1.
+- It does not change how the kit records a gate, nor the mirror job. That waited for open question 1, which `docs/design/both-ways-to-record.md` answers.
 - It does not report which failures a change brings and which its base already has (row 15). That needs a design of its own: running every check twice, and saying what a failure on the base means for the change.
 - It does not make the connect workflow run for a pull request that the bot opened. GitHub decides that.
 - It does not map the id of a bypass actor to a repository role.

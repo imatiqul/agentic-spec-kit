@@ -70,6 +70,8 @@ class Tool:
     schema: dict
     run: Callable[[dict], str]  # the arguments, already checked against the schema -> the text of the result
     open_world: bool = False    # does it reach anything beyond the project's own files?
+    writes: bool = False        # does it change a file? Only where the server was started with --allow-write (MCW-1)
+    idempotent: bool = False    # for a tool that writes: does a second call with the same arguments change nothing more?
 
 
 def _schema_words(schema: Any) -> set:
@@ -332,7 +334,9 @@ class Server:
         for tool in self.tools:
             entry = {"name": tool.name, "description": tool.description, "inputSchema": tool.schema}
             if version != NO_ANNOTATIONS:
-                entry["annotations"] = {"title": tool.title, "readOnlyHint": True, "openWorldHint": tool.open_world}
+                entry["annotations"] = {"title": tool.title, "readOnlyHint": not tool.writes, "openWorldHint": tool.open_world}
+                if tool.writes:  # a tool of this server that writes only adds; the hint's default would say it may destroy (MCW-6)
+                    entry["annotations"].update({"destructiveHint": False, "idempotentHint": tool.idempotent})
             listed.append(entry)
         return listed
 

@@ -51,7 +51,16 @@ def summary(ctx: Context, results: list, events: list, deliveries: list, templat
     return "\n".join(lines) + "\n"
 
 
-def mirror(ctx: Context, change: str, commit: str, write: bool = False) -> list[dict]:
+def merged_change(ctx: Context, commit: str) -> str | None:
+    """The pull request that was merged as this commit, as `pull/<n>`, or None where none was (BWR-5). Asked of the
+    enforcement adapter's `pulls`, which lists for a merge commit the pull request merged as it."""
+    for row in adapters.enforcement(ctx).pulls([commit]):
+        if row.get("state") == "merged" and adapters.same_commit(str(row.get("merge_commit") or ""), commit):
+            return str(row.get("change"))
+    return None
+
+
+def mirror(ctx: Context, change: str, commit: str | None, write: bool = False) -> list[dict]:
     """Find reviews on `change` that carry an approval line for the current evidence of a gate, and mirror them.
 
     A gate is mirrored only when every role it needs is covered by an approving review from a person who holds that
@@ -61,7 +70,8 @@ def mirror(ctx: Context, change: str, commit: str, write: bool = False) -> list[
     - a review that approves with conditions: the conditions are the reviewer's to state, and nothing here can pick
       them out of a review (REV-8);
     - a reviewer who also wrote the change, in a project that forbids the single-approver exception. Where the project
-      allows it, the record carries the exception, as CK-APPROVER asks (REV-9).
+      allows it, the record carries the exception, as CK-APPROVER asks (REV-9);
+    - with no `commit` given, reviews that carry the line on more than one commit: a record names one (BWR-5).
     """
     from agentic_kit.__main__ import _evidence_files, cmd_record, stated_reviews
     adapter = adapters.enforcement(ctx)
@@ -89,8 +99,11 @@ def mirror(ctx: Context, change: str, commit: str, write: bool = False) -> list[
                    "approvals": [f"{who}:{role}:{change}#{r.ref_suffix}" for who, role, r in approvals]}
             wrote = sorted({who for who, _, _ in approvals if who.lower() in authors})
             by_hand = f"`record --spec {spec} --gate {gate} --change {change}`"
+            on = sorted({r.commit for _, _, r in approvals})  # with no commit given, the one the reviews are on (BWR-5)
             if missing:
                 pass
+            elif not commit and (len(on) != 1 or not on[0]):
+                row["note"] = f"the reviews that carry the line are not on one commit ({', '.join(c[:12] or 'none' for c in on)}), and a record names one"
             elif decision == "approve-with-conditions":
                 row["note"] = f"the review approves with conditions, which are the reviewer's to state: a person records it, with {by_hand} and one --condition for each"
             elif wrote and not exception_allowed:
@@ -99,7 +112,7 @@ def mirror(ctx: Context, change: str, commit: str, write: bool = False) -> list[
                 row["exception"] = bool(wrote)
                 if write:
                     args = argparse.Namespace(root=str(ctx.src.root), base_ref=ctx.trusted.ref, json=False, spec=spec, gate=gate, decision=decision,
-                                              commit=commit, approval=row["approvals"], condition=None, exception=bool(wrote), file=None)
+                                              commit=commit or on[0], approval=row["approvals"], condition=None, exception=bool(wrote), file=None)
                     row["written"] = cmd_record(args) == 0
             rows.append(row)
     return rows

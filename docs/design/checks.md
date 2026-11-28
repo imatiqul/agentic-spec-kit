@@ -3,7 +3,7 @@
 - **Phase and date:** Phase 2 (design), 2026-11-21
 - **Requirement IDs covered:** see the "Enforces" column; full mapping in `requirement-map.md`
 - **Assumptions:** every check runs from the repo root with no network, except the approval checks, which make one adapter call
-- **Unverified:** none of these checks existed when this catalogue was written. As of 2026-11-22 all 105 exist, each with a passing and a failing fixture (`agentic.py selftest`); what has and has not been run is in the phase reports. Phase 12 added two on 2026-11-26, listed at the end of this file, which makes 107
+- **Unverified:** none of these checks existed when this catalogue was written. As of 2026-11-22 all 105 exist, each with a passing and a failing fixture (`agentic.py selftest`); what has and has not been run is in the phase reports. Phase 12 added two on 2026-11-26, listed at the end of this file, which makes 107; two more came on 2026-11-28, listed after them, which makes 109
 
 Every check ships a passing and a failing fixture (TRC-17). "Runs" says where: **L** local command, **A** agent runtime event where supported, **CI** continuous integration. CI is authoritative. Checks for slices 0.4 to 0.6 were built after this catalogue was written and are listed at the end of this file.
 
@@ -256,3 +256,12 @@ Detail the summaries leave out:
 | CK-CONVERSATION | A discussion moved after someone acted on its intake record and no Product Owner acknowledged it; or what is kept of a conversation holds what the screen removes, lacks its summary, its writer or its day, has a link that carries a credential, or names a confirmer whom `roles.yml` does not list | INT-2, INT-7 | Standard, Regulated |
 
 The two are registered under requirement IDs of `docs/prompts/spec/`, because the as-built map is made from the IDs in that folder. Their own requirements are DEC-10 to DEC-14 in `decision-log.md` and CNV-10 and CNV-11 in `conversation.md`. No other feature of Phase 12 adds a check: the page of a change, the search, the MCP server, the view of a programme and the workflow that opens a pull request judge nothing.
+
+## After Phase 12, 2026-11-28
+
+| Check | Fails when | Enforces | Profiles |
+|---|---|---|---|
+| CK-PROGRAMME-RELEASE | A parent's G7 is approved while a child has not passed its own gates: in this repository, a gate the child needs has no approving record; in another repository, the pinned commit holds no approving record of the last gate that repository's profile asks for, or cannot be read | MAP-14, GOV-4 | Standard, Regulated |
+| CK-DECISION-REVIEW | A decided entry of a decision log names a review that is not in the channel, is not by the entry's owner from a person's account that `roles.yml` lists, is not an approval, or does not carry the decision's line for the outcome as it stands; a review is named in another form, or by an entry that is not decided; or `kit.yml` asks for every decision to be bound and one is not | GOV-6 | All |
+
+They are registered under requirement IDs of `docs/prompts/spec/`, for the reason given above. Their own requirements are PRR-1 to PRR-8 in `programme-release.md` and DRV-1 to DRV-8 in `decision-review.md`. PRR-8 also changed `CK-PROGRAMME`, which now fails, where it stopped, on a `programme` entry of the wrong shape.

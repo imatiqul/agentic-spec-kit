@@ -108,12 +108,12 @@ Added on 2026-11-27: with the test corrected, the same pipeline passed on pull r
 
 Each spec ends with its own list. These are the ones I would look at first.
 
-1. **The decision log is evidence of G5, and a decision's owner is claimed, not proven.** The kit cannot tell who typed `decision decide`. The person who approves G5 is shown every entry. The other way is to bind a decision to a review, as a gate decision is bound.
+1. **A decision of the log can be bound to a review.** Changed on 2026-11-28, at the owner's word. Until then a decision's owner was claimed, not proven: the kit cannot tell who typed `decision decide`, and the person who approves G5 is shown every entry. Now the owner can approve a pull-request review with the decision's line, `decision bind` names that review in the entry, and `CK-DECISION-REVIEW` asks the channel who wrote it (`docs/design/decision-review.md`). Binding is optional unless `kit.yml` asks for it, and G5 still approves the log.
 2. **`report all` and the evidence pack now ask GitHub.** The other way is to show pull requests only on the page of one change.
 3. **Every fetch reads the comments of every item.** One request more for each item, with no setting to turn it off.
 4. **The MCP protocol is written by hand**, so that PyYAML stays the kit's only dependency. The server speaks the four revisions with a handshake and the one of 2026-07-28, which has none. The other way is the official library, as a dependency of that one extension.
-5. **The MCP server only reads.** A tool that adds a question to a decision log would be the first that writes, and needs a spec of its own.
-6. **A parent's gate does not wait for its children.** The view of a programme adds no rule. The other way is a check that holds a parent's release until each child has passed its own.
+5. **The MCP server reads only, unless it is started to write into a decision log.** Changed on 2026-11-28, at the owner's word. Until then it only read. Now, started with `--allow-write decision-log`, it also lists `decision_add`, which adds a question to a spec's decision log as a proposal and decides nothing (`docs/design/mcp-first-write.md`).
+6. **A parent's release waits for its children.** Changed on 2026-11-28, at the owner's word. Until then a parent's gate did not wait for its children, and the view of a programme added no rule. Now `CK-PROGRAMME-RELEASE` holds a parent's release, G7, until each child has passed its own gates (`docs/design/programme-release.md`); the view itself still adds none.
 7. **Only fixed words cross from another repository onto a programme's page**: no title and no name.
 8. **The workflow that opens a pull request needs a setting that also lets a workflow approve.** The other way is a second account or a GitHub App.
 9. **"One edge away" in the search counts an edge in either direction**, where the impact report follows it one way.
@@ -140,4 +140,17 @@ Added later on 2026-11-27: stages 3a to 5 are done, and stage 6 in part.
 - **The first gate on GitHub.** The workflow that opens a pull request opened one as `github-actions[bot]`. The owner approved its held checks, then G1 and G2 of spec 020 in a review that carried the two lines `gate` printed. `record --change` read that review from GitHub and wrote the records. Pushed onto the same pull request, the records made GitHub dismiss the review, because that repository dismisses an approval on a push. The owner approved again and merged, the records were written again after the merge on a branch of their own, and on that pull request the pipeline passed `CK-APPROVER` and `CK-GATE-MIRROR` for both. Phase 11 found that one person with one account could not pass a gate on GitHub; this is how one did.
 - **The page, the search and the MCP server on the result.** `changeset` read the change's four pull requests from GitHub; `search` put the one hit in the nodes the spec touches first; the MCP server answered the official MCP client against a checkout of that repository.
 
-What those stages showed is in `docs/design/first-gate-on-github.md` (FGR-1 to FGR-15), fixed except for one decision that is the owner's: how the kit records a gate where approvals are dismissed on a push. Not done: a programme with a child in a second repository. No coding agent has used any of it.
+What those stages showed is in `docs/design/first-gate-on-github.md` (FGR-1 to FGR-15), fixed except for one decision that is the owner's: how the kit records a gate where approvals are dismissed on a push. On 2026-11-28 he answered it: both ways, which `docs/design/both-ways-to-record.md` builds. Not done: a programme with a child in a second repository. No coding agent has used any of it.
+
+## Added on 2026-11-28
+
+On 2026-11-28 the owner gave his word on four decisions: the open question of the first gate on GitHub ("both can be accepted"), and decisions 1, 5 and 6 above, each taken the other way. Four features came of it. Each has its spec in `docs/design/`, committed before its code, and one test for each of its acceptance criteria, which fails on the kit as it was and passes now:
+
+- `both-ways-to-record.md` (BWR-1 to BWR-8): a gate recorded either way where approvals are dismissed on a push. Seven tests.
+- `programme-release.md` (PRR-1 to PRR-8): a programme's release waits for its children, with the check `CK-PROGRAMME-RELEASE`. Seven tests.
+- `mcp-first-write.md` (MCW-1 to MCW-8): the MCP server's first tool that writes, `decision_add`, listed only where the server is started with `--allow-write decision-log`. Eight tests.
+- `decision-review.md` (DRV-1 to DRV-8): a decision of the log bound to a review, with the check `CK-DECISION-REVIEW`. Seven tests.
+
+The two checks make 109. On the way, `CK-PROGRAMME` was found to stop the whole check run with a Python error on a child entry that is a plain word; it now fails that entry (PRR-8). `docs/release-notes.md` says what ran.
+
+The owner pushed the branch as pull request 8, and its three jobs passed on Linux and on Windows. GitHub Copilot then reviewed it: seven findings, each of which held when I read the code, and each fixed with a test of its own (`docs/design/pull-request-8-review.md`, PRV-1 to PRV-7). Its second review, of those fixes, found six more, which held and are fixed in the same way (PRV-8 to PRV-13). The reviews' threads on GitHub are not answered.
