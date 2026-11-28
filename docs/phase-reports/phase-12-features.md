@@ -112,7 +112,7 @@ Each spec ends with its own list. These are the ones I would look at first.
 2. **`report all` and the evidence pack now ask GitHub.** The other way is to show pull requests only on the page of one change.
 3. **Every fetch reads the comments of every item.** One request more for each item, with no setting to turn it off.
 4. **The MCP protocol is written by hand**, so that PyYAML stays the kit's only dependency. The server speaks the four revisions with a handshake and the one of 2026-07-28, which has none. The other way is the official library, as a dependency of that one extension.
-5. **The MCP server only reads.** A tool that adds a question to a decision log would be the first that writes, and needs a spec of its own.
+5. **The MCP server reads only, unless it is started to write into a decision log.** Changed on 2026-11-28, at the owner's word. Until then it only read. Now, started with `--allow-write decision-log`, it also lists `decision_add`, which adds a question to a spec's decision log as a proposal and decides nothing (`docs/design/mcp-first-write.md`).
 6. **A parent's release waits for its children.** Changed on 2026-11-28, at the owner's word. Until then a parent's gate did not wait for its children, and the view of a programme added no rule. Now `CK-PROGRAMME-RELEASE` holds a parent's release, G7, until each child has passed its own gates (`docs/design/programme-release.md`); the view itself still adds none.
 7. **Only fixed words cross from another repository onto a programme's page**: no title and no name.
 8. **The workflow that opens a pull request needs a setting that also lets a workflow approve.** The other way is a second account or a GitHub App.

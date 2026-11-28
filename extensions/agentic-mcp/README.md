@@ -1,8 +1,8 @@
 # agentic-mcp
 
-A read-only MCP server for agentic-spec-kit (Phase 12). Needs `agentic`. No profile installs it: a person adds it.
+An MCP server for agentic-spec-kit (Phase 12). Needs `agentic`. No profile installs it: a person adds it.
 
-A coding agent that speaks the Model Context Protocol can ask the kit where a project stands and get an answer of a known shape, where it would otherwise run the kit's commands and read what they print. Every tool reads. None writes a file, claims work, records a decision or approves anything: a gate is decided by a person in a pull-request review.
+A coding agent that speaks the Model Context Protocol can ask the kit where a project stands and get an answer of a known shape, where it would otherwise run the kit's commands and read what they print. Every tool reads. None writes a file, claims work, records a decision or approves anything: a gate is decided by a person in a pull-request review. The one exception is a tool a project may turn on, `decision_add`, which adds a question to a spec's decision log as a proposal and decides nothing (see "Let it add questions to a decision log" below).
 
 ```bash
 specify extension add --dev path/to/agentic-spec-kit/extensions/agentic-mcp
@@ -24,6 +24,7 @@ python .specify/extensions/agentic-mcp/scripts/agentic_mcp.py --root .    # an M
 | `context_pack` | `spec`, `item` | The context pack of a work item, built now and not written. Listed where `agentic-team` is installed |
 | `why` | `target`: a path, or `path:line` | The trace from a file back to the requirement and the approvals. Listed where `agentic-product` is installed |
 | `checks_run` | `ids` optional | What the `check` command prints with `--json`, and its exit code. With no id: every check |
+| `decision_add` | `spec`, `question`; `affects` optional | Adds the question to the spec's decision log as a proposal, or gives the entry that holds it already. The only tool that writes, and listed only where the server is started with `--allow-write decision-log` |
 
 - An argument is checked before anything is read. A spec, a gate, a work item or a check that the project does not have is refused, and so is a value that would leave the project: `..`, an absolute path, a drive letter, a backslash, or a file that a link leads out of the project.
 - A refusal is an answer the model can read, marked as an error. It says what was wrong.
@@ -60,6 +61,33 @@ Then the configuration of the MCP client. For a client that reads `.mcp.json` in
 - Both paths are written from the project folder. Whether a client starts a project's servers in that folder has not been tried here. Where it does not, write both paths in full, in both entries alike.
 - Where `python` is not the Python that has PyYAML, name the one that is, in both entries alike.
 
+### Let it add questions to a decision log
+
+An agent that meets a question the spec does not answer can leave it for a person in the change's decision log. The server does that only where it is started with `--allow-write decision-log` (`docs/design/mcp-first-write.md`). The two entries are then these, and they replace the two above:
+
+```yaml
+schema: agentic-tools/1
+mcp_servers:
+  - {name: agentic-spec-kit, command: python, args: [".specify/extensions/agentic-mcp/scripts/agentic_mcp.py", "--root", ".", "--allow-write", "decision-log"], reviewed_by: <person>, reason: <why agents need it>}
+```
+
+```json
+{
+  "mcpServers": {
+    "agentic-spec-kit": {
+      "command": "python",
+      "args": [".specify/extensions/agentic-mcp/scripts/agentic_mcp.py", "--root", ".", "--allow-write", "decision-log"]
+    }
+  }
+}
+```
+
+- `decision_add` writes `specs/<spec>/decision-log.yml` and the spec's audit log, in the working copy, and nothing else. Nothing is committed.
+- An entry it adds is a proposal. It names `agentic-mcp` under `proposed_by`, for the kit cannot tell which agent called, and it decides nothing: a person decides it with `agentic.py decision decide`, and the person who approves G5 approves what is decided. A question the log holds already is not added again.
+- It refuses while G5 of the spec is approved, since an entry added then opens G5 again. It also refuses a question that is not one line or is longer than 500 characters, an id under `affects` that the spec does not have, and, where `agentic-product` is installed, a question in which the intake screen finds personal data or a credential.
+- It writes the log anew in the kit's form, as `agentic.py decision` does: a comment a person wrote in the file is lost.
+- Turning it on is a change of `tools.yml`, reviewed as any other: `CK-TOOL-ALLOWLIST` compares the `args` word for word.
+
 ## What it speaks
 
 JSON-RPC 2.0 on standard input and output, one message a line. The protocol is written by hand in `scripts/agentic_kit_mcp/protocol.py`: the kit needs no MCP library, and still nothing but PyYAML.
@@ -70,7 +98,7 @@ Standard output carries protocol messages and nothing else. What the kit or a pr
 
 ## Not verified
 
-No MCP client has been run against this server: not Claude Code, not GitHub Copilot, not Cursor. On Windows only the kit's own tests have started it, on a runner hosted by GitHub; no person has run it on a Windows machine.
+No MCP client has been run against this server: not Claude Code, not GitHub Copilot, not Cursor. Of these, none has called `decision_add`. On Windows only the kit's own tests have started it, on a runner hosted by GitHub; no person has run it on a Windows machine.
 
 What has run: the tests in `tests/test_mcp.py`, which start the server and speak the protocol to it line by line, on Linux on Python 3.10 to 3.13; and the client of the official `mcp` package for Python, by hand on Linux and in one test that is skipped where the package is not installed. Version 2.3.0 of that client opened the server both ways, listed the tools and called them. Version 1.30.0 did the same with the handshake, the one way it has.
 
