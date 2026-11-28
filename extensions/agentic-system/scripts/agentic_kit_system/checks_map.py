@@ -6,8 +6,9 @@ import subprocess
 
 import yaml
 
-from agentic_kit.checks_gov import decisions, spec_front
-from agentic_kit.core import KIT_DIR, TIERS, Context, KitError, Result, check, front_matter
+from agentic_kit import adapters
+from agentic_kit.checks_gov import decisions, required_gates, spec_front
+from agentic_kit.core import DECISIONS, KIT_DIR, PROFILE_GATES, TIERS, Context, KitError, Result, check, front_matter
 
 from . import discover as disc
 from .mapmodel import (CONTRACT_TYPES, DATA_TYPES, EDGE_TYPES, MAP_PATH, NODE_TYPES, SHARED_TYPES, SystemMap, load_map,
@@ -424,12 +425,21 @@ def ck_programme(ctx: Context, res: Result) -> None:
         if not prog:
             continue
         rel = f"specs/{spec}/spec.md"
-        children = prog.get("children") or []
-        if not children:
+        if not isinstance(prog, dict):  # PRR-8: what the front matter holds is judged, never trusted to have a shape
+            res.fail("the programme entry is not a mapping, so it names no children, shared contract or rollout order", rel)
+            continue
+        raw = prog.get("children")
+        children = raw if isinstance(raw, list) else []
+        if raw is not None and not isinstance(raw, list):
+            res.fail("the children of the programme are not a list", rel)
+        elif not children:
             res.fail("a programme spec has no children", rel)
         names = []
         for c in children:
-            name = str(c.get("spec", ""))
+            if not isinstance(c, dict) or not c.get("spec"):
+                res.fail("an entry under children is not a mapping with the key spec", rel)
+                continue
+            name = str(c["spec"])
             names.append(name)
             repo = c.get("repo", ".")
             if repo == ".":
@@ -442,12 +452,112 @@ def ck_programme(ctx: Context, res: Result) -> None:
         contract = prog.get("contract")
         if not contract:
             res.fail("a programme spec names no shared contract", rel)
+        elif not isinstance(contract, str):
+            res.fail("the shared contract is not the name of a node in the system map", rel)
         elif (smap.nodes.get(contract) or {}).get("type") not in CONTRACT_TYPES:
             res.fail(f"shared contract {contract} is not a contract or event in the system map", rel)
-        rollout = [str(x) for x in prog.get("rollout") or []]
+        order = prog.get("rollout")
+        if order is not None and not isinstance(order, list):
+            res.fail("the rollout order is not a list", rel)
+        rollout = [str(x) for x in order] if isinstance(order, list) else []
         for name in names:
             if name not in rollout:
                 res.fail(f"the rollout order does not include child {name}", rel)
+
+
+# ── PRR-1 to PRR-5: a programme's release waits for its children ─────────────────
+
+PASSING = ("approve", "approve-with-conditions")  # a decision that passes a gate (PRR-5)
+
+
+@check("CK-PROGRAMME-RELEASE", ("MAP-14", "GOV-4"),
+       "a programme's release waits until each of its children has passed its own gates", profiles=SYS)
+def ck_programme_release(ctx: Context, res: Result) -> None:
+    """For each parent whose G7 is approved, every child must have passed (docs/design/programme-release.md).
+    A parent whose release is not approved is not looked at, so nothing before the release is held."""
+    released = {str(rec.get("spec")): rel for rel, rec in decisions(ctx)
+                if str(rec.get("gate")) == "G7" and rec.get("decision") in PASSING}
+    for spec in ctx.specs():
+        prog = spec_front(ctx, spec).get("programme") if spec in released else None
+        if not prog:
+            continue
+        rel, head = released[spec], f"the release of {spec} (G7) is approved while"
+        raw = prog.get("children") if isinstance(prog, dict) else None
+        if not isinstance(prog, dict) or (raw is not None and not isinstance(raw, list)):
+            res.fail(f"{head} its programme entry names no children that can be read, so it cannot be shown to wait for them", rel)
+            continue
+        for child in raw or []:
+            held = _held(ctx, child)
+            if held:
+                res.fail(f"{head} {held}", rel)
+
+
+def _held(ctx: Context, child) -> str:
+    """What keeps one child from having passed its gates; empty where it has passed."""
+    from .programme import _NAME, _shown
+    if not isinstance(child, dict) or not child.get("spec"):
+        return "an entry under children names no spec, so it cannot be shown to have passed"
+    name, repo = str(child["spec"]), str(child.get("repo", "."))
+    if not _NAME.fullmatch(name):  # a name is never a path: nothing in front matter picks what is read (PRR-4)
+        return f"its child `{_shown(name)}` is not the plain name of a spec's folder, so it was not looked up"
+    if repo == ".":
+        return _held_here(ctx, name)
+    return _held_elsewhere(ctx, name, repo, str(child.get("ref", "")))
+
+
+def _held_here(ctx: Context, name: str) -> str:
+    """A child in this repository: every gate it needs, in this profile and on its own lane, approved (PRR-2, PRR-5)."""
+    if name not in ctx.specs():
+        return f"its child {name} has not passed: the folder specs/{name}/ does not exist"
+    recorded = {str(rec.get("gate")): rec.get("decision") for _, rec in decisions(ctx) if str(rec.get("spec")) == name}
+    short = [f"{gate} {_decided(gate in recorded, recorded.get(gate))}"
+             for gate in required_gates(ctx, name) if recorded.get(gate) not in PASSING]
+    return f"its child {name} has not passed its gates: {', '.join(short)}" if short else ""
+
+
+def _decided(recorded: bool, decision) -> str:
+    if not recorded:
+        return "not recorded"
+    return decision if isinstance(decision, str) and decision in DECISIONS else "recorded with no decision the kit knows"
+
+
+def _held_elsewhere(ctx: Context, name: str, repo: str, ref: str) -> str:
+    """A child in another repository: at the pin, an approving record of the last gate its own profile asks for (PRR-3, PRR-4).
+    At most three questions to the adapter. Only the kit's own words cross from there into the finding (PRG-7)."""
+    from .programme import _shown, _why
+    if not adapters.REPO_NAME.fullmatch(repo):
+        return f"the repository of its child {name}, `{_shown(repo)}`, is not named as owner/name, so it was not read"
+    if not adapters.COMMIT_ID.fullmatch(ref):
+        return f"its child {name} in {repo} is not pinned to a commit id, so it was not read"
+    at = f"its child {name} in {repo}, pinned to {ref[:7]}, has not been shown to pass"
+    try:
+        adapter = adapters.enforcement(ctx)
+        pin = adapter.commit_at(repo, ref)
+        kit = _yaml(adapter.file_at(repo, pin, f"{KIT_DIR}/kit.yml"))
+        profile = kit.get("profile") if isinstance(kit, dict) else None
+        if not (isinstance(profile, str) and profile in PROFILE_GATES):
+            return f"{at}: that commit holds no {KIT_DIR}/kit.yml that names a profile the kit knows"
+        gate = PROFILE_GATES[profile][-1]
+        text = adapter.file_at(repo, pin, f"{KIT_DIR}/decisions/{name}/{gate}.yml")
+    except (KitError, OSError, ValueError) as exc:  # ValueError: what was read is not JSON
+        return f"its child {name} in {repo}, pinned to {ref[:7]}, could not be read ({_why(exc)}), so the release cannot be shown to wait for it"
+    if text is None:
+        return f"{at}: that commit holds no decision record for {gate}, the last gate its {profile} profile asks for"
+    record = _yaml(text)
+    if not isinstance(record, dict) or str(record.get("spec")) != name or str(record.get("gate")) != gate:
+        return f"{at}: the record of {gate} there does not name {name} and {gate}"
+    decision = record.get("decision")
+    if decision not in PASSING:
+        said = decision if isinstance(decision, str) and decision in DECISIONS else "none the kit knows"
+        return f"{at}: the decision recorded there for {gate} is {said}"
+    return ""
+
+
+def _yaml(text: str | None):
+    try:
+        return yaml.safe_load(text or "")
+    except yaml.YAMLError:
+        return None
 
 
 @check("CK-FINDING-EVIDENCE", ("MAP-15",), "every finding from brownfield discovery cites evidence that exists", profiles=SYS)

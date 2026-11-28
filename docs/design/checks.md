@@ -256,3 +256,11 @@ Detail the summaries leave out:
 | CK-CONVERSATION | A discussion moved after someone acted on its intake record and no Product Owner acknowledged it; or what is kept of a conversation holds what the screen removes, lacks its summary, its writer or its day, has a link that carries a credential, or names a confirmer whom `roles.yml` does not list | INT-2, INT-7 | Standard, Regulated |
 
 The two are registered under requirement IDs of `docs/prompts/spec/`, because the as-built map is made from the IDs in that folder. Their own requirements are DEC-10 to DEC-14 in `decision-log.md` and CNV-10 and CNV-11 in `conversation.md`. No other feature of Phase 12 adds a check: the page of a change, the search, the MCP server, the view of a programme and the workflow that opens a pull request judge nothing.
+
+## After Phase 12, 2026-11-28
+
+| Check | Fails when | Enforces | Profiles |
+|---|---|---|---|
+| CK-PROGRAMME-RELEASE | A parent's G7 is approved while a child has not passed its own gates: in this repository, a gate the child needs has no approving record; in another repository, the pinned commit holds no approving record of the last gate that repository's profile asks for, or cannot be read | MAP-14, GOV-4 | Standard, Regulated |
+
+It is registered under requirement IDs of `docs/prompts/spec/`, for the reason given above. Its own requirements are PRR-1 to PRR-8 in `programme-release.md`. PRR-8 also changed `CK-PROGRAMME`, which now fails, where it stopped, on a `programme` entry of the wrong shape.
